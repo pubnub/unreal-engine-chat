@@ -417,6 +417,19 @@ FPubnubMarkMessagesAsReadWrapper UPubnubChat::MarkAllMessagesAsRead(FString Filt
 	return FPubnubMarkMessagesAsReadWrapper();
 }
 
+
+FPubnubUserMentionDataList GetCurrentUserMentions(FString StartTimetoken, FString EndTimetoken, int Count) {
+    try {
+        auto list = InternalChat->get_current_user_mentions(UPubnubChatUtilities::FStringToPubnubString(StartTimetoken), UPubnubChatUtilities::FStringToPubnubString(EndTimetoken), Count);
+
+        FPubnubUserMentionDataList FinalList(list);
+
+        return FinalList;
+    } catch (std::exception& Exception) {
+        UE_LOG(PubnubLog, Error, TEXT("Get Current User Mentions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+    }
+}
+
 UPubnubThreadChannel* UPubnubChat::CreateThreadChannel(UPubnubMessage* Message)
 {
 	try

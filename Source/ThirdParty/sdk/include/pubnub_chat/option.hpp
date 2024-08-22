@@ -47,6 +47,14 @@ namespace Pubnub {
             Option(T value): maybe(value) {};
 
             /**
+             * Gets an Option object that represents the presence of a value from
+             * std::optional.
+             *
+             * @param value The optional value to be wrapped by the Option object.
+             */
+            Option(std::optional<T> value): maybe(value) {};
+
+            /**
              * Creates an Option object that represents the absence of a value.
              */
             static Option<T> none() {
@@ -278,6 +286,22 @@ namespace Pubnub {
 
                 return Option<T>::none();
             };
+
+            /**
+             * Function returns a pointer to the value wrapped by the Option object.
+             *
+             * It is meant to be used over the C ABI but can be used for any reasons that 
+             * require a pointer to the value wrapped by the Option object.
+             *
+             * @return A pointer to the value wrapped by the Option object or a null pointer.
+             */
+            T* c_ptr() {
+                if (this->has_value()) {
+                    return &this->maybe.value();
+                }
+
+                return nullptr;
+            }
 
             /**
              * Function returns a pointer to the value wrapped by the Option object.

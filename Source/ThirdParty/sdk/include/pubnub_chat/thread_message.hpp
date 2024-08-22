@@ -35,7 +35,9 @@ namespace Pubnub
                     std::unique_ptr<MessageDAO> data, 
                     Pubnub::String parent_channel_id);
 
+#ifndef PN_CHAT_C_ABI
             PN_CHAT_EXPORT ThreadMessage(Pubnub::Message base_message, Pubnub::String parent_channel_id);
+#endif
 
             Pubnub::String parent_channel_id_internal;
         friend class ::MessageService;
@@ -43,6 +45,7 @@ namespace Pubnub
 #ifdef PN_CHAT_C_ABI
         public:
         Pubnub::ThreadMessage update_with_thread_base(const Pubnub::ThreadMessage& base_message) const;
+        ThreadMessage(Pubnub::Message base_message, Pubnub::String parent_channel_id);
 #endif
       
     };
