@@ -160,14 +160,14 @@ struct FPubnubUserMentionData
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ChannelID;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubEvent Event;
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) UPubnubMessage Message;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) UPubnubMessage* Message;
 
     FPubnubUserMentionData() = default;
     FPubnubUserMentionData(Pubnub::UserMentionData& MentionData) :
     ChannelID(MentionData.channel_id),
     UserID(MentionData.user_id),
     Event(MentionData.event),
-    Message(MentionData.message)
+    Message(UPubnubMessage::Create(MentionData.message))
     {}
 };
 
