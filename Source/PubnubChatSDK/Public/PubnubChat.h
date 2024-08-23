@@ -301,7 +301,7 @@ public:
 	FPubnubMarkMessagesAsReadWrapper MarkAllMessagesAsRead(FString Filter = "", FString Sort = "", int Limit = 0, FPubnubPage Page = FPubnubPage());
 
     UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Messages")
-    FPubnubUserMentionDataList GetCurrentUserMentions(FString StartTimetoken, FString EndTimetoken, int Count = 100);
+    FPubnubUserMentionDataList GetCurrentUserMentions(FString StartTimetoken = "", FString EndTimetoken = "", int Count = 100);
 	
     /* THREADS */
 	
