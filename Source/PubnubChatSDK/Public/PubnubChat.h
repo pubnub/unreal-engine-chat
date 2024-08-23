@@ -161,13 +161,18 @@ struct FPubnubUserMentionData
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubEvent Event;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere) UPubnubMessage* Message;
+    
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ParentThreadId;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ThreadChannelId;
 
     FPubnubUserMentionData() = default;
     FPubnubUserMentionData(Pubnub::UserMentionData& MentionData) :
     ChannelID(MentionData.channel_id),
     UserID(MentionData.user_id),
     Event(MentionData.event),
-    Message(UPubnubMessage::Create(MentionData.message))
+    Message(UPubnubMessage::Create(MentionData.message)),
+    ParentThreadId(MentionData.parent_thread_id.value_or("")),
+    ThreadChannelId(MentionData.thread_channel_id.value_or(""))
     {}
 };
 
