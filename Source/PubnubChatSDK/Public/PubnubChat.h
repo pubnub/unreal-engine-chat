@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PubnubChannel.h"
+#include "PubnubMessage.h"
 #include "PubnubUser.h"
 #include "PubnubMembership.h"
 #include "PubnubChatStructLibrary.h"
@@ -183,7 +184,7 @@ struct FPubnubUserMentionDataList
     FPubnubUserMentionDataList(Pubnub::UserMentionDataList& MentionDataList) :
     IsMore(MentionDataList.is_more)
     {
-        auto CppUserMentions = MentionDataList.user_mentions.into_std_vector();
+        auto CppUserMentions = MentionDataList.user_mention_data.into_std_vector();
         for(auto UserMention : CppUserMentions)
         {
             UserMentions.Add(UserMention);
