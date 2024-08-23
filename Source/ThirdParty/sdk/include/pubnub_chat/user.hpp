@@ -25,13 +25,13 @@ namespace Pubnub
 
     struct ChatUserData
     {
-        Pubnub::String user_name = "";
-        Pubnub::String external_id = "";
-        Pubnub::String profile_url = "";
-        Pubnub::String email = "";
-        Pubnub::String custom_data_json = "";
-        Pubnub::String status = "";
-        Pubnub::String type = "";
+        Pubnub::String user_name = Pubnub::String("");
+        Pubnub::String external_id = Pubnub::String("");
+        Pubnub::String profile_url = Pubnub::String("");
+        Pubnub::String email = Pubnub::String("");
+        Pubnub::String custom_data_json = Pubnub::String("");
+        Pubnub::String status = Pubnub::String("");
+        Pubnub::String type = Pubnub::String("");
     };
 
     struct MembershipsResponseWrapper
@@ -55,6 +55,7 @@ namespace Pubnub
     class User
     {
         public:
+            PN_CHAT_EXPORT User();
             PN_CHAT_EXPORT User(const User& other);
             PN_CHAT_EXPORT ~User();
 

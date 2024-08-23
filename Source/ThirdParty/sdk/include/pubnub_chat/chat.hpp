@@ -3,6 +3,7 @@
 
 #include "access_manager.hpp"
 #include "enums.hpp"
+#include "mentions.hpp"
 #include "string.hpp"
 #include "channel.hpp"
 #include "thread_channel.hpp"
@@ -146,6 +147,8 @@ namespace Pubnub {
             PN_CHAT_EXPORT Pubnub::Vector<Pubnub::UnreadMessageWrapper> get_unread_messages_counts(const Pubnub::String& filter = "", const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
             PN_CHAT_EXPORT MarkMessagesAsReadWrapper mark_all_messages_as_read(const Pubnub::String& filter = "", const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
 
+            PN_CHAT_EXPORT Pubnub::UserMentionDataList get_current_user_mentions(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 100) const;
+
 
             /* THREADS */
 
@@ -158,6 +161,7 @@ namespace Pubnub {
 
         private:
             Chat(const Pubnub::String& publish_key, const Pubnub::String& subscribe_key, const Pubnub::String& user_id, const ChatConfig& config);
+
             std::shared_ptr<const ChatService> chat_service;
             std::shared_ptr<const ChannelService> channel_service;
             std::shared_ptr<const UserService> user_service;

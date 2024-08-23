@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PubnubChannel.h"
+#include "PubnubMessage.h"
 #include "PubnubUser.h"
 #include "PubnubMembership.h"
 #include "PubnubChatStructLibrary.h"
@@ -150,6 +151,48 @@ struct FPubnubEventsHistoryWrapper
 	}
 };
 
+// TODO: Probably it should be moved into new directory but I'm not sure if it requires any additional actions:
+// -->
+USTRUCT(BlueprintType)
+struct FPubnubUserMentionData 
+{
+    GENERATED_BODY();
+
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ChannelID;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubEvent Event;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) UPubnubMessage* Message;
+
+    FPubnubUserMentionData() = default;
+    FPubnubUserMentionData(Pubnub::UserMentionData& MentionData) :
+    ChannelID(MentionData.channel_id),
+    UserID(MentionData.user_id),
+    Event(MentionData.event),
+    Message(UPubnubMessage::Create(MentionData.message))
+    {}
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubUserMentionDataList
+{
+    GENERATED_BODY();
+
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<FPubnubUserMentionData> UserMentions;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool IsMore;
+
+    FPubnubUserMentionDataList() = default;
+    FPubnubUserMentionDataList(Pubnub::UserMentionDataList& MentionDataList) :
+    IsMore(MentionDataList.is_more)
+    {
+        auto CppUserMentions = MentionDataList.user_mention_data.into_std_vector();
+        for(auto UserMention : CppUserMentions)
+        {
+            UserMentions.Add(UserMention);
+        }
+    }
+};
+// <--
+
 /**
  * 
  */
@@ -257,6 +300,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Messages")
 	FPubnubMarkMessagesAsReadWrapper MarkAllMessagesAsRead(FString Filter = "", FString Sort = "", int Limit = 0, FPubnubPage Page = FPubnubPage());
 
+    UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Messages")
+    FPubnubUserMentionDataList GetCurrentUserMentions(FString StartTimetoken = "", FString EndTimetoken = "", int Count = 100);
 	
     /* THREADS */
 	
