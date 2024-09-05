@@ -95,6 +95,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub User")
 	UPubnubCallbackStop* StreamUpdatesOn(TArray<UPubnubUser*> Users, FOnPubnubUsersStreamUpdateOnReceived UserUpdateCallback);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub User")
+	bool Active();
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub User")
+	FString LastActiveTimestamp();
 	
 	//Internal usage only
 	Pubnub::User* GetInternalUser(){return InternalUser;};

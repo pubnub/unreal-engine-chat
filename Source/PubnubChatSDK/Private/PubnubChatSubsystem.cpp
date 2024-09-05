@@ -29,6 +29,8 @@ UPubnubChat* UPubnubChatSubsystem::InitChat(FString PublishKey, FString Subscrib
 	CppConfig.auth_key = UPubnubChatUtilities::FStringToPubnubString(Config.AuthKey);
 	CppConfig.typing_timeout = Config.TypingTimeout;
 	CppConfig.typing_timeout_difference = Config.TypingTimeoutDifference;
+	CppConfig.store_user_activity_interval = Config.StoreUserActivityInterval;
+	CppConfig.store_user_activity_timestamps = Config.StoreUserActivityTimestamps;
 	try
 	{
 		Chat = UPubnubChat::Create(Pubnub::Chat::init(UPubnubChatUtilities::FStringToPubnubString(PublishKey),

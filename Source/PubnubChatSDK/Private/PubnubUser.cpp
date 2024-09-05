@@ -272,6 +272,22 @@ UPubnubCallbackStop* UPubnubUser::StreamUpdatesOn(TArray<UPubnubUser*> Users, FO
 	return nullptr;
 }
 
+bool UPubnubUser::Active()
+{
+	if(!IsInternalUserValid()) {return false;}
+
+	return InternalUser->active();
+}
+
+FString UPubnubUser::LastActiveTimestamp()
+{
+	if(!IsInternalUserValid()) {return "";}
+
+	auto TimestampOpt =  InternalUser->last_active_timestamp();
+
+	return UPubnubChatUtilities::PubnubStringToFString(TimestampOpt.value_or(""));
+}
+
 bool UPubnubUser::IsInternalUserValid()
 {
 	if(InternalUser == nullptr)
