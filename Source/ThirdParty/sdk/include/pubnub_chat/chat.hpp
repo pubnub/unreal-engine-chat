@@ -42,6 +42,8 @@ namespace Pubnub {
         Pubnub::String auth_key = "";
         int typing_timeout = 5000;
         int typing_timeout_difference = 1000;
+        int store_user_activity_interval = 600000;
+        bool store_user_activity_timestamps = false;
     };
 
     struct CreatedChannelWrapper
@@ -161,6 +163,7 @@ namespace Pubnub {
 
         private:
             Chat(const Pubnub::String& publish_key, const Pubnub::String& subscribe_key, const Pubnub::String& user_id, const ChatConfig& config);
+            void store_user_activity_timestamp() const;
 
             std::shared_ptr<const ChatService> chat_service;
             std::shared_ptr<const ChannelService> channel_service;
