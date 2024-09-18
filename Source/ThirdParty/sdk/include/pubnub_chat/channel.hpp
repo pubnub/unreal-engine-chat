@@ -1,6 +1,7 @@
 #ifndef PN_CHAT_CHANNEL_HPP
 #define PN_CHAT_CHANNEL_HPP
 
+#include "event.hpp"
 #include "string.hpp"
 #include "helpers/export.hpp"
 #include "restrictions.hpp"
@@ -36,6 +37,7 @@ namespace Pubnub
     class Membership;
     class User;
     class MessageDraft;
+    struct EventsHistoryWrapper;
 
     struct ChatChannelData
     {
@@ -119,6 +121,11 @@ namespace Pubnub
             PN_CHAT_EXPORT CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::Channel> channels, std::function<void(Pubnub::Vector<Pubnub::Channel>)> channel_callback);
             PN_CHAT_EXPORT CallbackStop stream_presence(std::function<void(Pubnub::Vector<Pubnub::String>)> presence_callback) const;
             PN_CHAT_EXPORT CallbackStop stream_read_receipts(std::function<void(Pubnub::Map<Pubnub::String, Pubnub::Vector<Pubnub::String>, Pubnub::StringComparer>)> read_receipts_callback) const;
+
+            PN_CHAT_EXPORT Pubnub::EventsHistoryWrapper get_messsage_reports_history(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 100) const;
+#ifndef PN_CHAT_C_ABI
+            PN_CHAT_EXPORT CallbackStop stream_message_reports(std::function<void(const Pubnub::Event&)> event_callback) const;
+#endif
 
             PN_CHAT_EXPORT Pubnub::MessageDraft create_message_draft(Pubnub::MessageDraftConfig message_draft_config = Pubnub::MessageDraftConfig()) const;
 

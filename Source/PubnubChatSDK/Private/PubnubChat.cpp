@@ -7,9 +7,10 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubCallbackStop.h"
 #include "PubnubAccessManager.h"
+#include "Async/Async.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
-DEFINE_LOG_CATEGORY(PubnubLog)
+DEFINE_LOG_CATEGORY(PubnubChatLog)
 
 
 UPubnubChat* UPubnubChat::Create(Pubnub::Chat Chat)
@@ -28,7 +29,7 @@ UPubnubChannel* UPubnubChat::CreatePublicConversation(FString ChannelID, FPubnub
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Create Public Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Create Public Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -44,7 +45,7 @@ FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnub
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Create Group Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Create Group Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubCreatedChannelWrapper();
 }
@@ -59,7 +60,7 @@ FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* 
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Create Direct Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Create Direct Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubCreatedChannelWrapper();
 }
@@ -73,7 +74,7 @@ UPubnubChannel* UPubnubChat::GetChannel(FString ChannelID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -89,7 +90,7 @@ FPubnubChannelsResponseWrapper UPubnubChat::GetChannels(FString Filter, FString 
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Channels error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Channels error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubChannelsResponseWrapper();
 }
@@ -104,7 +105,7 @@ UPubnubChannel* UPubnubChat::UpdateChannel(FString ChannelID, FPubnubChatChannel
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Update Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Update Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -117,7 +118,7 @@ void UPubnubChat::DeleteChannel(FString ChannelID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Delete Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Delete Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -129,7 +130,7 @@ void UPubnubChat::PinMessageToChannel(UPubnubMessage* Message, UPubnubChannel* C
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Pin Message to Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Pin Message to Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -141,7 +142,7 @@ void UPubnubChat::UnpinMessageFromChannel(UPubnubChannel* Channel)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Unpin Message from Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Unpin Message from Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -155,7 +156,7 @@ TArray<UPubnubChannel*> UPubnubChat::GetChannelSuggestions(FString Text, int Lim
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Channel Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Channel Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -169,7 +170,7 @@ UPubnubUser* UPubnubChat::CurrentUser()
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Current User error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Current User error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -183,7 +184,7 @@ UPubnubUser* UPubnubChat::CreateUser(FString UserID, FPubnubChatUserData UserDat
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Create User error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Create User error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -197,7 +198,7 @@ UPubnubUser* UPubnubChat::GetUser(FString UserID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get User error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get User error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -212,7 +213,7 @@ FPubnubUsersResponseWrapper UPubnubChat::GetUsers(FString Filter, FString Sort, 
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Users error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Users error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubUsersResponseWrapper();
 }
@@ -226,7 +227,7 @@ UPubnubUser* UPubnubChat::UpdateUser(FString UserID, FPubnubChatUserData UserDat
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Update User error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Update User error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -239,7 +240,7 @@ void UPubnubChat::DeleteUser(FString UserID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Delete User error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Delete User error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -253,7 +254,7 @@ TArray<UPubnubUser*> UPubnubChat::GetUserSuggestions(FString Text, int Limit)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get User Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get User Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -271,7 +272,7 @@ TArray<FString> UPubnubChat::WherePresent(FString UserID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Where Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Where Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -289,7 +290,7 @@ TArray<FString> UPubnubChat::WhoIsPresent(FString ChannelID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Who is Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Who is Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -302,7 +303,7 @@ bool UPubnubChat::IsPresent(FString UserID, FString ChannelID)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Is Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Is Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -315,7 +316,7 @@ void UPubnubChat::SetRestrictions(FString UserID, FString ChannelID, FPubnubRest
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Set Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Set Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -327,7 +328,7 @@ void UPubnubChat::EmitChatEvent(EPubnubChatEventType ChatEventType, FString Chan
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Emit Chat Event error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Emit Chat Event error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -348,7 +349,7 @@ UPubnubCallbackStop* UPubnubChat::ListenForEvents(FString ChannelID, EPubnubChat
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Listen for Events error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Listen for Events error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -358,12 +359,12 @@ FPubnubEventsHistoryWrapper UPubnubChat::GetEventsHistory(FString ChannelID, FSt
 	try
 	{
 		auto CppWrapper = InternalChat->get_events_history(UPubnubChatUtilities::FStringToPubnubString(ChannelID), UPubnubChatUtilities::FStringToPubnubString(StartTimetoken), UPubnubChatUtilities::FStringToPubnubString(EndTimetoken), Count);
-		auto UEWrappe = FPubnubEventsHistoryWrapper(CppWrapper);
-		return CppWrapper;
+		auto UEWrapper = FPubnubEventsHistoryWrapper(CppWrapper);
+		return UEWrapper;
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Events History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Events History error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubEventsHistoryWrapper();
 }
@@ -376,7 +377,7 @@ void UPubnubChat::ForwardMessage(UPubnubChannel* Channel, UPubnubMessage* Messag
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Forward Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Forward Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -397,7 +398,7 @@ TArray<FPubnubUnreadMessageWrapper> UPubnubChat::GetUnreadMessagesCounts(FString
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Unread Messages Counts error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Unread Messages Counts error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -412,7 +413,7 @@ FPubnubMarkMessagesAsReadWrapper UPubnubChat::MarkAllMessagesAsRead(FString Filt
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Mark All Messages as Read error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Mark All Messages as Read error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubMarkMessagesAsReadWrapper();
 }
@@ -426,7 +427,7 @@ FPubnubUserMentionDataList UPubnubChat::GetCurrentUserMentions(FString StartTime
 
         return FinalList;
     } catch (std::exception& Exception) {
-        UE_LOG(PubnubLog, Error, TEXT("Get Current User Mentions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+        UE_LOG(PubnubChatLog, Error, TEXT("Get Current User Mentions error: %s"), UTF8_TO_TCHAR(Exception.what()));
     }
     return FPubnubUserMentionDataList();
 }
@@ -440,7 +441,7 @@ UPubnubThreadChannel* UPubnubChat::CreateThreadChannel(UPubnubMessage* Message)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Create Thread Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Create Thread Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -454,7 +455,7 @@ UPubnubThreadChannel* UPubnubChat::GetThreadChannel(UPubnubMessage* Message)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Get Thread Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Thread Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -467,7 +468,7 @@ void UPubnubChat::RemoveThreadChannel(UPubnubMessage* Message)
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Remove Thread Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Remove Thread Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 

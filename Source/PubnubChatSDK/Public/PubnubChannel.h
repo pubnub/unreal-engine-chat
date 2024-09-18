@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelsStreamUpdateOnReceived, const
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelStreamPresenceReceived, const TArray<FString>&, PresentUsersIDs);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelTypingReceived, const TArray<FString>&, TypingUsersIDs);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelStreamReadReceiptsReceived, FPubnubReadReceiptsWrapper, Receipts);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubStreamMessageReportsReceived, FPubnubEvent, Event);
 
 
 USTRUCT(BlueprintType)
@@ -28,13 +29,13 @@ struct FSendTextParams
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool StoreInHistory = true;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool SendByPost = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TMap<int, FPubnubMentionedUser> MentionedUsers;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TMap<int, FPubnubReferencedChannel> ReferencedChannels;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<FPubnubTextLink> TextLinks;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) UPubnubMessage* QuotedMessage;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubMentionedUser> MentionedUsers;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubReferencedChannel> ReferencedChannels;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubTextLink> TextLinks;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
 
 	FSendTextParams() = default;
 
@@ -47,10 +48,10 @@ struct FPubnubMembersResponseWrapper
 {
 	GENERATED_BODY();
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<UPubnubMembership*> Memberships;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) int Total;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Status;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubMembership*> Memberships;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status;
 
 	FPubnubMembersResponseWrapper() = default;
 	FPubnubMembersResponseWrapper(Pubnub::MembersResponseWrapper& Wrapper);
@@ -62,14 +63,34 @@ struct FPubnubUsersRestrictionsWrapper
 {
 	GENERATED_BODY();
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<FPubnubUserRestriction> Restrictions;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) int Total;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Status;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubUserRestriction> Restrictions;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status;
 
 	FPubnubUsersRestrictionsWrapper() = default;
 	FPubnubUsersRestrictionsWrapper(Pubnub::UsersRestrictionsWrapper& Wrapper);
 	
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubMessageReportsHistoryWrapper
+{
+	GENERATED_BODY();
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubEvent> Events;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore;
+
+	FPubnubMessageReportsHistoryWrapper() = default;
+	FPubnubMessageReportsHistoryWrapper(Pubnub::EventsHistoryWrapper& Wrapper) :
+	IsMore(Wrapper.is_more)
+	{
+		auto CppEvents = Wrapper.events.into_std_vector();
+		for(auto Event : CppEvents)
+		{
+			Events.Add(Event);
+		}
+	}
 };
 
 
@@ -181,6 +202,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	UPubnubCallbackStop* StreamReadReceipts(FOnPubnubChannelStreamReadReceiptsReceived ReadReceiptsCallback);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
+	UPubnubCallbackStop* StreamMessageReports(FOnPubnubStreamMessageReportsReceived MessageReportsCallback);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
+	FPubnubMessageReportsHistoryWrapper GetMessageReportsHistory(FString StartTimetoken, FString EndTimetoken, int Count = 100);
 	
 	
 	//Internal usage only

@@ -18,11 +18,13 @@ public class ChatSDKModule : ModuleRules
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			string BuildLocation = "lib/win64";
-			PublicDelayLoadDLLs.Add("pubnub-chat.dll");
+			
 			PublicAdditionalLibraries.Add(Path.Combine(SDKPath, BuildLocation, "pubnub-chat.lib"));
 			
+			PublicDelayLoadDLLs.Add("pubnub-chat.dll");
+			
 			// Ensure that the DLL is staged along with the executable
-			RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/ChatSDKModule/Win64/pubnub-chat.dll");
+			RuntimeDependencies.Add("$(PluginDir)/Source/ThirdParty/sdk/lib/win64/pubnub-chat.dll");
 		}
 		else if(Target.Platform == UnrealTargetPlatform.Mac)
 		{

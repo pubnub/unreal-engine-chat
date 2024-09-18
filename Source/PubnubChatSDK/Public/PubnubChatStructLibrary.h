@@ -15,7 +15,7 @@ struct FPubnubStringArrayWrapper
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<FString> Strings;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FString> Strings;
 	
 };
 
@@ -23,7 +23,7 @@ USTRUCT(BlueprintType)
 struct FPubnubReadReceiptsWrapper
 {
 	GENERATED_BODY()
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TMap<FString, FPubnubStringArrayWrapper> Receipts;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<FString, FPubnubStringArrayWrapper> Receipts;
 	
 };
 
@@ -32,12 +32,12 @@ struct FPubnubChatChannelData
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ChannelName = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Description = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString CustomDataJson = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Updated = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Status = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Type = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelName = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Description = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString CustomDataJson = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Updated = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Type = "";
 
 	FPubnubChatChannelData() = default;
 	FPubnubChatChannelData(Pubnub::ChatChannelData ChatChannelData) :
@@ -69,13 +69,13 @@ struct FPubnubChatUserData
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserName = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ExternalID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ProfileUrl = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Email = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString CustomDataJson = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Status = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Type = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserName = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ExternalID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ProfileUrl = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Email = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString CustomDataJson = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Type = "";
 
 	FPubnubChatUserData() = default;
 	FPubnubChatUserData(Pubnub::ChatUserData ChatUserData) :
@@ -109,10 +109,10 @@ struct FPubnubMessageAction
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) EPubnubMessageActionType Type = EPubnubMessageActionType::PMAT_Reaction;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Value = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Timetoken = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubMessageActionType Type = EPubnubMessageActionType::PMAT_Reaction;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Value = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Timetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
 
 	FPubnubMessageAction() = default;
 	FPubnubMessageAction(Pubnub::MessageAction& MessageAction) :
@@ -140,12 +140,12 @@ struct FPubnubChatMessageData
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) EPubnubChatMessageType Type = EPubnubChatMessageType::PCMT_TEXT;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Text = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ChannelID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<FPubnubMessageAction> MessageActions;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubChatMessageType Type = EPubnubChatMessageType::PCMT_TEXT;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Text = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubMessageAction> MessageActions;
 
 	FPubnubChatMessageData() = default;
 	FPubnubChatMessageData(Pubnub::ChatMessageData& ChatMessageData) :
@@ -193,9 +193,9 @@ struct FPubnubRestriction
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool Ban = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool Mute = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Reason = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool Ban = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool Mute = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Reason = "";
 
 	FPubnubRestriction() = default;
 	FPubnubRestriction(Pubnub::Restriction Restriction) :
@@ -222,10 +222,10 @@ struct FPubnubChannelRestriction
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool Ban = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool Mute = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Reason = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool Ban = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool Mute = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Reason = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
 
 	FPubnubChannelRestriction() = default;
 	FPubnubChannelRestriction(Pubnub::ChannelRestriction Restriction) :
@@ -255,10 +255,10 @@ struct FPubnubUserRestriction
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool Ban = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) bool Mute = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Reason = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool Ban = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool Mute = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Reason = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
 
 	FPubnubUserRestriction() = default;
 	FPubnubUserRestriction(Pubnub::UserRestriction Restriction) :
@@ -288,8 +288,8 @@ struct FPubnubPage
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Next = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Prev = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Next = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Prev = "";
 
 	FPubnubPage() = default;
 	FPubnubPage(Pubnub::Page& Page) :
@@ -314,8 +314,8 @@ struct FPubnubMentionedUser
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Name = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Name = "";
 
 	FPubnubMentionedUser() = default;
 	FPubnubMentionedUser(Pubnub::MentionedUser MentionedUser) :
@@ -339,8 +339,8 @@ struct FPubnubReferencedChannel
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Name = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Name = "";
 
 	FPubnubReferencedChannel() = default;
 	FPubnubReferencedChannel(Pubnub::ReferencedChannel ReferencedChannel) :
@@ -364,9 +364,9 @@ struct FPubnubTextLink
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) int Start_Index = 0;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) int End_Index = 0;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Link = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Start_Index = 0;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int End_Index = 0;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Link = "";
 
 	FPubnubTextLink() = default;
 	FPubnubTextLink(Pubnub::TextLink& TextLink) :
@@ -392,11 +392,11 @@ struct FPubnubEvent
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Timetoken = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) EPubnubChatEventType Type;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString ChannelID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString UserID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Payload = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Timetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubChatEventType Type;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Payload = "";
 
 	FPubnubEvent() = default;
 	FPubnubEvent(Pubnub::Event event) :

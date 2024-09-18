@@ -26,7 +26,7 @@ UPubnubMessage* UPubnubThreadChannel::GetParentMessage()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Get Parent Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Get Parent Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -41,7 +41,7 @@ FString UPubnubThreadChannel::GetParentChannelID()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Get Parent Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Get Parent Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -59,7 +59,7 @@ TArray<UPubnubThreadMessage*> UPubnubThreadChannel::GetThreadHistory(int Limit, 
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Get Thread History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Get Thread History error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -74,7 +74,7 @@ UPubnubThreadChannel* UPubnubThreadChannel::PinMessageToThread(UPubnubThreadMess
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Pin Message To Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Pin Message To Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -89,7 +89,7 @@ UPubnubThreadChannel* UPubnubThreadChannel::UnpinMessageFromThread()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Unpin Message from Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Unpin Message from Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -104,7 +104,7 @@ UPubnubChannel* UPubnubThreadChannel::PinMessageToParentChannel(UPubnubThreadMes
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Pin Message To Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Pin Message To Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -119,7 +119,7 @@ UPubnubChannel* UPubnubThreadChannel::UnpinMessageFromParentChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Channel Unpin Message From Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Unpin Message From Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -134,7 +134,7 @@ bool UPubnubThreadChannel::IsInternalThreadChannelValid()
 {
 	if(GetInternalThreadChannel() == nullptr)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("This PubnubChannel is invalid"));
+		UE_LOG(PubnubChatLog, Error, TEXT("This PubnubChannel is invalid"));
 		return false;
 	}
 	return true;
