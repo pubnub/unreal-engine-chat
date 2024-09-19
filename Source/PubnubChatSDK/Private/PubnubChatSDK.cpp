@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2024 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChatSDK.h"
 #include "Core.h"
@@ -15,12 +15,8 @@ void FPubnubChatSDKModule::StartupModule()
 	FString LibraryPath;
 	
 #if PLATFORM_WINDOWS
-#if WITH_EDITOR
-	LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/sdk/lib/win64/pubnub-chat.dll"));
-#else
-	BaseDir = UKismetSystemLibrary::GetProjectDirectory();
-	LibraryPath = FPaths::Combine(*BaseDir, TEXT("Binaries/ThirdParty/ChatSDKModule/Win64/pubnub-chat.dll"));
-#endif
+
+	LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/sdk/lib/Win64/pubnub-chat.dll"));
 
 #elif PLATFORM_MAC
 	LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dylib"));
@@ -47,4 +43,4 @@ void FPubnubChatSDKModule::ShutdownModule()
 
 #undef LOCTEXT_NAMESPACE
 	
-IMPLEMENT_MODULE(FPubnubChatSDKModule, PubnubChat)
+IMPLEMENT_MODULE(FPubnubChatSDKModule, PubnubChatSDK)

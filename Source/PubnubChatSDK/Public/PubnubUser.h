@@ -20,10 +20,10 @@ struct FPubnubMembershipsResponseWrapper
 {
 	GENERATED_BODY();
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<UPubnubMembership*> Memberships;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) int Total;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Status;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubMembership*> Memberships;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status;
 
 	FPubnubMembershipsResponseWrapper() = default;
 	FPubnubMembershipsResponseWrapper(Pubnub::MembershipsResponseWrapper& Wrapper);
@@ -35,10 +35,10 @@ struct FPubnubChannelsRestrictionsWrapper
 {
 	GENERATED_BODY();
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) TArray<FPubnubChannelRestriction> Restrictions;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) int Total;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere) FString Status;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubChannelRestriction> Restrictions;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status;
 
 	FPubnubChannelsRestrictionsWrapper() = default;
 	FPubnubChannelsRestrictionsWrapper(Pubnub::ChannelsRestrictionsWrapper& Wrapper);

@@ -21,7 +21,7 @@ UPubnubChat* UPubnubChatSubsystem::InitChat(FString PublishKey, FString Subscrib
 {
 	if(Chat != nullptr)
 	{
-		UE_LOG(PubnubLog, Warning, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Char"));
+		UE_LOG(PubnubChatLog, Warning, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Char"));
 		return Chat;
 	}
 	
@@ -39,7 +39,7 @@ UPubnubChat* UPubnubChatSubsystem::InitChat(FString PublishKey, FString Subscrib
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Can't create chat. Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't create chat. Error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 	
@@ -49,7 +49,7 @@ UPubnubChat* UPubnubChatSubsystem::GetChat()
 {
 	if(Chat == nullptr)
 	{
-		UE_LOG(PubnubLog, Warning, TEXT("Chat doesn't exist. Call 'Create Chat' instead"));
+		UE_LOG(PubnubChatLog, Warning, TEXT("Chat doesn't exist. Call 'Create Chat' instead"));
 		return nullptr;
 	}
 

@@ -19,7 +19,7 @@ public:
 	static UPubnubCallbackStop* Create(Pubnub::CallbackStop CallbackStop);
 	~UPubnubCallbackStop();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "CallbackStop")
 	void Stop();
 
 protected:

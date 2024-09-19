@@ -6,6 +6,7 @@
 #include "PubnubChannel.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubCallbackStop.h"
+#include "Async/Async.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 
@@ -27,7 +28,7 @@ FString UPubnubThreadMessage::GetParentChannelID()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Message Get Parent Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Get Parent Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -42,7 +43,7 @@ UPubnubChannel* UPubnubThreadMessage::PinToParentChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Message Pin To Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Pin To Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -57,7 +58,7 @@ UPubnubChannel* UPubnubThreadMessage::UnpinFromParentChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Message Unpin From Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Unpin From Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -92,7 +93,7 @@ UPubnubCallbackStop* UPubnubThreadMessage::StreamThreadMessageUpdatesOn(TArray<U
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("Thread Message Stream Thread Message Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Stream Thread Message Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -106,7 +107,7 @@ bool UPubnubThreadMessage::IsInternalThreadMessageValid()
 {
 	if(GetInternalThreadMessage() == nullptr)
 	{
-		UE_LOG(PubnubLog, Error, TEXT("This PubnubMessage is invalid"));
+		UE_LOG(PubnubChatLog, Error, TEXT("This PubnubMessage is invalid"));
 		return false;
 	}
 	return true;
