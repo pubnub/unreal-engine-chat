@@ -14,8 +14,8 @@ UPubnubMembership* UPubnubMembership::Create(Pubnub::Membership Membership)
 {
 	UPubnubMembership* NewMembership = NewObject<UPubnubMembership>();
 	NewMembership->InternalMembership = new Pubnub::Membership(Membership);
-	Channel = UPubnubChannel::Create(Membership.channel);
-	User = UPubnubUser::Create(Membership.user);
+	NewMembership->Channel = UPubnubChannel::Create(Membership.channel);
+	NewMembership->User = UPubnubUser::Create(Membership.user);
 	return NewMembership;
 }
 

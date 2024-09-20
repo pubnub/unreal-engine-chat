@@ -62,8 +62,10 @@ public:
 
 private:
 	Pubnub::Membership* InternalMembership;
-	static inline UPubnubChannel* Channel = nullptr;
-	static inline UPubnubUser* User = nullptr;
+	UPROPERTY()
+	UPubnubChannel* Channel = nullptr;
+	UPROPERTY()
+	UPubnubUser* User = nullptr;
 	
 	bool IsInternalMembershipValid();
 	
