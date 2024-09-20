@@ -2,23 +2,31 @@
 	"FileVersion": 3,
 	"Version": 3,
 	"VersionName": "0.1.2",
-	"FriendlyName": "PubnubChatSDK",
-	"Description": "",
-	"Category": "Other",
-	"CreatedBy": "",
-	"CreatedByURL": "",
-	"DocsURL": "",
+	"FriendlyName": "Pubnub Chat SDK",
+	"Description": "Quickly and easily integrate a real-time text chat solution that is reliable, flexible, and scalable.",
+	"Category": "Code",
+	"CreatedBy": "PubNub Inc.",
+	"CreatedByURL": "https://www.pubnub.com/",
+	"DocsURL": "https://www.pubnub.com/docs/chat/unreal-chat-sdk/overview",
 	"MarketplaceURL": "",
 	"SupportURL": "",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": false,
+	"SupportedTargetPlatforms": [
+		"Win64",
+		"Mac"
+	],
 	"Modules": [
 		{
 			"Name": "PubnubChatSDK",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac"
+			]
 		}
 	]
 }
