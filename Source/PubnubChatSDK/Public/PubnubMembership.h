@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2024 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -62,8 +62,10 @@ public:
 
 private:
 	Pubnub::Membership* InternalMembership;
-	static inline UPubnubChannel* Channel = nullptr;
-	static inline UPubnubUser* User = nullptr;
+	UPROPERTY()
+	UPubnubChannel* Channel = nullptr;
+	UPROPERTY()
+	UPubnubUser* User = nullptr;
 	
 	bool IsInternalMembershipValid();
 	

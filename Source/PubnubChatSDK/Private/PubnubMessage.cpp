@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2024 PubNub Inc. All Rights Reserved.
 
 
 #include "PubnubMessage.h"
