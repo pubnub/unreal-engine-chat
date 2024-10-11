@@ -11,6 +11,7 @@
 #include "PubnubChat.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubEventReceived, FPubnubEvent, Event);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPubnubChatDestroyed);
 
 class UPubnubChannel;
 class UPubnubUser;
@@ -208,8 +209,19 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	
 public:
 	static UPubnubChat* Create(Pubnub::Chat Chat);
-	~UPubnubChat(){delete InternalChat;}
+	~UPubnubChat()
+	{
+		if(InternalChat)
+		{
+			delete InternalChat;
+		}
+	}
 
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat")
+	FOnPubnubChatDestroyed OnChatDestroyed;
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat")
+	void DestroyChat();
 	
 		/* CHANNELS */
 	
@@ -327,6 +339,7 @@ public:
     
     
 private:
-	Pubnub::Chat* InternalChat;
+	bool IsInternalChatValid();
+	Pubnub::Chat* InternalChat = nullptr;
 
 };
