@@ -35,6 +35,9 @@ UPubnubChat* UPubnubChatSubsystem::InitChat(FString PublishKey, FString Subscrib
 	{
 		Chat = UPubnubChat::Create(Pubnub::Chat::init(UPubnubChatUtilities::FStringToPubnubString(PublishKey),
 	UPubnubChatUtilities::FStringToPubnubString(SubscribeKey),UPubnubChatUtilities::FStringToPubnubString(UserID), CppConfig));
+		//Bind OnChatDestroyed, so Subsystem can clear a variable when Chat is destroyed manually by an user
+		Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+		
 		return Chat;
 	}
 	catch (std::exception& Exception)
@@ -54,4 +57,22 @@ UPubnubChat* UPubnubChatSubsystem::GetChat()
 	}
 
 	return Chat;
+}
+
+void UPubnubChatSubsystem::DestroyChat()
+{
+	if(Chat == nullptr)
+	{
+		UE_LOG(PubnubChatLog, Warning, TEXT("Can't destroy chat as it doesn't exists"));
+		return;
+	}
+	
+	Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+	Chat->DestroyChat();
+	Chat = nullptr;
+}
+
+void UPubnubChatSubsystem::OnChatDestroyed()
+{
+	Chat = nullptr;
 }

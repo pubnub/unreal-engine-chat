@@ -40,7 +40,13 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat")
 	UPubnubChat* GetChat();
 
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat")
+	void DestroyChat();
+
 private:
+	UPROPERTY()
 	UPubnubChat* Chat = nullptr;
+	UFUNCTION()
+	void OnChatDestroyed();
 
 };

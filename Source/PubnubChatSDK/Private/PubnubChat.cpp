@@ -20,8 +20,17 @@ UPubnubChat* UPubnubChat::Create(Pubnub::Chat Chat)
 	return NewChat;
 }
 
+void UPubnubChat::DestroyChat()
+{
+	delete InternalChat;
+	InternalChat = nullptr;
+	OnChatDestroyed.Broadcast();
+}
+
 UPubnubChannel* UPubnubChat::CreatePublicConversation(FString ChannelID, FPubnubChatChannelData ChannelData)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto channel = InternalChat->create_public_conversation(UPubnubChatUtilities::FStringToPubnubString(ChannelID), ChannelData.GetCppChatChannelData());
@@ -36,6 +45,8 @@ UPubnubChannel* UPubnubChat::CreatePublicConversation(FString ChannelID, FPubnub
 
 FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData)
 {
+	if(!IsInternalChatValid()) {return FPubnubCreatedChannelWrapper();}
+	
 	try
 	{
 		auto CppUsers = UPubnubChatUtilities::UnrealUsersToCppUsers(Users);
@@ -52,6 +63,8 @@ FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnub
 
 FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData)
 {
+	if(!IsInternalChatValid()) {return FPubnubCreatedChannelWrapper();}
+	
 	try
 	{
 		auto CppWrapper = InternalChat->create_direct_conversation(*User->GetInternalUser(), UPubnubChatUtilities::FStringToPubnubString(ChannelID), ChannelData.GetCppChatChannelData(), UPubnubChatUtilities::FStringToPubnubString(MembershipData));
@@ -67,6 +80,8 @@ FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* 
 
 UPubnubChannel* UPubnubChat::GetChannel(FString ChannelID)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto channel = InternalChat->get_channel(UPubnubChatUtilities::FStringToPubnubString(ChannelID));
@@ -81,6 +96,8 @@ UPubnubChannel* UPubnubChat::GetChannel(FString ChannelID)
 
 FPubnubChannelsResponseWrapper UPubnubChat::GetChannels(FString Filter, FString Sort, int Limit, FPubnubPage Page)
 {
+	if(!IsInternalChatValid()) {return FPubnubChannelsResponseWrapper();}
+	
 	try
 	{
 		TArray<UPubnubChannel*> FinalChannels;
@@ -97,6 +114,8 @@ FPubnubChannelsResponseWrapper UPubnubChat::GetChannels(FString Filter, FString 
 
 UPubnubChannel* UPubnubChat::UpdateChannel(FString ChannelID, FPubnubChatChannelData ChannelData)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto new_channel_data = ChannelData.GetCppChatChannelData();
@@ -112,6 +131,8 @@ UPubnubChannel* UPubnubChat::UpdateChannel(FString ChannelID, FPubnubChatChannel
 
 void UPubnubChat::DeleteChannel(FString ChannelID)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->delete_channel(UPubnubChatUtilities::FStringToPubnubString(ChannelID));
@@ -124,6 +145,8 @@ void UPubnubChat::DeleteChannel(FString ChannelID)
 
 void UPubnubChat::PinMessageToChannel(UPubnubMessage* Message, UPubnubChannel* Channel)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->pin_message_to_channel(*Message->GetInternalMessage(), *Channel->GetInternalChannel());
@@ -136,6 +159,8 @@ void UPubnubChat::PinMessageToChannel(UPubnubMessage* Message, UPubnubChannel* C
 
 void UPubnubChat::UnpinMessageFromChannel(UPubnubChannel* Channel)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->unpin_message_from_channel(*Channel->GetInternalChannel());
@@ -148,6 +173,8 @@ void UPubnubChat::UnpinMessageFromChannel(UPubnubChannel* Channel)
 
 TArray<UPubnubChannel*> UPubnubChat::GetChannelSuggestions(FString Text, int Limit)
 {
+	if(!IsInternalChatValid()) {return {};}
+	
 	try
 	{
 		auto CppChannels = InternalChat->get_channel_suggestions(UPubnubChatUtilities::FStringToPubnubString(Text), Limit);
@@ -163,6 +190,8 @@ TArray<UPubnubChannel*> UPubnubChat::GetChannelSuggestions(FString Text, int Lim
 
 UPubnubUser* UPubnubChat::CurrentUser()
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto CppUser = InternalChat->current_user();
@@ -177,6 +206,8 @@ UPubnubUser* UPubnubChat::CurrentUser()
 
 UPubnubUser* UPubnubChat::CreateUser(FString UserID, FPubnubChatUserData UserData)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto CppUser = InternalChat->create_user(UPubnubChatUtilities::FStringToPubnubString(UserID), UserData.GetCppChatUserData());
@@ -191,6 +222,8 @@ UPubnubUser* UPubnubChat::CreateUser(FString UserID, FPubnubChatUserData UserDat
 
 UPubnubUser* UPubnubChat::GetUser(FString UserID)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto CppUser = InternalChat->get_user(UPubnubChatUtilities::FStringToPubnubString(UserID));
@@ -205,6 +238,8 @@ UPubnubUser* UPubnubChat::GetUser(FString UserID)
 
 FPubnubUsersResponseWrapper UPubnubChat::GetUsers(FString Filter, FString Sort, int Limit, FPubnubPage Page)
 {
+	if(!IsInternalChatValid()) {return FPubnubUsersResponseWrapper();}
+	
 	try
 	{
 		auto CppWrapper = InternalChat->get_users(UPubnubChatUtilities::FStringToPubnubString(Filter), UPubnubChatUtilities::FStringToPubnubString(Sort), Limit, Page.GetCppPage());
@@ -220,6 +255,8 @@ FPubnubUsersResponseWrapper UPubnubChat::GetUsers(FString Filter, FString Sort, 
 
 UPubnubUser* UPubnubChat::UpdateUser(FString UserID, FPubnubChatUserData UserData)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto CppUser = InternalChat->update_user(UPubnubChatUtilities::FStringToPubnubString(UserID), UserData.GetCppChatUserData());
@@ -234,6 +271,8 @@ UPubnubUser* UPubnubChat::UpdateUser(FString UserID, FPubnubChatUserData UserDat
 
 void UPubnubChat::DeleteUser(FString UserID)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->delete_user(UPubnubChatUtilities::FStringToPubnubString(UserID));
@@ -246,6 +285,8 @@ void UPubnubChat::DeleteUser(FString UserID)
 
 TArray<UPubnubUser*> UPubnubChat::GetUserSuggestions(FString Text, int Limit)
 {
+	if(!IsInternalChatValid()) {return {};}
+	
 	try
 	{
 		auto CppUsers = InternalChat->get_user_suggestions(UPubnubChatUtilities::FStringToPubnubString(Text), Limit);
@@ -261,6 +302,8 @@ TArray<UPubnubUser*> UPubnubChat::GetUserSuggestions(FString Text, int Limit)
 
 TArray<FString> UPubnubChat::WherePresent(FString UserID)
 {
+	if(!IsInternalChatValid()) {return {};}
+	
 	try
 	{
 		TArray<FString> PresentChannels;
@@ -279,6 +322,8 @@ TArray<FString> UPubnubChat::WherePresent(FString UserID)
 
 TArray<FString> UPubnubChat::WhoIsPresent(FString ChannelID)
 {
+	if(!IsInternalChatValid()) {return {};}
+	
 	try
 	{
 		TArray<FString> PresentUsers;
@@ -297,6 +342,8 @@ TArray<FString> UPubnubChat::WhoIsPresent(FString ChannelID)
 
 bool UPubnubChat::IsPresent(FString UserID, FString ChannelID)
 {
+	if(!IsInternalChatValid()) {return false;}
+	
 	try
 	{
 		return InternalChat->is_present(UPubnubChatUtilities::FStringToPubnubString(UserID), UPubnubChatUtilities::FStringToPubnubString(ChannelID));
@@ -310,6 +357,8 @@ bool UPubnubChat::IsPresent(FString UserID, FString ChannelID)
 
 void UPubnubChat::SetRestrictions(FString UserID, FString ChannelID, FPubnubRestriction Restrictions)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->set_restrictions(UPubnubChatUtilities::FStringToPubnubString(UserID), UPubnubChatUtilities::FStringToPubnubString(ChannelID), Restrictions.GetCppRestriction());
@@ -322,6 +371,8 @@ void UPubnubChat::SetRestrictions(FString UserID, FString ChannelID, FPubnubRest
 
 void UPubnubChat::EmitChatEvent(EPubnubChatEventType ChatEventType, FString ChannelID, FString Payload)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->emit_chat_event((Pubnub::pubnub_chat_event_type)(uint8)ChatEventType, UPubnubChatUtilities::FStringToPubnubString(ChannelID), UPubnubChatUtilities::FStringToPubnubString(Payload));
@@ -334,6 +385,8 @@ void UPubnubChat::EmitChatEvent(EPubnubChatEventType ChatEventType, FString Chan
 
 UPubnubCallbackStop* UPubnubChat::ListenForEvents(FString ChannelID, EPubnubChatEventType ChatEventType, FOnPubnubEventReceived EventCallback)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto lambda = [EventCallback](Pubnub::Event Event)
@@ -356,6 +409,8 @@ UPubnubCallbackStop* UPubnubChat::ListenForEvents(FString ChannelID, EPubnubChat
 
 FPubnubEventsHistoryWrapper UPubnubChat::GetEventsHistory(FString ChannelID, FString StartTimetoken, FString EndTimetoken, int Count)
 {
+	if(!IsInternalChatValid()) {return FPubnubEventsHistoryWrapper();}
+	
 	try
 	{
 		auto CppWrapper = InternalChat->get_events_history(UPubnubChatUtilities::FStringToPubnubString(ChannelID), UPubnubChatUtilities::FStringToPubnubString(StartTimetoken), UPubnubChatUtilities::FStringToPubnubString(EndTimetoken), Count);
@@ -371,6 +426,8 @@ FPubnubEventsHistoryWrapper UPubnubChat::GetEventsHistory(FString ChannelID, FSt
 
 void UPubnubChat::ForwardMessage(UPubnubChannel* Channel, UPubnubMessage* Message)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->forward_message(*Message->GetInternalMessage(), *Channel->GetInternalChannel());
@@ -383,6 +440,8 @@ void UPubnubChat::ForwardMessage(UPubnubChannel* Channel, UPubnubMessage* Messag
 
 TArray<FPubnubUnreadMessageWrapper> UPubnubChat::GetUnreadMessagesCounts(FString Filter, FString Sort, int Limit, FPubnubPage Page)
 {
+	if(!IsInternalChatValid()) {return {};}
+	
 	try
 	{
 		auto MessageWrappers = InternalChat->get_unread_messages_counts(UPubnubChatUtilities::FStringToPubnubString(Filter), UPubnubChatUtilities::FStringToPubnubString(Sort), Limit, Page.GetCppPage());
@@ -405,6 +464,8 @@ TArray<FPubnubUnreadMessageWrapper> UPubnubChat::GetUnreadMessagesCounts(FString
 
 FPubnubMarkMessagesAsReadWrapper UPubnubChat::MarkAllMessagesAsRead(FString Filter, FString Sort, int Limit, FPubnubPage Page)
 {
+	if(!IsInternalChatValid()) {return FPubnubMarkMessagesAsReadWrapper();}
+	
 	try
 	{
 		auto CppWrapper = InternalChat->mark_all_messages_as_read(UPubnubChatUtilities::FStringToPubnubString(Filter), UPubnubChatUtilities::FStringToPubnubString(Sort), Limit, Page.GetCppPage());
@@ -419,7 +480,10 @@ FPubnubMarkMessagesAsReadWrapper UPubnubChat::MarkAllMessagesAsRead(FString Filt
 }
 
 
-FPubnubUserMentionDataList UPubnubChat::GetCurrentUserMentions(FString StartTimetoken, FString EndTimetoken, int Count) {
+FPubnubUserMentionDataList UPubnubChat::GetCurrentUserMentions(FString StartTimetoken, FString EndTimetoken, int Count)
+{
+	if(!IsInternalChatValid()) {return FPubnubUserMentionDataList();}
+	
     try {
         auto list = InternalChat->get_current_user_mentions(UPubnubChatUtilities::FStringToPubnubString(StartTimetoken), UPubnubChatUtilities::FStringToPubnubString(EndTimetoken), Count);
 
@@ -434,6 +498,8 @@ FPubnubUserMentionDataList UPubnubChat::GetCurrentUserMentions(FString StartTime
 
 UPubnubThreadChannel* UPubnubChat::CreateThreadChannel(UPubnubMessage* Message)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto CppThread = InternalChat->create_thread_channel(*Message->GetInternalMessage());
@@ -448,6 +514,8 @@ UPubnubThreadChannel* UPubnubChat::CreateThreadChannel(UPubnubMessage* Message)
 
 UPubnubThreadChannel* UPubnubChat::GetThreadChannel(UPubnubMessage* Message)
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	try
 	{
 		auto CppThread = InternalChat->get_thread_channel(*Message->GetInternalMessage());
@@ -462,6 +530,8 @@ UPubnubThreadChannel* UPubnubChat::GetThreadChannel(UPubnubMessage* Message)
 
 void UPubnubChat::RemoveThreadChannel(UPubnubMessage* Message)
 {
+	if(!IsInternalChatValid()) {return;}
+	
 	try
 	{
 		InternalChat->remove_thread_channel(*Message->GetInternalMessage());
@@ -474,6 +544,18 @@ void UPubnubChat::RemoveThreadChannel(UPubnubMessage* Message)
 
 UPubnubAccessManager* UPubnubChat::GetAccessManager()
 {
+	if(!IsInternalChatValid()) {return nullptr;}
+	
 	return UPubnubAccessManager::Create(InternalChat->access_manager());
+}
+
+bool UPubnubChat::IsInternalChatValid()
+{
+	if(InternalChat == nullptr)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Chat is invalid. Are you trying to call functions on destroyed chat? Try creating new one."));
+		return false;
+	}
+	return true;
 }
 
