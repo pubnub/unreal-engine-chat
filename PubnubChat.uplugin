@@ -22,7 +22,7 @@
 		{
 			"Name": "PubnubChatSDK",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
+			"LoadingPhase": "PostEngineInit",
 			"PlatformAllowList": [
 				"Win64",
 				"Mac"
