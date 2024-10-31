@@ -142,12 +142,12 @@ namespace Pubnub
             
             Pubnub::String channel_id_internal;
             std::unique_ptr<ChannelDAO> data;
-            std::shared_ptr<const ChannelService> channel_service;
             std::shared_ptr<const ChatService> chat_service;
             std::shared_ptr<const PresenceService> presence_service;
             std::shared_ptr<const RestrictionsService> restrictions_service;
             std::shared_ptr<const MessageService> message_service;
             std::shared_ptr<const MembershipService> membership_service;
+            std::shared_ptr<const ChannelService> channel_service;
 
         friend class ::ChannelService;
 
