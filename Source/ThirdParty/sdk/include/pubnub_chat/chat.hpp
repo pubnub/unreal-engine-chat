@@ -38,12 +38,21 @@ class CallbackService;
 #endif
 
 namespace Pubnub {
+    struct ChannelRateLimits {
+        int direct_conversation = 0;
+        int group_conversation = 0;
+        int public_conversation = 0;
+        int unknown_conversation = 0;
+    };
+
     struct ChatConfig {
         Pubnub::String auth_key = "";
         int typing_timeout = 5000;
         int typing_timeout_difference = 1000;
         int store_user_activity_interval = 600000;
         bool store_user_activity_timestamps = false;
+        float rate_limit_factor = 1.2;
+        ChannelRateLimits rate_limit_per_channel;
     };
 
     struct CreatedChannelWrapper
@@ -166,12 +175,12 @@ namespace Pubnub {
             void store_user_activity_timestamp() const;
 
             std::shared_ptr<const ChatService> chat_service;
-            std::shared_ptr<const ChannelService> channel_service;
             std::shared_ptr<const UserService> user_service;
             std::shared_ptr<const PresenceService> presence_service;
             std::shared_ptr<const RestrictionsService> restrictions_service;
             std::shared_ptr<const MessageService> message_service;
             std::shared_ptr<const MembershipService> membership_service;
+            std::shared_ptr<const ChannelService> channel_service;
 #ifndef PN_CHAT_C_ABI
             std::shared_ptr<CallbackService> callback_service;
 #else
