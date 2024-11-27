@@ -432,6 +432,73 @@ namespace Pubnub {
        PN_CHAT_EXPORT void replace(std::size_t pos, std::size_t count, const String& string);
 
        /**
+        * Replaces all the occurrences of the character or sequence of characters with another character or sequence of characters.
+        *
+        * This method will reallocate the memory if the capacity is not enough to store the new character 
+        * or sequence of characters. The memory will be reallocated to the new size that is the length
+        * of the string plus the length of the new character or sequence of characters.
+        * The previous content of the string will be copied to the new memory.
+        *
+        * @see capacity 
+        * @see reserve 
+        *
+        * @param string The character or sequence of characters to replace.
+        * @param replacement The character or sequence of characters to replace with.
+        *
+        * Example:
+        * String string = "Hello, World!";
+        * string.replace_all("World!", "Universe!");
+        *
+        * // String { "Hello, Universe!" }
+        */
+       PN_CHAT_EXPORT void replace_all(const char* string, const char* replacement);
+
+       /**
+        * Replaces all the occurrences of the character or sequence of characters with another character or sequence of characters.
+        *
+        * This method will reallocate the memory if the capacity is not enough to store the new character 
+        * or sequence of characters. The memory will be reallocated to the new size that is the length
+        * of the string plus the length of the new character or sequence of characters.
+        * The previous content of the string will be copied to the new memory.
+        *
+        * @see capacity 
+        * @see reserve 
+        *
+        * @param string The character or sequence of characters to replace.
+        * @param replacement The character or sequence of characters to replace with.
+        *
+        * Example:
+        * String string = "Hello, World!";
+        * string.replace_all("World!", "Universe!");
+        *
+        * // String { "Hello, Universe!" }
+        */       
+       PN_CHAT_EXPORT void replace_all(const std::string& string, const std::string& replacement);
+
+       /**
+        * Replaces all the occurrences of the character or sequence of characters with another character or sequence of characters.
+        *
+        * This method will reallocate the memory if the capacity is not enough to store the new character 
+        * or sequence of characters. The memory will be reallocated to the new size that is the length
+        * of the string plus the length of the new character or sequence of characters.
+        * The previous content of the string will be copied to the new memory.
+        *
+        * @see capacity 
+        * @see reserve 
+        *
+        * @param string The character or sequence of characters to replace.
+        * @param replacement The character or sequence of characters to replace with.
+        *
+        * Example:
+        * String string = "Hello, World!";
+        * String universe = "Universe!";
+        * string.replace_all("World!", universe);
+        *
+        * // String { "Hello, Universe!" }
+        */
+       PN_CHAT_EXPORT void replace_all(const String& string, const String& replacement);
+
+       /**
         * Substring method that returns the substring of the string.
         *
         * This function creates a new String object that holds the substring of the string.

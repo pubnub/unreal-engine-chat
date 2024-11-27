@@ -86,7 +86,7 @@ namespace Pubnub {
              * }
              * @endcode
              */
-            bool has_value() {
+            bool has_value() const {
                 return this->maybe.has_value();
             };
 
@@ -106,7 +106,7 @@ namespace Pubnub {
              * }
              * @endcode
              */
-            T value() {
+            T value() const {
                 return this->maybe.value();
             };
 

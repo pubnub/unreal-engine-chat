@@ -11,7 +11,7 @@ supported_ue_versions = ["5.0.0", "5.1.0", "5.2.0", "5.3.0", "5.4.0"]
 print("Preparing files")
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-temporary_dir = current_dir + "/../Pubnub/"
+temporary_dir = current_dir + "/../PubnubChat/"
 
 shutil.copytree(current_dir, temporary_dir)
 

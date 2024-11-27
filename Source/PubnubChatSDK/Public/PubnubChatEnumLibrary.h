@@ -52,3 +52,11 @@ enum class EPubnubAccessManagerPermission : uint8
 	PAMP_JOIN				UMETA(DisplayName="Join"),
 	PAMP_UPDATE				UMETA(DisplayName="Update"),
 };
+
+UENUM(BlueprintType)
+enum class EPubnubMentionTargetType : uint8
+{
+	PMTT_User				UMETA(DisplayName="User"),
+	PMTT_Channel			UMETA(DisplayName="Channel"),
+	PMTT_Url				UMETA(DisplayName="Url")
+};
