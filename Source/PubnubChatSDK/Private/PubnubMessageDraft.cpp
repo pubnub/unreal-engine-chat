@@ -2,12 +2,12 @@
 
 
 #include "PubnubMessageDraft.h"
-#include "PubnubThreadChannel.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubCallbackStop.h"
 #include "PubnubChat.h"
 #include "Async/Async.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
+
 
 /* MENTION TARGET */
 
@@ -212,6 +212,88 @@ void UPubnubMessageDraft::Update(FString Text)
 	catch (std::exception& Exception)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Update Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+}
+
+void UPubnubMessageDraft::Send(FSendTextParams SendTextParams)
+{
+	if(!IsInternalMessageDraftValid()) {return;}
+
+	try
+	{
+		InternalMessageDraft->send(SendTextParams.GetCppSendTextParams());
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Send Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+}
+
+void UPubnubMessageDraft::AddChangeListener(FOnPubnubDraftUpdated DraftUpdateCallback)
+{
+	if(!IsInternalMessageDraftValid()) {return;}
+
+	try
+	{
+		auto lambda = [DraftUpdateCallback](Pubnub::Vector<Pubnub::MessageElement> MessageElements)
+		{
+			auto StdMessageElements = MessageElements.into_std_vector();
+			AsyncTask(ENamedThreads::GameThread, [DraftUpdateCallback, StdMessageElements]()
+			{
+				TArray<UPubnubMessageElement*> FinalMessageElements;
+			
+				for(auto CppMessageElement : StdMessageElements)
+				{
+					UPubnubMessageElement* NewMessageElement = UPubnubMessageElement::Create(CppMessageElement);
+					FinalMessageElements.Add(NewMessageElement);
+				}
+			
+				DraftUpdateCallback.ExecuteIfBound(FinalMessageElements);
+			});
+		};
+		InternalMessageDraft->add_change_listener(lambda);
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Add Change Listener Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+}
+
+void UPubnubMessageDraft::AddChangeListenerWithSuggestions(FOnPubnubDraftUpdatedWithSuggestions DraftUpdateCallback)
+{
+	if(!IsInternalMessageDraftValid()) {return;}
+
+	try
+	{
+		auto lambda = [DraftUpdateCallback](Pubnub::Vector<Pubnub::MessageElement> MessageElements , Pubnub::Vector<Pubnub::SuggestedMention> SuggestedMentions)
+		{
+			auto StdMessageElements = MessageElements.into_std_vector();
+			auto StdSuggestedMentions = SuggestedMentions.into_std_vector();
+			AsyncTask(ENamedThreads::GameThread, [DraftUpdateCallback, StdMessageElements, StdSuggestedMentions]()
+			{
+				TArray<UPubnubMessageElement*> FinalMessageElements;
+			
+				for(auto CppMessageElement : StdMessageElements)
+				{
+					UPubnubMessageElement* NewMessageElement = UPubnubMessageElement::Create(CppMessageElement);
+					FinalMessageElements.Add(NewMessageElement);
+				}
+
+				TArray<FPubnubSuggestedMention> FinalSuggestedMentions;
+			
+				for(auto CppSuggestedMention : StdSuggestedMentions)
+				{
+					FinalSuggestedMentions.Add(FPubnubSuggestedMention(CppSuggestedMention));
+				}
+			
+				DraftUpdateCallback.ExecuteIfBound(FinalMessageElements, FinalSuggestedMentions);
+			});
+		};
+		InternalMessageDraft->add_change_listener(lambda);
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Add Change Listener With Suggestions Error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 

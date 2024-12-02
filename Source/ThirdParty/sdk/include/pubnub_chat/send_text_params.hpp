@@ -13,8 +13,6 @@ namespace Pubnub {
         bool send_by_post = false;
         Pubnub::String meta = "";
         Pubnub::Map<int, Pubnub::MentionedUser> mentioned_users;
-        Pubnub::Map<int, Pubnub::ReferencedChannel> referenced_channels;
-        Pubnub::Vector<Pubnub::TextLink> text_links;
         Pubnub::Option<Pubnub::Message> quoted_message;
     };
 }

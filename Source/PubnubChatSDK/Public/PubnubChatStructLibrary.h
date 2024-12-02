@@ -409,3 +409,20 @@ struct FPubnubEvent
 	Payload(UPubnubChatUtilities::PubnubStringToFString(event.payload))
 	{};
 };
+
+USTRUCT(BlueprintType)
+struct FSendTextParams
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubMentionedUser> MentionedUsers;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
+
+	FSendTextParams() = default;
+
+	//Internal use only
+	Pubnub::SendTextParams GetCppSendTextParams();
+};

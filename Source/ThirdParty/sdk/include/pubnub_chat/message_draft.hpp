@@ -62,12 +62,6 @@ namespace Pubnub
         Pubnub::MentionTarget target;
     };
 
-    struct SuggestedMention2 {
-        std::size_t offset;
-        Pubnub::String replace_from;
-        Pubnub::String replace_to;
-    };
-
     PN_CHAT_EXPORT class MessageDraft {
         public:
             PN_CHAT_EXPORT enum class UserSuggestionsSource {
@@ -87,8 +81,8 @@ namespace Pubnub
             PN_CHAT_EXPORT void send(SendTextParams send_params = SendTextParams());
 
 #ifndef PN_CHAT_C_ABI
-            PN_CHAT_EXPORT void add_message_elements_listener(std::function<void(Pubnub::Vector<Pubnub::MessageElement>)> listener);
-            PN_CHAT_EXPORT void add_message_elements_listener(std::function<void(Pubnub::Vector<Pubnub::MessageElement>, Pubnub::Vector<Pubnub::SuggestedMention>)> listener);
+            PN_CHAT_EXPORT void add_change_listener(std::function<void(Pubnub::Vector<Pubnub::MessageElement>)> listener);
+            PN_CHAT_EXPORT void add_change_listener(std::function<void(Pubnub::Vector<Pubnub::MessageElement>, Pubnub::Vector<Pubnub::SuggestedMention>)> listener);
 #else 
             std::vector<Pubnub::MessageElement> consume_message_elements();
             std::vector<Pubnub::SuggestedMention> consume_suggested_mentions();

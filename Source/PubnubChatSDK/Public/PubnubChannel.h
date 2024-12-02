@@ -24,24 +24,6 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelStreamReadReceiptsReceived, FP
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubStreamMessageReportsReceived, FPubnubEvent, Event);
 
 
-USTRUCT(BlueprintType)
-struct FSendTextParams
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubMentionedUser> MentionedUsers;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubReferencedChannel> ReferencedChannels;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubTextLink> TextLinks;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
-
-	FSendTextParams() = default;
-
-	//Internal use only
-	Pubnub::SendTextParams GetCppSendTextParams();
-};
 
 USTRUCT(BlueprintType)
 struct FPubnubMembersResponseWrapper

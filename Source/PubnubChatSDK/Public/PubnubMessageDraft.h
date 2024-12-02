@@ -13,9 +13,6 @@ class UPubnubMessage;
 class UPubnubThreadChannel;
 class UPubnubCallbackStop;
 
-//DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubMessageStreamUpdateReceived, UPubnubMessage*, PubnubMessage);
-//DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubMessagesStreamUpdateOnReceived, const TArray<UPubnubMessage*>&, PubnubMessages);
-
 
 PN_CHAT_EXPORT struct SuggestedMention {
 	std::size_t offset;
@@ -127,6 +124,10 @@ protected:
 	bool IsInternalMessageElementValid();
 };
 
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubDraftUpdated, const TArray<UPubnubMessageElement*>&, MessageElements);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnPubnubDraftUpdatedWithSuggestions, const TArray<UPubnubMessageElement*>&, MessageElements, const TArray<FPubnubSuggestedMention>&, SuggestedMentions);
+
 /**
  * 
  */
@@ -156,8 +157,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
 	void Update(FString Text);
 
-	//UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
-	//void Send(FPubnubSendText Text);
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
+	void Send(FSendTextParams SendTextParams = FSendTextParams());
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
+	void AddChangeListener(FOnPubnubDraftUpdated DraftUpdateCallback);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
+	void AddChangeListenerWithSuggestions(FOnPubnubDraftUpdatedWithSuggestions DraftUpdateCallback);
 	
 	//Internal usage only
 	Pubnub::MessageDraft* GetInternalMessage(){return InternalMessageDraft;};
