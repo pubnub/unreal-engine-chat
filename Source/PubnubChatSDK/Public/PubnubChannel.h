@@ -13,6 +13,7 @@ class UPubnubChannel;
 class UPubnubMembership;
 class UPubnubUser;
 class UPubnubCallbackStop;
+class UPubnubMessageDraft;
 
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelMessageReceived, UPubnubMessage*, PubnubMessage);
@@ -114,7 +115,7 @@ public:
 	void DeleteChannel();
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	void SendText(FString Message, FSendTextParams SendTextParams = FSendTextParams());
+	void SendText(FString Message, FPubnubSendTextParams SendTextParams = FPubnubSendTextParams());
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	UPubnubCallbackStop* StreamUpdates(FOnPubnubChannelStreamUpdateReceived ChannelUpdateCallback);
@@ -190,7 +191,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	FPubnubMessageReportsHistoryWrapper GetMessageReportsHistory(FString StartTimetoken, FString EndTimetoken, int Count = 100);
-	
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
+	UPubnubMessageDraft* CreateMessageDraft(FPubnubMessageDraftConfig MessageDraftConfig = FPubnubMessageDraftConfig());
 	
 	//Internal usage only
 	Pubnub::Channel* GetInternalChannel(){return InternalChannel;};

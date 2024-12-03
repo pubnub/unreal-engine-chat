@@ -60,3 +60,10 @@ enum class EPubnubMentionTargetType : uint8
 	PMTT_Channel			UMETA(DisplayName="Channel"),
 	PMTT_Url				UMETA(DisplayName="Url")
 };
+
+UENUM(BlueprintType)
+enum class EPubnubMessageDraftSuggestionSource : uint8
+{
+	PMDSS_Channel			UMETA(DisplayName="Channel"),
+	PMDSS_Global			UMETA(DisplayName="Global"),
+};

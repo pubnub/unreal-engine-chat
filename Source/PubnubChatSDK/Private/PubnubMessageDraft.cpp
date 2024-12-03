@@ -215,7 +215,7 @@ void UPubnubMessageDraft::Update(FString Text)
 	}
 }
 
-void UPubnubMessageDraft::Send(FSendTextParams SendTextParams)
+void UPubnubMessageDraft::Send(FPubnubSendTextParams SendTextParams)
 {
 	if(!IsInternalMessageDraftValid()) {return;}
 

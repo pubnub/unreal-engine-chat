@@ -158,7 +158,7 @@ public:
 	void Update(FString Text);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
-	void Send(FSendTextParams SendTextParams = FSendTextParams());
+	void Send(FPubnubSendTextParams SendTextParams = FPubnubSendTextParams());
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
 	void AddChangeListener(FOnPubnubDraftUpdated DraftUpdateCallback);

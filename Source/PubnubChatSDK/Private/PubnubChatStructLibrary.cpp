@@ -3,7 +3,7 @@
 #include "PubnubChatStructLibrary.h"
 #include "PubnubMessage.h"
 
-Pubnub::SendTextParams FSendTextParams::GetCppSendTextParams()
+Pubnub::SendTextParams FPubnubSendTextParams::GetCppSendTextParams()
 {
 	Pubnub::SendTextParams FinalParams;
 

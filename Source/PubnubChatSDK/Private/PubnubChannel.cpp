@@ -7,6 +7,7 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubUser.h"
 #include "PubnubCallbackStop.h"
+#include "PubnubMessageDraft.h"
 #include "Async/Async.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
@@ -182,7 +183,7 @@ void UPubnubChannel::DeleteChannel()
 	}
 }
 
-void UPubnubChannel::SendText(FString Message, FSendTextParams SendTextParams)
+void UPubnubChannel::SendText(FString Message, FPubnubSendTextParams SendTextParams)
 {
 	if(!IsInternalChannelValid()) {return;}
 
@@ -666,6 +667,8 @@ UPubnubCallbackStop* UPubnubChannel::StreamMessageReports(FOnPubnubStreamMessage
 
 FPubnubMessageReportsHistoryWrapper UPubnubChannel::GetMessageReportsHistory(FString StartTimetoken, FString EndTimetoken, int Count)
 {
+	if(!IsInternalChannelValid()) {return FPubnubMessageReportsHistoryWrapper();}
+	
 	try
 	{
 		auto CppWrapper = InternalChannel->get_messsage_reports_history(UPubnubChatUtilities::FStringToPubnubString(StartTimetoken), UPubnubChatUtilities::FStringToPubnubString(EndTimetoken), Count);
@@ -674,9 +677,24 @@ FPubnubMessageReportsHistoryWrapper UPubnubChannel::GetMessageReportsHistory(FSt
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get Message Reports History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Message Reports History error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubMessageReportsHistoryWrapper();
+}
+
+UPubnubMessageDraft* UPubnubChannel::CreateMessageDraft(FPubnubMessageDraftConfig MessageDraftConfig)
+{
+	if(!IsInternalChannelValid()) {return nullptr;}
+	
+	try
+	{
+		return UPubnubMessageDraft::Create(InternalChannel->create_message_draft(MessageDraftConfig.GetCppMessageDraftConfig()));
+	}
+	catch(std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Channel Create Message Draft error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+	return nullptr;
 }
 
 
