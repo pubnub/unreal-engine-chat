@@ -23,17 +23,17 @@ UPubnubMentionTarget::~UPubnubMentionTarget()
 	delete InternalMentionTarget;
 }
 
-UPubnubMentionTarget* UPubnubMentionTarget::User(const FString UserID)
+UPubnubMentionTarget* UPubnubMentionTarget::CreateUserMentionTarget(const FString UserID)
 {
 	return Create(Pubnub::MentionTarget::user(UPubnubChatUtilities::FStringToPubnubString(UserID)));
 }
 
-UPubnubMentionTarget* UPubnubMentionTarget::Channel(const FString Channel)
+UPubnubMentionTarget* UPubnubMentionTarget::CreateChannelMentionTarget(const FString Channel)
 {
 	return Create(Pubnub::MentionTarget::channel(UPubnubChatUtilities::FStringToPubnubString(Channel)));
 }
 
-UPubnubMentionTarget* UPubnubMentionTarget::Url(const FString Url)
+UPubnubMentionTarget* UPubnubMentionTarget::CreateUrlMentionTarget(const FString Url)
 {
 	return Create(Pubnub::MentionTarget::url(UPubnubChatUtilities::FStringToPubnubString(Url)));
 }

@@ -33,13 +33,13 @@ public:
 	~UPubnubMentionTarget();
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Mention Target")
-	static UPubnubMentionTarget* User(const FString UserID);
+	static UPubnubMentionTarget* CreateUserMentionTarget(const FString UserID);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Mention Target")
-	static UPubnubMentionTarget* Channel(const FString Channel);
+	static UPubnubMentionTarget* CreateChannelMentionTarget(const FString Channel);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Mention Target")
-	static UPubnubMentionTarget* Url(const FString Url);
+	static UPubnubMentionTarget* CreateUrlMentionTarget(const FString Url);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Mention Target")
 	FString GetTarget();
