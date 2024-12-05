@@ -76,19 +76,6 @@ UPubnubMessageElement::~UPubnubMessageElement()
 	delete InternalMessageElement;
 }
 
-UPubnubMessageElement* UPubnubMessageElement::PlainText(const FString Text)
-{
-	return Create(Pubnub::MessageElement::plain_text(UPubnubChatUtilities::FStringToPubnubString(Text)));
-}
-
-UPubnubMessageElement* UPubnubMessageElement::Link(const FString Text, UPubnubMentionTarget* Target)
-{
-	if(!Target)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Create Pubnub Message Element for Link failed. Target is invalid"));
-	}
-	return Create(Pubnub::MessageElement::link(UPubnubChatUtilities::FStringToPubnubString(Text), *Target->GetInternalMentionTarget()));
-}
 
 FString UPubnubMessageElement::GetText()
 {

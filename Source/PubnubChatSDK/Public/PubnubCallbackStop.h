@@ -15,12 +15,14 @@ class PUBNUBCHATSDK_API UPubnubCallbackStop : public UObject
 {
 	GENERATED_BODY()
 public:
-
-	static UPubnubCallbackStop* Create(Pubnub::CallbackStop CallbackStop);
+	
 	~UPubnubCallbackStop();
 
 	UFUNCTION(BlueprintCallable, Category = "CallbackStop")
 	void Stop();
+
+	//Internal usage only
+	static UPubnubCallbackStop* Create(Pubnub::CallbackStop CallbackStop);
 
 protected:
 	Pubnub::CallbackStop* InternalCallbackStop;

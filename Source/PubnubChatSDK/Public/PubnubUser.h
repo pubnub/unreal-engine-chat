@@ -53,7 +53,6 @@ class PUBNUBCHATSDK_API UPubnubUser : public UObject
 {
 	GENERATED_BODY()
 public:
-	static UPubnubUser* Create(Pubnub::User User);
 	~UPubnubUser(){delete InternalUser;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub User")
@@ -101,6 +100,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub User")
 	FString LastActiveTimestamp();
+
+	//Internal usage only
+	static UPubnubUser* Create(Pubnub::User User);
 	
 	//Internal usage only
 	Pubnub::User* GetInternalUser(){return InternalUser;};

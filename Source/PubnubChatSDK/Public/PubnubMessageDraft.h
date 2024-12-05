@@ -22,7 +22,6 @@ class PUBNUBCHATSDK_API UPubnubMentionTarget : public UObject
 {
 	GENERATED_BODY()
 public:
-	static UPubnubMentionTarget* Create(Pubnub::MentionTarget MentionTarget);
 	~UPubnubMentionTarget();
 
 	/**
@@ -54,6 +53,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Mention Target")
 	EPubnubMentionTargetType GetType();
+
+	//Internal usage only
+	static UPubnubMentionTarget* Create(Pubnub::MentionTarget MentionTarget);
 	
 	//Internal usage only
 	Pubnub::MentionTarget* GetInternalMentionTarget(){return InternalMentionTarget;};
@@ -118,15 +120,8 @@ class PUBNUBCHATSDK_API UPubnubMessageElement : public UObject
 {
 	GENERATED_BODY()
 public:
-	static UPubnubMessageElement* Create(Pubnub::MessageElement MessageElement);
 	~UPubnubMessageElement();
-
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Element")
-	static UPubnubMessageElement* PlainText(const FString Text);
 	
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Element")
-	static UPubnubMessageElement* Link(const FString Text, UPubnubMentionTarget* Target);
-
 	/**
 	 * Get the literal text contained in this [PubnubMessageElement]. This is what the user should see when reading or composing the message.
 	 */
@@ -138,6 +133,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Message Element")
 	UPubnubMentionTarget* GetTarget();
+
+	//Internal usage only
+	static UPubnubMessageElement* Create(Pubnub::MessageElement MessageElement);
 	
 	//Internal usage only
 	Pubnub::MessageElement* GetInternalMessageElement(){return InternalMessageElement;};
@@ -162,7 +160,6 @@ class PUBNUBCHATSDK_API UPubnubMessageDraft : public UObject
 {
 	GENERATED_BODY()
 public:
-	static UPubnubMessageDraft* Create(Pubnub::MessageDraft MessageDraft);
 	~UPubnubMessageDraft();
 
 	/**
@@ -253,7 +250,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Message Draft")
 	void AddChangeListenerWithSuggestions(FOnPubnubDraftUpdatedWithSuggestions DraftUpdateCallback);
-	
+
+	//Internal usage only
+	static UPubnubMessageDraft* Create(Pubnub::MessageDraft MessageDraft);
 	//Internal usage only
 	Pubnub::MessageDraft* GetInternalMessage(){return InternalMessageDraft;};
 

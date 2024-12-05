@@ -208,7 +208,6 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	GENERATED_BODY()
 	
 public:
-	static UPubnubChat* Create(Pubnub::Chat Chat);
 	~UPubnubChat()
 	{
 		if(InternalChat)
@@ -336,7 +335,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Access Manager")
 	UPubnubAccessManager* GetAccessManager();
-    
+
+	//Internal usage only
+	static UPubnubChat* Create(Pubnub::Chat Chat);
     
 private:
 	bool IsInternalChatValid();

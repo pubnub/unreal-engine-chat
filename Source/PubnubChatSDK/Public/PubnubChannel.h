@@ -86,7 +86,6 @@ class PUBNUBCHATSDK_API UPubnubChannel : public UObject
 	GENERATED_BODY()
 	
 public:
-	static UPubnubChannel* Create(Pubnub::Channel Channel);
 	virtual ~UPubnubChannel();
 	
 
@@ -194,6 +193,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	UPubnubMessageDraft* CreateMessageDraft(FPubnubMessageDraftConfig MessageDraftConfig = FPubnubMessageDraftConfig());
+	
+	//Internal usage only
+	static UPubnubChannel* Create(Pubnub::Channel Channel);
 	
 	//Internal usage only
 	Pubnub::Channel* GetInternalChannel(){return InternalChannel;};

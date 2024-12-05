@@ -23,7 +23,6 @@ class PUBNUBCHATSDK_API UPubnubThreadMessage : public UPubnubMessage
 	GENERATED_BODY()
 	
 public:
-	static UPubnubThreadMessage* Create(Pubnub::ThreadMessage ThreadMessage);
 	~UPubnubThreadMessage() override {delete InternalMessage;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Thread Message")
@@ -38,6 +37,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Message")
 	UPubnubCallbackStop* StreamThreadMessageUpdatesOn(TArray<UPubnubThreadMessage*> Messages, FOnPubnubThreadMessagesStreamUpdateOnReceived MessageUpdateCallback);
 
+	//Internal usage only
+	static UPubnubThreadMessage* Create(Pubnub::ThreadMessage ThreadMessage);
 	
 	//Internal usage only
 	Pubnub::ThreadMessage* GetInternalThreadMessage();

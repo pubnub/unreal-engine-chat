@@ -19,13 +19,14 @@ class PUBNUBCHATSDK_API UPubnubAccessManager : public UObject
 	GENERATED_BODY()
 	
 public:
-
-	static UPubnubAccessManager* Create(Pubnub::AccessManager AccessManager);
+	
 	~UPubnubAccessManager();
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Access Manager")
 	bool CanI(EPubnubAccessManagerPermission Permission, EPubnubAccessManagerResourceType ResourceType, FString ResourceName);
 
+	//Internal usage only
+	static UPubnubAccessManager* Create(Pubnub::AccessManager AccessManager);
 private:
 	Pubnub::AccessManager* InternalAccessManager;
 };
