@@ -588,23 +588,6 @@ void UPubnubChannel::EmitUserMention(FString UserID, FString Timetoken, FString 
 	}
 }
 
-TArray<UPubnubMembership*> UPubnubChannel::GetUserSuggestions(FString Text, int Limit)
-{
-	if(!IsInternalChannelValid()) {return {};}
-
-	try
-	{
-		auto CppMemberships = InternalChannel->get_user_suggestions(UPubnubChatUtilities::FStringToPubnubString(Text), Limit);
-		TArray<UPubnubMembership*> FinalMemberships = UPubnubChatUtilities::CppMembershipsToUnrealMemberships(CppMemberships);
-		return FinalMemberships;
-	}
-	catch (std::exception& Exception)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get User Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
-	}
-	return {};
-}
-
 UPubnubCallbackStop* UPubnubChannel::StreamReadReceipts(FOnPubnubChannelStreamReadReceiptsReceived ReadReceiptsCallback)
 {
 	if(!IsInternalChannelValid()) {return nullptr;}

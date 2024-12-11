@@ -171,23 +171,6 @@ void UPubnubChat::UnpinMessageFromChannel(UPubnubChannel* Channel)
 	}
 }
 
-TArray<UPubnubChannel*> UPubnubChat::GetChannelSuggestions(FString Text, int Limit)
-{
-	if(!IsInternalChatValid()) {return {};}
-	
-	try
-	{
-		auto CppChannels = InternalChat->get_channel_suggestions(UPubnubChatUtilities::FStringToPubnubString(Text), Limit);
-		TArray<UPubnubChannel*> FinalChannels = UPubnubChatUtilities::CppChannelsToUnrealChannels(CppChannels);
-		return FinalChannels;
-	}
-	catch(std::exception& Exception)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get Channel Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
-	}
-	return {};
-}
-
 UPubnubUser* UPubnubChat::CurrentUser()
 {
 	if(!IsInternalChatValid()) {return nullptr;}
@@ -281,23 +264,6 @@ void UPubnubChat::DeleteUser(FString UserID)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Delete User error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
-}
-
-TArray<UPubnubUser*> UPubnubChat::GetUserSuggestions(FString Text, int Limit)
-{
-	if(!IsInternalChatValid()) {return {};}
-	
-	try
-	{
-		auto CppUsers = InternalChat->get_user_suggestions(UPubnubChatUtilities::FStringToPubnubString(Text), Limit);
-		TArray<UPubnubUser*> FinalUsers = UPubnubChatUtilities::CppUsersToUnrealUsers(CppUsers);
-		return FinalUsers;
-	}
-	catch(std::exception& Exception)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get User Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
-	}
-	return {};
 }
 
 TArray<FString> UPubnubChat::WherePresent(FString UserID)

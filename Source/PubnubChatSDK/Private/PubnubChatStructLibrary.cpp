@@ -11,16 +11,6 @@ Pubnub::SendTextParams FPubnubSendTextParams::GetCppSendTextParams()
 	FinalParams.send_by_post = SendByPost;
 	FinalParams.meta = UPubnubChatUtilities::FStringToPubnubString(Meta);
 
-	if(!MentionedUsers.IsEmpty())
-	{
-		std::map<int, Pubnub::MentionedUser> CppMentionedUsers;
-		for(auto It : MentionedUsers)
-		{
-			CppMentionedUsers[It.Key] = It.Value.GetCppMentionedUser();
-		}
-		FinalParams.mentioned_users = CppMentionedUsers;
-	}
-
 	if(QuotedMessage)
 	{
 		FinalParams.quoted_message = *QuotedMessage->GetInternalMessage();

@@ -251,9 +251,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	void UnpinMessageFromChannel(UPubnubChannel* Channel);
 
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	TArray<UPubnubChannel*> GetChannelSuggestions(FString Text, int Limit = 10);
-
 	
 	/* USERS */
 
@@ -274,9 +271,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	void DeleteUser(FString UserID);
-
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	TArray<UPubnubUser*> GetUserSuggestions(FString Text, int Limit = 10);
 
 
 	/* PRESENCE */

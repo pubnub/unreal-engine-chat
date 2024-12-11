@@ -178,9 +178,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	void EmitUserMention(FString UserID, FString Timetoken, FString Text);
-
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	TArray<UPubnubMembership*> GetUserSuggestions(FString Text, int Limit = 10);
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	UPubnubCallbackStop* StreamReadReceipts(FOnPubnubChannelStreamReadReceiptsReceived ReadReceiptsCallback);
