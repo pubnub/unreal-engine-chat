@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ChatSDK.h"
 #include "PubnubChatEnumLibrary.h"
+#include <pubnub_chat/message_draft_config.hpp>
 #include "FunctionLibraries/PubnubChatUtilities.h"
 #include "PubnubChatStructLibrary.generated.h"
 
@@ -408,4 +409,44 @@ struct FPubnubEvent
 	UserID(UPubnubChatUtilities::PubnubStringToFString(event.user_id)),
 	Payload(UPubnubChatUtilities::PubnubStringToFString(event.payload))
 	{};
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubSendTextParams
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
+
+	FPubnubSendTextParams() = default;
+
+	//Internal use only
+	Pubnub::SendTextParams GetCppSendTextParams();
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubMessageDraftConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubMessageDraftSuggestionSource UserSuggestionSource = EPubnubMessageDraftSuggestionSource::PMDSS_Global;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsTypingIndicatorTriggered = true;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int UserLimit = 10;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int ChannelLimit = 10;
+
+	FPubnubMessageDraftConfig() = default;
+
+	//Internal usage only
+	Pubnub::MessageDraftConfig GetCppMessageDraftConfig()
+	{
+		return Pubnub::MessageDraftConfig({
+			(Pubnub::MessageDraftConfig::MessageDraftSuggestionSource)(uint8)UserSuggestionSource,
+				IsTypingIndicatorTriggered,
+			UserLimit,
+			ChannelLimit
+		});
+	}
 };

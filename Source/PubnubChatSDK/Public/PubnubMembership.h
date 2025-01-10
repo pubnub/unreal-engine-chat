@@ -25,7 +25,6 @@ class PUBNUBCHATSDK_API UPubnubMembership : public UObject
 	GENERATED_BODY()
 
 public:
-	static UPubnubMembership* Create(Pubnub::Membership Membership);
 	~UPubnubMembership(){delete InternalMembership;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership")
@@ -57,6 +56,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	int GetUnreadMessageCount();
 
+	//Internal usage only
+	static UPubnubMembership* Create(Pubnub::Membership Membership);
+	
 	//Internal usage only
 	Pubnub::Membership* GetInternalMembership(){return InternalMembership;};
 

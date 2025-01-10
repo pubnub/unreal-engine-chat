@@ -14,6 +14,7 @@ namespace Pubnub
         public:
 
         PN_CHAT_EXPORT ~ThreadChannel();
+        PN_CHAT_EXPORT ThreadChannel();
         PN_CHAT_EXPORT ThreadChannel& operator=(const ThreadChannel& other);
 
         PN_CHAT_EXPORT Pubnub::String parent_channel_id() const {return parent_channel_id_internal;};

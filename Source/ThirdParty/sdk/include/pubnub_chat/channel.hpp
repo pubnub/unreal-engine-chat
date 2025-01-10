@@ -16,6 +16,7 @@
 #include <vector>
 #include <functional>
 #include <map>
+#include "send_text_params.hpp"
 
 #include "message_draft_config.hpp"
 
@@ -47,17 +48,6 @@ namespace Pubnub
         Pubnub::String updated = "";
         Pubnub::String status = "";
         Pubnub::String type = "";
-    };
-
-    struct SendTextParams
-    {
-        bool store_in_history = true;
-        bool send_by_post = false;
-        Pubnub::String meta = "";
-        Pubnub::Map<int, Pubnub::MentionedUser> mentioned_users;
-        Pubnub::Map<int, Pubnub::ReferencedChannel> referenced_channels;
-        Pubnub::Vector<Pubnub::TextLink> text_links;
-        Pubnub::Option<Pubnub::Message> quoted_message;
     };
 
     struct MembersResponseWrapper

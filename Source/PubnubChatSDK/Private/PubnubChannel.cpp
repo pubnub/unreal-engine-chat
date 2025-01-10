@@ -7,56 +7,10 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubUser.h"
 #include "PubnubCallbackStop.h"
+#include "PubnubMessageDraft.h"
 #include "Async/Async.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
-
-Pubnub::SendTextParams FSendTextParams::GetCppSendTextParams()
-{
-	Pubnub::SendTextParams FinalParams;
-
-	FinalParams.store_in_history = StoreInHistory;
-	FinalParams.send_by_post = SendByPost;
-	FinalParams.meta = UPubnubChatUtilities::FStringToPubnubString(Meta);
-
-	if(!MentionedUsers.IsEmpty())
-	{
-		std::map<int, Pubnub::MentionedUser> CppMentionedUsers;
-		for(auto It : MentionedUsers)
-		{
-			CppMentionedUsers[It.Key] = It.Value.GetCppMentionedUser();
-		}
-		FinalParams.mentioned_users = CppMentionedUsers;
-	}
-
-	if(!ReferencedChannels.IsEmpty())
-	{
-		std::map<int, Pubnub::ReferencedChannel> CppReferencedChannels;
-		for(auto It : ReferencedChannels)
-		{
-			CppReferencedChannels[It.Key] = It.Value.GetCppReferencedChannel();
-		}
-		FinalParams.referenced_channels = CppReferencedChannels;
-	}
-
-	if(!TextLinks.IsEmpty())
-	{
-		Pubnub::Vector<Pubnub::TextLink> CppTextLinks;
-		for(auto TextLink : TextLinks)
-		{
-			CppTextLinks.push_back(TextLink.GetCppTextLink());
-		}
-		FinalParams.text_links = std::move(CppTextLinks);
-	}
-
-	if(QuotedMessage)
-	{
-		FinalParams.quoted_message = *QuotedMessage->GetInternalMessage();
-	}
-		
-	return FinalParams;
-
-}
 
 FPubnubMembersResponseWrapper::FPubnubMembersResponseWrapper(Pubnub::MembersResponseWrapper& Wrapper) :
 Page(Wrapper.page),
@@ -229,7 +183,7 @@ void UPubnubChannel::DeleteChannel()
 	}
 }
 
-void UPubnubChannel::SendText(FString Message, FSendTextParams SendTextParams)
+void UPubnubChannel::SendText(FString Message, FPubnubSendTextParams SendTextParams)
 {
 	if(!IsInternalChannelValid()) {return;}
 
@@ -634,23 +588,6 @@ void UPubnubChannel::EmitUserMention(FString UserID, FString Timetoken, FString 
 	}
 }
 
-TArray<UPubnubMembership*> UPubnubChannel::GetUserSuggestions(FString Text, int Limit)
-{
-	if(!IsInternalChannelValid()) {return {};}
-
-	try
-	{
-		auto CppMemberships = InternalChannel->get_user_suggestions(UPubnubChatUtilities::FStringToPubnubString(Text), Limit);
-		TArray<UPubnubMembership*> FinalMemberships = UPubnubChatUtilities::CppMembershipsToUnrealMemberships(CppMemberships);
-		return FinalMemberships;
-	}
-	catch (std::exception& Exception)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get User Suggestions error: %s"), UTF8_TO_TCHAR(Exception.what()));
-	}
-	return {};
-}
-
 UPubnubCallbackStop* UPubnubChannel::StreamReadReceipts(FOnPubnubChannelStreamReadReceiptsReceived ReadReceiptsCallback)
 {
 	if(!IsInternalChannelValid()) {return nullptr;}
@@ -713,6 +650,8 @@ UPubnubCallbackStop* UPubnubChannel::StreamMessageReports(FOnPubnubStreamMessage
 
 FPubnubMessageReportsHistoryWrapper UPubnubChannel::GetMessageReportsHistory(FString StartTimetoken, FString EndTimetoken, int Count)
 {
+	if(!IsInternalChannelValid()) {return FPubnubMessageReportsHistoryWrapper();}
+	
 	try
 	{
 		auto CppWrapper = InternalChannel->get_messsage_reports_history(UPubnubChatUtilities::FStringToPubnubString(StartTimetoken), UPubnubChatUtilities::FStringToPubnubString(EndTimetoken), Count);
@@ -721,9 +660,24 @@ FPubnubMessageReportsHistoryWrapper UPubnubChannel::GetMessageReportsHistory(FSt
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get Message Reports History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Message Reports History error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubMessageReportsHistoryWrapper();
+}
+
+UPubnubMessageDraft* UPubnubChannel::CreateMessageDraft(FPubnubMessageDraftConfig MessageDraftConfig)
+{
+	if(!IsInternalChannelValid()) {return nullptr;}
+	
+	try
+	{
+		return UPubnubMessageDraft::Create(InternalChannel->create_message_draft(MessageDraftConfig.GetCppMessageDraftConfig()));
+	}
+	catch(std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Channel Create Message Draft error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+	return nullptr;
 }
 
 

@@ -208,7 +208,6 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	GENERATED_BODY()
 	
 public:
-	static UPubnubChat* Create(Pubnub::Chat Chat);
 	~UPubnubChat()
 	{
 		if(InternalChat)
@@ -252,9 +251,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	void UnpinMessageFromChannel(UPubnubChannel* Channel);
 
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	TArray<UPubnubChannel*> GetChannelSuggestions(FString Text, int Limit = 10);
-
 	
 	/* USERS */
 
@@ -275,9 +271,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	void DeleteUser(FString UserID);
-
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	TArray<UPubnubUser*> GetUserSuggestions(FString Text, int Limit = 10);
 
 
 	/* PRESENCE */
@@ -336,7 +329,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Access Manager")
 	UPubnubAccessManager* GetAccessManager();
-    
+
+	//Internal usage only
+	static UPubnubChat* Create(Pubnub::Chat Chat);
     
 private:
 	bool IsInternalChatValid();

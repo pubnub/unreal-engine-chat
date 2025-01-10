@@ -24,7 +24,6 @@ class PUBNUBCHATSDK_API UPubnubMessage : public UObject
 {
 	GENERATED_BODY()
 public:
-	static UPubnubMessage* Create(Pubnub::Message Message);
 	~UPubnubMessage();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Message")
@@ -105,8 +104,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Message")
 	TArray<FPubnubTextLink> TextLinks();
 	
-
-
+	//Internal usage only
+	static UPubnubMessage* Create(Pubnub::Message Message);
 	
 	//Internal usage only
 	Pubnub::Message* GetInternalMessage(){return InternalMessage;};

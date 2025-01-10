@@ -20,7 +20,6 @@ class PUBNUBCHATSDK_API UPubnubThreadChannel : public UPubnubChannel
 	GENERATED_BODY()
 	
 public:
-	static UPubnubThreadChannel* Create(Pubnub::ThreadChannel ThreadChannel);
 	~UPubnubThreadChannel() override {delete InternalChannel;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure,  Category = "Pubnub Thread Channel")
@@ -44,6 +43,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Thread Channel")
 	UPubnubChannel* UnpinMessageFromParentChannel();
 
+	//Internal usage only
+	static UPubnubThreadChannel* Create(Pubnub::ThreadChannel ThreadChannel);
+	
 	//Internal usage only
 	Pubnub::ThreadChannel* GetInternalThreadChannel();
 

@@ -13,6 +13,7 @@ class UPubnubChannel;
 class UPubnubMembership;
 class UPubnubUser;
 class UPubnubCallbackStop;
+class UPubnubMessageDraft;
 
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelMessageReceived, UPubnubMessage*, PubnubMessage);
@@ -24,24 +25,6 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChannelStreamReadReceiptsReceived, FP
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubStreamMessageReportsReceived, FPubnubEvent, Event);
 
 
-USTRUCT(BlueprintType)
-struct FSendTextParams
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubMentionedUser> MentionedUsers;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TMap<int, FPubnubReferencedChannel> ReferencedChannels;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubTextLink> TextLinks;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
-
-	FSendTextParams() = default;
-
-	//Internal use only
-	Pubnub::SendTextParams GetCppSendTextParams();
-};
 
 USTRUCT(BlueprintType)
 struct FPubnubMembersResponseWrapper
@@ -103,7 +86,6 @@ class PUBNUBCHATSDK_API UPubnubChannel : public UObject
 	GENERATED_BODY()
 	
 public:
-	static UPubnubChannel* Create(Pubnub::Channel Channel);
 	virtual ~UPubnubChannel();
 	
 
@@ -132,7 +114,7 @@ public:
 	void DeleteChannel();
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	void SendText(FString Message, FSendTextParams SendTextParams = FSendTextParams());
+	void SendText(FString Message, FPubnubSendTextParams SendTextParams = FPubnubSendTextParams());
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	UPubnubCallbackStop* StreamUpdates(FOnPubnubChannelStreamUpdateReceived ChannelUpdateCallback);
@@ -196,9 +178,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	void EmitUserMention(FString UserID, FString Timetoken, FString Text);
-
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	TArray<UPubnubMembership*> GetUserSuggestions(FString Text, int Limit = 10);
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	UPubnubCallbackStop* StreamReadReceipts(FOnPubnubChannelStreamReadReceiptsReceived ReadReceiptsCallback);
@@ -208,7 +187,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	FPubnubMessageReportsHistoryWrapper GetMessageReportsHistory(FString StartTimetoken, FString EndTimetoken, int Count = 100);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
+	UPubnubMessageDraft* CreateMessageDraft(FPubnubMessageDraftConfig MessageDraftConfig = FPubnubMessageDraftConfig());
 	
+	//Internal usage only
+	static UPubnubChannel* Create(Pubnub::Channel Channel);
 	
 	//Internal usage only
 	Pubnub::Channel* GetInternalChannel(){return InternalChannel;};
