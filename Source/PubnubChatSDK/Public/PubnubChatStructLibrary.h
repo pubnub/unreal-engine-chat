@@ -419,7 +419,7 @@ struct FPubnubSendTextParams
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage = nullptr;
 
 	FPubnubSendTextParams() = default;
 
