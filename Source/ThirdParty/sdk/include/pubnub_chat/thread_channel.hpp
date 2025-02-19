@@ -17,8 +17,8 @@ namespace Pubnub
         PN_CHAT_EXPORT ThreadChannel();
         PN_CHAT_EXPORT ThreadChannel& operator=(const ThreadChannel& other);
 
-        PN_CHAT_EXPORT Pubnub::String parent_channel_id() const {return parent_channel_id_internal;};
-        PN_CHAT_EXPORT Pubnub::Message parent_message() const {return parent_message_internal;};
+        PN_CHAT_EXPORT Pubnub::String parent_channel_id() const;
+        PN_CHAT_EXPORT Pubnub::Message parent_message() const;
 
         PN_CHAT_EXPORT void send_text(const Pubnub::String& message, SendTextParams text_params = SendTextParams()) override;
 

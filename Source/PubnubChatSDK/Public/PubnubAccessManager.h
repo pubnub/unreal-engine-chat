@@ -25,6 +25,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Access Manager")
 	bool CanI(EPubnubAccessManagerPermission Permission, EPubnubAccessManagerResourceType ResourceType, FString ResourceName);
 
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Access Manager")
+	FString ParseToken(FString Token);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Access Manager")
+	void SetAuthToken(FString Token);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Access Manager")
+	int SetPubnubOrigin(FString Origin);
+
 	//Internal usage only
 	static UPubnubAccessManager* Create(Pubnub::AccessManager AccessManager);
 private:
