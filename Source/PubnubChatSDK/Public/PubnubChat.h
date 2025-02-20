@@ -26,9 +26,9 @@ struct FPubnubUnreadMessageWrapper
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChannel* Channel;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMembership* Membership;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Count;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChannel* Channel = nullptr;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMembership* Membership = nullptr;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Count = 0;
 
 	FPubnubUnreadMessageWrapper() = default;
 	FPubnubUnreadMessageWrapper(Pubnub::UnreadMessageWrapper& MessageWrapper) :
@@ -46,8 +46,8 @@ struct FPubnubMarkMessagesAsReadWrapper
 	GENERATED_BODY();
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Status;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total = 0;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Status = 0;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubMembership*> Memberships;
 
 	FPubnubMarkMessagesAsReadWrapper() = default;
@@ -69,8 +69,8 @@ struct FPubnubCreatedChannelWrapper
 {
 	GENERATED_BODY();
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChannel* CreatedChannel;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMembership* HostMembership;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChannel* CreatedChannel = nullptr;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMembership* HostMembership = nullptr;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubMembership*> InviteesMemberships;
 
 	FPubnubCreatedChannelWrapper() = default;
@@ -93,7 +93,7 @@ struct FPubnubChannelsResponseWrapper
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubChannel*> Channels;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total = 0;
 
 	FPubnubChannelsResponseWrapper() = default;
 	FPubnubChannelsResponseWrapper(Pubnub::ChannelsResponseWrapper& Wrapper) :
@@ -116,7 +116,7 @@ struct FPubnubUsersResponseWrapper
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubUser*> Users;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total = 0;
 
 	FPubnubUsersResponseWrapper() = default;
 	FPubnubUsersResponseWrapper(Pubnub::UsersResponseWrapper& Wrapper) :
@@ -138,7 +138,7 @@ struct FPubnubEventsHistoryWrapper
 	GENERATED_BODY();
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubEvent> Events;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore = false;
 
 	FPubnubEventsHistoryWrapper() = default;
 	FPubnubEventsHistoryWrapper(Pubnub::EventsHistoryWrapper& Wrapper) :
@@ -162,7 +162,7 @@ struct FPubnubUserMentionData
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubEvent Event;
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* Message;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* Message = nullptr;
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ParentChannelID;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ThreadChannelID;
@@ -184,7 +184,7 @@ struct FPubnubUserMentionDataList
     GENERATED_BODY();
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubUserMentionData> UserMentions;
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore = false;
 
     FPubnubUserMentionDataList() = default;
     FPubnubUserMentionDataList(Pubnub::UserMentionDataList& MentionDataList) :
