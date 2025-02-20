@@ -33,7 +33,7 @@ struct FPubnubMembersResponseWrapper
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<UPubnubMembership*> Memberships;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total = 0;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status;
 
 	FPubnubMembersResponseWrapper() = default;
@@ -48,7 +48,7 @@ struct FPubnubUsersRestrictionsWrapper
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubUserRestriction> Restrictions;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubPage Page;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Total = 0;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status;
 
 	FPubnubUsersRestrictionsWrapper() = default;
@@ -62,7 +62,7 @@ struct FPubnubMessageReportsHistoryWrapper
 	GENERATED_BODY();
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FPubnubEvent> Events;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsMore = false;
 
 	FPubnubMessageReportsHistoryWrapper() = default;
 	FPubnubMessageReportsHistoryWrapper(Pubnub::EventsHistoryWrapper& Wrapper) :

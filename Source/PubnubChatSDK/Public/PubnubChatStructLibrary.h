@@ -396,7 +396,7 @@ struct FPubnubEvent
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Timetoken = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubChatEventType Type;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubChatEventType Type = EPubnubChatEventType::PCET_CUSTOM;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Payload = "";
@@ -419,7 +419,7 @@ struct FPubnubSendTextParams
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool StoreInHistory = true;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool SendByPost = false;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* QuotedMessage = nullptr;
 
 	FPubnubSendTextParams() = default;
 
