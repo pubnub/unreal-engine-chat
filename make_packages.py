@@ -6,7 +6,7 @@ import json
 import zipfile
 
 print("Creating packages for Unreal Engine chat")
-supported_ue_versions = ["5.0.0", "5.1.0", "5.2.0", "5.3.0", "5.4.0"]
+supported_ue_versions = ["5.0.0", "5.1.0", "5.2.0", "5.3.0", "5.4.0", "5.5.0"]
 
 print("Preparing files")
 
@@ -18,11 +18,14 @@ shutil.copytree(current_dir, temporary_dir)
 os.remove(temporary_dir + "/LICENSE")
 os.remove(temporary_dir + "/make_packages.py")
 os.remove(temporary_dir + "/.gitignore")
+os.remove(temporary_dir + "/.git")
 os.remove(temporary_dir + "/README.md")
-
+os.remove(temporary_dir + "/Config/FilterPlugin.ini")
+    
 shutil.rmtree(temporary_dir + "/.github", ignore_errors=True)
-shutil.rmtree(temporary_dir + "/.git", ignore_errors=True)
 shutil.rmtree(temporary_dir + "/readme_content", ignore_errors=True)
+shutil.rmtree(temporary_dir + "/Binaries", ignore_errors=True)
+shutil.rmtree(temporary_dir + "/Intermediate", ignore_errors=True)
 
 cpp_files = itertools.chain(
     glob.glob(temporary_dir + "/**/*.cpp", recursive=True),
@@ -30,7 +33,6 @@ cpp_files = itertools.chain(
     glob.glob(temporary_dir + "/**/*.c", recursive=True),
     glob.glob(temporary_dir + "/**/*.h", recursive=True),
 )
-
 for version in supported_ue_versions:
     print("Creating package for Unreal Engine " + version)
     with open(temporary_dir + "/PubnubChat.uplugin", "r") as uplugin_file:
