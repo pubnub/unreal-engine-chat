@@ -15,7 +15,7 @@ namespace Pubnub
     class ThreadMessage : public Message
     {
         public:
-        PN_CHAT_EXPORT ~ThreadMessage();
+        PN_CHAT_EXPORT virtual ~ThreadMessage();
         PN_CHAT_EXPORT ThreadMessage& operator=(const ThreadMessage& other);
 
         PN_CHAT_EXPORT Pubnub::String parent_channel_id() const {return parent_channel_id_internal;};

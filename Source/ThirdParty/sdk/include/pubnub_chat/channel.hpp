@@ -66,61 +66,61 @@ namespace Pubnub
         Pubnub::String status;
     };
 
-    class Channel {
+    class PN_CHAT_EXPORT Channel {
         public:
-            PN_CHAT_EXPORT Channel();
-            PN_CHAT_EXPORT Channel(const Channel& other);
-            PN_CHAT_EXPORT ~Channel();
+            Channel();
+            Channel(const Channel& other);
+            virtual ~Channel();
 
-            PN_CHAT_EXPORT Pubnub::Channel& operator =(const Pubnub::Channel& other);
+            Pubnub::Channel& operator =(const Pubnub::Channel& other);
 
-            PN_CHAT_EXPORT Pubnub::String channel_id() const;
-            PN_CHAT_EXPORT Pubnub::ChatChannelData channel_data() const;
+            Pubnub::String channel_id() const;
+            Pubnub::ChatChannelData channel_data() const;
 
-            PN_CHAT_EXPORT Pubnub::Channel update(const ChatChannelData& in_additional_channel_data) const;
+            Pubnub::Channel update(const ChatChannelData& in_additional_channel_data) const;
 #ifndef PN_CHAT_C_ABI
-            PN_CHAT_EXPORT void connect(std::function<void(Message)> message_callback) const;
-            PN_CHAT_EXPORT void join(std::function<void(Message)> message_callback, const Pubnub::String& additional_params = "") const;
-            PN_CHAT_EXPORT void disconnect() const;
-            PN_CHAT_EXPORT void leave() const;
+            void connect(std::function<void(Message)> message_callback) const;
+            void join(std::function<void(Message)> message_callback, const Pubnub::String& additional_params = "") const;
+            void disconnect() const;
+            void leave() const;
 #endif
-            PN_CHAT_EXPORT void delete_channel() const;
+            void delete_channel() const;
 
-            PN_CHAT_EXPORT virtual void send_text(const Pubnub::String& message, SendTextParams text_params = SendTextParams());
-            PN_CHAT_EXPORT Pubnub::Vector<Pubnub::String> who_is_present() const;
-            PN_CHAT_EXPORT bool is_present(const Pubnub::String& user_id) const;
-            PN_CHAT_EXPORT void set_restrictions(const Pubnub::String& user_id, Pubnub::Restriction restrictions) const;
-            PN_CHAT_EXPORT Pubnub::Restriction get_user_restrictions(const Pubnub::User& user) const;
-            PN_CHAT_EXPORT UsersRestrictionsWrapper get_users_restrictions(const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
-            PN_CHAT_EXPORT Pubnub::Vector<Pubnub::Message> get_history(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 25) const;
-            PN_CHAT_EXPORT Pubnub::Message get_message(const Pubnub::String& timetoken) const;
-            PN_CHAT_EXPORT MembersResponseWrapper get_members(const Pubnub::String& filter = "", const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
-            PN_CHAT_EXPORT Pubnub::Membership invite(const Pubnub::User& user) const;
-            PN_CHAT_EXPORT Pubnub::Vector<Pubnub::Membership> invite_multiple(Pubnub::Vector<Pubnub::User> users) const;
-            PN_CHAT_EXPORT void start_typing() const;
-            PN_CHAT_EXPORT void stop_typing() const;
-            PN_CHAT_EXPORT CallbackStop get_typing(std::function<void(Pubnub::Vector<Pubnub::String>)> typing_callback) const;
-            PN_CHAT_EXPORT Pubnub::Channel pin_message(const Pubnub::Message& message) const;
-            PN_CHAT_EXPORT Pubnub::Channel unpin_message() const;
-            PN_CHAT_EXPORT Pubnub::Message get_pinned_message() const;
-            PN_CHAT_EXPORT void forward_message(const Pubnub::Message& message) const;
-            PN_CHAT_EXPORT virtual void emit_user_mention(const Pubnub::String& user_id, const Pubnub::String& timetoken, const Pubnub::String& text) const;
-            PN_CHAT_EXPORT Pubnub::Vector<Pubnub::Membership> get_user_suggestions(Pubnub::String text, int limit = 10) const;
+            virtual void send_text(const Pubnub::String& message, SendTextParams text_params = SendTextParams());
+            Pubnub::Vector<Pubnub::String> who_is_present() const;
+            bool is_present(const Pubnub::String& user_id) const;
+            void set_restrictions(const Pubnub::String& user_id, Pubnub::Restriction restrictions) const;
+            Pubnub::Restriction get_user_restrictions(const Pubnub::User& user) const;
+            UsersRestrictionsWrapper get_users_restrictions(const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
+            Pubnub::Vector<Pubnub::Message> get_history(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 25) const;
+            Pubnub::Message get_message(const Pubnub::String& timetoken) const;
+            MembersResponseWrapper get_members(const Pubnub::String& filter = "", const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
+            Pubnub::Membership invite(const Pubnub::User& user) const;
+            Pubnub::Vector<Pubnub::Membership> invite_multiple(Pubnub::Vector<Pubnub::User> users) const;
+            void start_typing() const;
+            void stop_typing() const;
+            CallbackStop get_typing(std::function<void(Pubnub::Vector<Pubnub::String>)> typing_callback) const;
+            Pubnub::Channel pin_message(const Pubnub::Message& message) const;
+            Pubnub::Channel unpin_message() const;
+            Pubnub::Message get_pinned_message() const;
+            void forward_message(const Pubnub::Message& message) const;
+            virtual void emit_user_mention(const Pubnub::String& user_id, const Pubnub::String& timetoken, const Pubnub::String& text) const;
+            Pubnub::Vector<Pubnub::Membership> get_user_suggestions(Pubnub::String text, int limit = 10) const;
 
-            PN_CHAT_EXPORT CallbackStop stream_updates(std::function<void(const Pubnub::Channel&)> channel_callback) const;
-            PN_CHAT_EXPORT CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::Channel> channels, std::function<void(Pubnub::Vector<Pubnub::Channel>)> channel_callback);
-            PN_CHAT_EXPORT CallbackStop stream_presence(std::function<void(Pubnub::Vector<Pubnub::String>)> presence_callback) const;
-            PN_CHAT_EXPORT CallbackStop stream_read_receipts(std::function<void(Pubnub::Map<Pubnub::String, Pubnub::Vector<Pubnub::String>, Pubnub::StringComparer>)> read_receipts_callback) const;
+            CallbackStop stream_updates(std::function<void(const Pubnub::Channel&)> channel_callback) const;
+            CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::Channel> channels, std::function<void(Pubnub::Vector<Pubnub::Channel>)> channel_callback);
+            CallbackStop stream_presence(std::function<void(Pubnub::Vector<Pubnub::String>)> presence_callback) const;
+            CallbackStop stream_read_receipts(std::function<void(Pubnub::Map<Pubnub::String, Pubnub::Vector<Pubnub::String>, Pubnub::StringComparer>)> read_receipts_callback) const;
 
-            PN_CHAT_EXPORT Pubnub::EventsHistoryWrapper get_messsage_reports_history(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 100) const;
+            Pubnub::EventsHistoryWrapper get_messsage_reports_history(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 100) const;
 #ifndef PN_CHAT_C_ABI
-            PN_CHAT_EXPORT CallbackStop stream_message_reports(std::function<void(const Pubnub::Event&)> event_callback) const;
+            CallbackStop stream_message_reports(std::function<void(const Pubnub::Event&)> event_callback) const;
 #endif
 
-            PN_CHAT_EXPORT Pubnub::MessageDraft create_message_draft(Pubnub::MessageDraftConfig message_draft_config = Pubnub::MessageDraftConfig()) const;
+            Pubnub::MessageDraft create_message_draft(Pubnub::MessageDraftConfig message_draft_config = Pubnub::MessageDraftConfig()) const;
 
         protected:
-            PN_CHAT_EXPORT Channel(
+            Channel(
                     Pubnub::String channel_id,
                     std::shared_ptr<const ChatService> chat_service,
                     std::shared_ptr<const ChannelService> channel_service,
