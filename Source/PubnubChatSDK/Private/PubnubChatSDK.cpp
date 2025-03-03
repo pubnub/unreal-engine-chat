@@ -11,6 +11,7 @@
 void FPubnubChatSDKModule::StartupModule()
 {
 	bool IsEditor = false;
+	bool LoadDLL = true;
 	FString BaseDir;
 	FString LibraryPath;
 
@@ -31,15 +32,21 @@ void FPubnubChatSDKModule::StartupModule()
 
 	LibraryPath = IsEditor? FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dylib")) :
 	FPaths::Combine(*BaseDir, TEXT("Binaries/macos/libpubnub-chat.dylib"));
+	
+#elif PLATFORM_LINUX
 
+	LoadDLL = false;
+	
 #endif
 	
 	ChatSDKLibraryHandle = !LibraryPath.IsEmpty() ? FPlatformProcess::GetDllHandle(*LibraryPath) : nullptr;
-	
-	if (!ChatSDKLibraryHandle)
+
+
+	if (!ChatSDKLibraryHandle && LoadDLL)
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ChatSDKModuleHandle", "Failed to load pubnub third party library"));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ChatSDKModuleHandle", "Failed to load pubnub chat third party library"));
 	}
+	
 }
 
 void FPubnubChatSDKModule::ShutdownModule()

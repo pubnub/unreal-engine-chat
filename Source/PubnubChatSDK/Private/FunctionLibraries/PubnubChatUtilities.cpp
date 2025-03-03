@@ -13,7 +13,7 @@
 
 FString UPubnubChatUtilities::PubnubStringToFString(Pubnub::String PubnubString)
 {
-	return FString(PubnubString);
+	return FString(UTF8_TO_TCHAR(PubnubString));
 }
 
 Pubnub::String UPubnubChatUtilities::FStringToPubnubString(FString UEString)

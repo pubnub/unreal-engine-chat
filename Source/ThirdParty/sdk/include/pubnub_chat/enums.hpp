@@ -2,6 +2,7 @@
 #define PN_ENUMS_HPP
 
 #include "string.hpp"
+#include <cstdint>
 
 namespace Pubnub
 {
