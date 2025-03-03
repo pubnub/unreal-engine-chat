@@ -4,6 +4,7 @@
 #include "string.hpp"
 #include <map>
 #include <vector>
+#include <functional>
 
 #include "option.hpp"
 #include "message_elements.hpp"

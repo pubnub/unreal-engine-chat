@@ -31,12 +31,19 @@ public class ChatSDKModule : ModuleRules
 			PublicDelayLoadDLLs.Add(Path.Combine(SDKPath, "lib", "macos", "libpubnub-chat.dylib"));
 			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.dylib", "$(PluginDir)/Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dylib");
 		}
+		else if(Target.Platform == UnrealTargetPlatform.Linux)
+		{
+			string LibPath = Path.Combine(SDKPath, "lib", "Linux", "libpubnub-chat.so");
 
+			PublicAdditionalLibraries.Add(LibPath);
+			PublicDelayLoadDLLs.Add(LibPath);
+			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.so", LibPath);
+		}
 
 		PublicIncludePaths.AddRange(
 			new string[] {
 				SDKPath,
-				Path.Combine(SDKPath, "Include"),
+				Path.Combine(SDKPath, "include"),
 			}
 		);
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
