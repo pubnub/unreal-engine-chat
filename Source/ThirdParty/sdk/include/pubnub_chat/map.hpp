@@ -4,6 +4,7 @@
 #include "vector.hpp"
 #include <map>
 #include <iostream>
+#include <cassert>
 
 namespace Pubnub {
 
@@ -59,10 +60,7 @@ namespace Pubnub {
         }
 
         std::map<T, K> into_std_map(){
-            if(keys.size() != values.size())
-            {
-                throw std::runtime_error("Map is broken, can't convert into std::map");
-            }
+            assert(keys.size() == values.size()); //Keys and values sizes have to be the same
 
             std::vector<T> std_keys = keys.into_std_vector();
             std::vector<K> std_values = values.into_std_vector();
