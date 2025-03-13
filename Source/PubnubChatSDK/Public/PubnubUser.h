@@ -82,10 +82,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	FPubnubChannelsRestrictionsWrapper GetChannelsRestrictions(FString Sort = "", int Limit = 0, FPubnubPage Page = FPubnubPage());
 
-	//Deprecated in JS chat
-	//UFUNCTION(BlueprintCallable, Category = "Pubnub User")
-	//void Report(FString Reason);
-
 	UFUNCTION(BlueprintCallable, Category = "Pubnub User")
 	FPubnubMembershipsResponseWrapper GetMemberships(FString Filter = "", FString Sort = "", int Limit = 0, FPubnubPage Page = FPubnubPage());
 	
