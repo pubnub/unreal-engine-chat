@@ -2,6 +2,7 @@
 #define PN_CHAT_CHAT_HPP
 
 #include "access_manager.hpp"
+#include "callback_handle.hpp"
 #include "enums.hpp"
 #include "mentions.hpp"
 #include "string.hpp"
@@ -27,6 +28,7 @@ class RestrictionsService;
 class MessageService;
 class MembershipService;
 class AccessManagerService;
+class CallbackService;
 
 
 #ifdef PN_CHAT_C_ABI
@@ -148,9 +150,7 @@ namespace Pubnub {
             PN_CHAT_EXPORT void set_restrictions(const Pubnub::String& user_id, const Pubnub::String& channel_id, const Pubnub::Restriction& restrictions) const;
             PN_CHAT_EXPORT void emit_chat_event(pubnub_chat_event_type chat_event_type, const Pubnub::String& channel_id, const Pubnub::String& payload, EventMethod event_method = EventMethod::Default) const;
             PN_CHAT_EXPORT EventsHistoryWrapper get_events_history(const Pubnub::String& channel_id, const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 100) const;
-#ifndef PN_CHAT_C_ABI
-            PN_CHAT_EXPORT Pubnub::CallbackStop listen_for_events(const Pubnub::String& channel_id, pubnub_chat_event_type chat_event_type, std::function<void(const Pubnub::Event&)> event_callback) const;
-#endif
+            PN_CHAT_EXPORT Pubnub::CallbackHandle listen_for_events(const Pubnub::String& channel_id, pubnub_chat_event_type chat_event_type, std::function<void(const Pubnub::Event&)> event_callback) const;
 
             /* MESSAGES */
 
@@ -181,13 +181,11 @@ namespace Pubnub {
             std::shared_ptr<const MessageService> message_service;
             std::shared_ptr<const MembershipService> membership_service;
             std::shared_ptr<const ChannelService> channel_service;
-#ifndef PN_CHAT_C_ABI
-            std::shared_ptr<CallbackService> callback_service;
-#else
+            std::shared_ptr<const CallbackService> callback_service;
+#ifdef PN_CHAT_C_ABI
         public:
             const ChatService* get_chat_service() const;
-            std::vector<pubnub_v2_message> listen_for_events(const Pubnub::String& channel_id, pubnub_chat_event_type chat_event_type) const;
-            std::vector<pubnub_v2_message> get_chat_updates() const;
+            std::shared_ptr<const ChatService> shared_chat_service() const;
 #endif
 
     };

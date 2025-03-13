@@ -1,6 +1,7 @@
 #ifndef PN_CHAT_MESSAGE_H
 #define PN_CHAT_MESSAGE_H
 
+#include "callback_handle.hpp"
 #include "string.hpp"
 #include "helpers/export.hpp"
 #include "message_action.hpp"
@@ -63,8 +64,8 @@ namespace Pubnub
             PN_CHAT_EXPORT void forward(const Pubnub::String& channel_id) const;
             PN_CHAT_EXPORT void report(const Pubnub::String& reason) const;
 
-            PN_CHAT_EXPORT CallbackStop stream_updates(std::function<void(const Message&)> message_callback) const;
-            PN_CHAT_EXPORT CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::Message> messages, std::function<void(Pubnub::Vector<Pubnub::Message>)> message_callback) const;
+            PN_CHAT_EXPORT CallbackHandle stream_updates(std::function<void(const Message&)> message_callback) const;
+            PN_CHAT_EXPORT CallbackHandle stream_updates_on(Pubnub::Vector<Pubnub::Message> messages, std::function<void(Pubnub::Vector<Pubnub::Message>)> message_callback) const;
 
             PN_CHAT_EXPORT Pubnub::ThreadChannel create_thread() const;
             PN_CHAT_EXPORT Pubnub::ThreadChannel get_thread() const;
@@ -98,6 +99,8 @@ namespace Pubnub
 #ifdef PN_CHAT_C_ABI
         public:
             Pubnub::Message update_with_base(const Pubnub::Message& base_message) const;
+
+            std::shared_ptr<const ChatService> shared_chat_service() const;
 #endif
     };
 }
