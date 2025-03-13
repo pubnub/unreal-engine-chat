@@ -3,10 +3,10 @@
 
 #include "PubnubCallbackStop.h"
 
-UPubnubCallbackStop* UPubnubCallbackStop::Create(Pubnub::CallbackStop CallbackStop)
+UPubnubCallbackStop* UPubnubCallbackStop::Create(Pubnub::CallbackHandle CallbackStop)
 {
 	UPubnubCallbackStop* NewCallbackStop = NewObject<UPubnubCallbackStop>();
-	NewCallbackStop->InternalCallbackStop = new Pubnub::CallbackStop(CallbackStop);
+	NewCallbackStop->InternalCallbackStop = new Pubnub::CallbackHandle(CallbackStop);
 	return NewCallbackStop;
 }
 
@@ -19,7 +19,7 @@ void UPubnubCallbackStop::Stop()
 {
 	if(InternalCallbackStop)
 	{
-		InternalCallbackStop->operator()();
+		InternalCallbackStop->close();
 	}
 }
 

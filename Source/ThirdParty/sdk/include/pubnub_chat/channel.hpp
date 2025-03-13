@@ -1,6 +1,7 @@
 #ifndef PN_CHAT_CHANNEL_HPP
 #define PN_CHAT_CHANNEL_HPP
 
+#include "callback_handle.hpp"
 #include "event.hpp"
 #include "string.hpp"
 #include "helpers/export.hpp"
@@ -78,12 +79,10 @@ namespace Pubnub
             Pubnub::ChatChannelData channel_data() const;
 
             Pubnub::Channel update(const ChatChannelData& in_additional_channel_data) const;
-#ifndef PN_CHAT_C_ABI
-            void connect(std::function<void(Message)> message_callback) const;
-            void join(std::function<void(Message)> message_callback, const Pubnub::String& additional_params = "") const;
+            Pubnub::CallbackHandle connect(std::function<void(Message)> message_callback) const;
+            Pubnub::CallbackHandle join(std::function<void(Message)> message_callback, const Pubnub::String& additional_params = "") const;
             void disconnect() const;
             void leave() const;
-#endif
             void delete_channel() const;
 
             virtual void send_text(const Pubnub::String& message, SendTextParams text_params = SendTextParams());
@@ -99,7 +98,7 @@ namespace Pubnub
             Pubnub::Vector<Pubnub::Membership> invite_multiple(Pubnub::Vector<Pubnub::User> users) const;
             void start_typing() const;
             void stop_typing() const;
-            CallbackStop get_typing(std::function<void(Pubnub::Vector<Pubnub::String>)> typing_callback) const;
+            CallbackHandle get_typing(std::function<void(Pubnub::Vector<Pubnub::String>)> typing_callback) const;
             Pubnub::Channel pin_message(const Pubnub::Message& message) const;
             Pubnub::Channel unpin_message() const;
             Pubnub::Message get_pinned_message() const;
@@ -107,16 +106,13 @@ namespace Pubnub
             virtual void emit_user_mention(const Pubnub::String& user_id, const Pubnub::String& timetoken, const Pubnub::String& text) const;
             Pubnub::Vector<Pubnub::Membership> get_user_suggestions(Pubnub::String text, int limit = 10) const;
 
-            CallbackStop stream_updates(std::function<void(const Pubnub::Channel&)> channel_callback) const;
-            CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::Channel> channels, std::function<void(Pubnub::Vector<Pubnub::Channel>)> channel_callback);
-            CallbackStop stream_presence(std::function<void(Pubnub::Vector<Pubnub::String>)> presence_callback) const;
-            CallbackStop stream_read_receipts(std::function<void(Pubnub::Map<Pubnub::String, Pubnub::Vector<Pubnub::String>, Pubnub::StringComparer>)> read_receipts_callback) const;
+            Pubnub::CallbackHandle stream_updates(std::function<void(const Pubnub::Channel&)> channel_callback) const;
+            Pubnub::CallbackHandle stream_updates_on(Pubnub::Vector<Pubnub::Channel> channels, std::function<void(Pubnub::Vector<Pubnub::Channel>)> channel_callback);
+            CallbackHandle stream_presence(std::function<void(Pubnub::Vector<Pubnub::String>)> presence_callback) const;
+            CallbackHandle stream_read_receipts(std::function<void(Pubnub::Map<Pubnub::String, Pubnub::Vector<Pubnub::String>, Pubnub::StringComparer>)> read_receipts_callback) const;
 
             Pubnub::EventsHistoryWrapper get_messsage_reports_history(const Pubnub::String& start_timetoken, const Pubnub::String& end_timetoken, int count = 100) const;
-#ifndef PN_CHAT_C_ABI
-            CallbackStop stream_message_reports(std::function<void(const Pubnub::Event&)> event_callback) const;
-#endif
-
+            CallbackHandle stream_message_reports(std::function<void(const Pubnub::Event&)> event_callback) const;
             Pubnub::MessageDraft create_message_draft(Pubnub::MessageDraftConfig message_draft_config = Pubnub::MessageDraftConfig()) const;
 
         protected:
@@ -143,11 +139,10 @@ namespace Pubnub
 
 #ifdef PN_CHAT_C_ABI
         public:
-        std::vector<pubnub_v2_message> connect() const;
-        std::vector<pubnub_v2_message> join(const Pubnub::String& additional_params = "") const;
-        std::vector<pubnub_v2_message> disconnect() const;
-        std::vector<pubnub_v2_message> leave() const;
+        // TODO: probably not needed
         Pubnub::Channel update_with_base(const Pubnub::Channel& base_channel) const;
+
+        std::shared_ptr<const ChatService> shared_chat_service() const;
 #endif
     };
 };

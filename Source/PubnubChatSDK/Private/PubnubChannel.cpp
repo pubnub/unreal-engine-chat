@@ -96,9 +96,9 @@ UPubnubChannel* UPubnubChannel::Update(FPubnubChatChannelData ChannelData)
 	return nullptr;
 }
 
-void UPubnubChannel::Connect(FOnPubnubChannelMessageReceived MessageCallback)
+UPubnubCallbackStop* UPubnubChannel::Connect(FOnPubnubChannelMessageReceived MessageCallback)
 {
-	if(!IsInternalChannelValid()) {return;}
+	if(!IsInternalChannelValid()) {return nullptr;}
 
 	try
 	{
@@ -110,11 +110,13 @@ void UPubnubChannel::Connect(FOnPubnubChannelMessageReceived MessageCallback)
 				MessageCallback.ExecuteIfBound(NewMessage);
 			});
 		};
-		InternalChannel->connect(lambda);
+		auto CppCallbackStop = InternalChannel->connect(lambda);
+		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Channel Connect error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		return nullptr;
 	}
 }
 
@@ -132,9 +134,9 @@ void UPubnubChannel::Disconnect()
 	}
 }
 
-void UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData)
+UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData)
 {
-	if(!IsInternalChannelValid()) {return;}
+	if(!IsInternalChannelValid()) {return nullptr;}
 
 	try
 	{
@@ -147,11 +149,13 @@ void UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FStri
 			});
 
 		};
-		InternalChannel->join(lambda, UPubnubChatUtilities::FStringToPubnubString(CustomData));
+		auto CppCallbackStop = InternalChannel->join(lambda, UPubnubChatUtilities::FStringToPubnubString(CustomData));
+		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Channel Join error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		return nullptr;
 	}
 }
 

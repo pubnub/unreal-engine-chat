@@ -23,8 +23,8 @@ namespace Pubnub
         PN_CHAT_EXPORT Pubnub::Channel pin_to_parent_channel() const;
         PN_CHAT_EXPORT Pubnub::Channel unpin_from_parent_channel() const;
 
-        PN_CHAT_EXPORT CallbackStop stream_updates(std::function<void(const ThreadMessage&)> message_callback) const;
-        PN_CHAT_EXPORT CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::ThreadMessage>, std::function<void(Pubnub::Vector<Pubnub::ThreadMessage>)> callback) const;
+        PN_CHAT_EXPORT CallbackHandle stream_updates(std::function<void(const ThreadMessage&)> message_callback) const;
+        PN_CHAT_EXPORT CallbackHandle stream_updates_on(Pubnub::Vector<Pubnub::ThreadMessage>, std::function<void(Pubnub::Vector<Pubnub::ThreadMessage>)> callback) const;
 
         private:
             PN_CHAT_EXPORT ThreadMessage(

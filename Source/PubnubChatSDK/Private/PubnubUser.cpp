@@ -180,21 +180,6 @@ FPubnubChannelsRestrictionsWrapper UPubnubUser::GetChannelsRestrictions(FString 
 	return FPubnubChannelsRestrictionsWrapper();
 }
 
-//Deprecated in JS chat
-/*void UPubnubUser::Report(FString Reason)
-{
-	if(!IsInternalUserValid()) {return;}
-
-	try
-	{
-		InternalUser->report(UPubnubChatUtilities::FStringToPubnubString(Reason));
-	}
-	catch (std::exception& Exception)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Report error: %s"), UTF8_TO_TCHAR(Exception.what()));
-	}
-}*/
-
 FPubnubMembershipsResponseWrapper UPubnubUser::GetMemberships(FString Filter, FString Sort, int Limit, FPubnubPage Page)
 {
 	if(!IsInternalUserValid()) {return FPubnubMembershipsResponseWrapper();}

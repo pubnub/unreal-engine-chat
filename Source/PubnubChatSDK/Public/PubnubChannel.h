@@ -99,13 +99,13 @@ public:
 	UPubnubChannel* Update(FPubnubChatChannelData ChannelData); 
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	void Connect(FOnPubnubChannelMessageReceived MessageCallback);
+	UPubnubCallbackStop* Connect(FOnPubnubChannelMessageReceived MessageCallback);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	void Disconnect();
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	void Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData = "");
+	UPubnubCallbackStop* Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData = "");
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	void Leave();

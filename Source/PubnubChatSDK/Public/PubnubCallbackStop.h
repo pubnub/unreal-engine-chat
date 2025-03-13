@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include <pubnub_chat/callback_stop.hpp>
+#include <pubnub_chat/callback_handle.hpp>
 #include "PubnubCallbackStop.generated.h"
 
 
@@ -22,8 +22,8 @@ public:
 	void Stop();
 
 	//Internal usage only
-	static UPubnubCallbackStop* Create(Pubnub::CallbackStop CallbackStop);
+	static UPubnubCallbackStop* Create(Pubnub::CallbackHandle CallbackStop);
 
 protected:
-	Pubnub::CallbackStop* InternalCallbackStop;
+	Pubnub::CallbackHandle* InternalCallbackStop;
 };

@@ -1,6 +1,7 @@
 #ifndef PN_CHAT_USER_H
 #define PN_CHAT_USER_H
 
+#include "callback_handle.hpp"
 #include "option.hpp"
 #include "string.hpp"
 #include "helpers/export.hpp"
@@ -78,8 +79,8 @@ namespace Pubnub
 
             PN_CHAT_EXPORT MembershipsResponseWrapper get_memberships(const Pubnub::String& filter = "", const Pubnub::String& sort = "", int limit = 0, const Pubnub::Page& page = Pubnub::Page()) const;
 
-            PN_CHAT_EXPORT CallbackStop stream_updates(std::function<void(const User&)> user_callback) const;
-            PN_CHAT_EXPORT CallbackStop stream_updates_on(Pubnub::Vector<Pubnub::User> users, std::function<void(Pubnub::Vector<Pubnub::User>)> user_callback) const;
+            PN_CHAT_EXPORT CallbackHandle stream_updates(std::function<void(const User&)> user_callback) const;
+            PN_CHAT_EXPORT CallbackHandle stream_updates_on(Pubnub::Vector<Pubnub::User> users, std::function<void(Pubnub::Vector<Pubnub::User>)> user_callback) const;
 
             PN_CHAT_EXPORT bool active() const;
             PN_CHAT_EXPORT Pubnub::Option<Pubnub::String> last_active_timestamp() const;
@@ -107,6 +108,8 @@ namespace Pubnub
 #ifdef PN_CHAT_C_ABI
         public:
         Pubnub::User update_with_base(const Pubnub::User& base_user) const;
+
+        std::shared_ptr<const ChatService> shared_chat_service() const;
 #endif
     };
 }
