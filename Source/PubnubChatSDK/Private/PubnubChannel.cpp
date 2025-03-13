@@ -98,7 +98,7 @@ UPubnubChannel* UPubnubChannel::Update(FPubnubChatChannelData ChannelData)
 
 UPubnubCallbackStop* UPubnubChannel::Connect(FOnPubnubChannelMessageReceived MessageCallback)
 {
-	if(!IsInternalChannelValid()) {return;}
+	if(!IsInternalChannelValid()) {return nullptr;}
 
 	try
 	{
@@ -136,7 +136,7 @@ void UPubnubChannel::Disconnect()
 
 UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData)
 {
-	if(!IsInternalChannelValid()) {return;}
+	if(!IsInternalChannelValid()) {return nullptr;}
 
 	try
 	{
