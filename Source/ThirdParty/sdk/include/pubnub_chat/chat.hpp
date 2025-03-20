@@ -170,9 +170,13 @@ namespace Pubnub {
             /* PAM */
             PN_CHAT_EXPORT Pubnub::AccessManager access_manager() const;
 
+            /* LOG */
+            PN_CHAT_EXPORT void register_logger_callback(std::function<void(Pubnub::pn_log_level, const char*)> callback);
+
         private:
             Chat(const Pubnub::String& publish_key, const Pubnub::String& subscribe_key, const Pubnub::String& user_id, const ChatConfig& config);
             void store_user_activity_timestamp() const;
+            Pubnub::User create_user_for_init_chat(const Pubnub::String& user_id, const Pubnub::ChatUserData& user_data) const;
 
             std::shared_ptr<const ChatService> chat_service;
             std::shared_ptr<const UserService> user_service;

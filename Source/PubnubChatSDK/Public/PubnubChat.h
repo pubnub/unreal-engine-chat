@@ -222,7 +222,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat")
 	void DestroyChat();
 	
-		/* CHANNELS */
+	/* CHANNELS */
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	UPubnubChannel* CreatePublicConversation(FString ChannelID, FPubnubChatChannelData ChannelData);

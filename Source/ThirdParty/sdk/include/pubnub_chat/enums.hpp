@@ -38,6 +38,15 @@ enum EventMethod {
     Signal
 };
 
+enum pn_log_level {
+    None,
+    Error,
+    Warning,
+    Info,
+    Debug,
+    Trace
+};
+
 }
 
 #endif // PN_ENUMS_HPP
