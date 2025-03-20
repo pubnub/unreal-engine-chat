@@ -17,6 +17,22 @@ UPubnubChat* UPubnubChat::Create(Pubnub::Chat Chat)
 {
 	UPubnubChat* NewChat = NewObject<UPubnubChat>();
 	NewChat->InternalChat = new Pubnub::Chat(Chat);
+	auto PubnubChatLogLambda = [=](Pubnub::pn_log_level log_level, const char* message)
+	{
+		switch (log_level)
+		{
+		case Pubnub::pn_log_level::Warning:
+			UE_LOG(PubnubChatLog, Warning, TEXT("%s"), UTF8_TO_TCHAR(message));
+			break;
+		case Pubnub::pn_log_level::Error:
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), UTF8_TO_TCHAR(message));
+			break;
+		default:
+			UE_LOG(PubnubChatLog, Log, TEXT("%s"), UTF8_TO_TCHAR(message));
+			break;
+		};
+	};
+	Chat.register_logger_callback(PubnubChatLogLambda);
 	return NewChat;
 }
 
@@ -524,4 +540,3 @@ bool UPubnubChat::IsInternalChatValid()
 	}
 	return true;
 }
-
