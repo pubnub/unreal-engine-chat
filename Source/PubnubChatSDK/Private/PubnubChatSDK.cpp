@@ -25,12 +25,12 @@ void FPubnubChatSDKModule::StartupModule()
 	
 #if PLATFORM_WINDOWS
 	
-	LibraryPath = IsEditor? FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/sdk/lib/Win64/pubnub-chat.dll")) :
+	LibraryPath = IsEditor? FPaths::Combine(*BaseDir, TEXT("Source/PubnubCoreSDK/sdk/lib/Win64/pubnub-chat.dll")) :
 	FPaths::Combine(*BaseDir, TEXT("Binaries/Win64/pubnub-chat.dll"));
 
 #elif PLATFORM_MAC
 
-	LibraryPath = IsEditor? FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dylib")) :
+	LibraryPath = IsEditor? FPaths::Combine(*BaseDir, TEXT("Source/PubnubCoreSDK/sdk/lib/macos/libpubnub-chat.dylib")) :
 	FPaths::Combine(*BaseDir, TEXT("Binaries/macos/libpubnub-chat.dylib"));
 	
 #elif PLATFORM_LINUX
