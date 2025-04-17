@@ -25,13 +25,28 @@ FString UPubnubMembership::GetCustomData()
 
 	try
 	{
-		return UPubnubChatUtilities::PubnubStringToFString(InternalMembership->custom_data());
+		return UPubnubChatUtilities::PubnubStringToFString(InternalMembership->membership_data().custom_data_json);
 	}
 	catch (std::exception& Exception)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Membership Get Custom Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
+}
+
+FPubnubChatMembershipData UPubnubMembership::GetMembershipData()
+{
+	if(!IsInternalMembershipValid()) {return FPubnubChatMembershipData();}
+
+	try
+	{
+		return FPubnubChatMembershipData(InternalMembership->membership_data());
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Get Membership Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+	return FPubnubChatMembershipData();
 }
 
 UPubnubMembership* UPubnubMembership::Update(FString CustomData)
@@ -46,6 +61,22 @@ UPubnubMembership* UPubnubMembership::Update(FString CustomData)
 	catch (std::exception& Exception)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Membership Update error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+	return nullptr;
+}
+
+UPubnubMembership* UPubnubMembership::UpdateMembership(FPubnubChatMembershipData MembershipData)
+{
+	if(!IsInternalMembershipValid()) {return nullptr;}
+
+	try
+	{
+		auto CppMembership = InternalMembership->update(MembershipData.GetCppChatMembershipData());
+		return Create(CppMembership);
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Update Membership error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }

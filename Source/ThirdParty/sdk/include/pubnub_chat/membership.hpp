@@ -19,6 +19,13 @@ namespace Pubnub
 {
     class Message;
 
+    struct ChatMembershipData
+    {
+        Pubnub::String custom_data_json = "";
+        Pubnub::String status = "";
+        Pubnub::String type = "";
+    };
+
     PN_CHAT_EXPORT class Membership
     {
         public:
@@ -30,9 +37,12 @@ namespace Pubnub
 
             PN_CHAT_EXPORT Pubnub::Membership& operator =(const Pubnub::Membership& other);
 
+            [[deprecated("Replaced by membership_data() which contains more membership information")]]
             PN_CHAT_EXPORT Pubnub::String custom_data() const;
+            PN_CHAT_EXPORT Pubnub::ChatMembershipData membership_data() const;
 
             PN_CHAT_EXPORT Pubnub::Membership update(const Pubnub::String& custom_object_json) const;
+            PN_CHAT_EXPORT Pubnub::Membership update(const Pubnub::ChatMembershipData& membership_data) const;
             PN_CHAT_EXPORT Pubnub::String last_read_message_timetoken() const;
             PN_CHAT_EXPORT Pubnub::Membership set_last_read_message_timetoken(const Pubnub::String& timetoken) const;
             PN_CHAT_EXPORT Pubnub::Membership set_last_read_message(const Pubnub::Message& message) const;

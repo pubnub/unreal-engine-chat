@@ -108,6 +108,39 @@ struct FPubnubChatUserData
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatMembershipData
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString CustomDataJson = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Status = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Type = "";
+
+	FPubnubChatMembershipData() = default;
+	
+	FPubnubChatMembershipData(const FString& InCustomDataJson, const FString& InStatus, const FString& InType)
+	: CustomDataJson(InCustomDataJson), Status(InStatus), Type(InType)
+	{};
+	FPubnubChatMembershipData(Pubnub::ChatMembershipData ChatMembershipData) :
+	CustomDataJson(UPubnubChatUtilities::PubnubStringToFString(ChatMembershipData.custom_data_json)),
+	Status(UPubnubChatUtilities::PubnubStringToFString(ChatMembershipData.status)),
+	Type(UPubnubChatUtilities::PubnubStringToFString(ChatMembershipData.type))
+	{};
+
+	//Internal use only
+	Pubnub::ChatMembershipData GetCppChatMembershipData()
+	{
+		return Pubnub::ChatMembershipData(
+			{
+				UPubnubChatUtilities::FStringToPubnubString(CustomDataJson),
+				UPubnubChatUtilities::FStringToPubnubString(Status),
+				UPubnubChatUtilities::FStringToPubnubString(Type)
+		});
+	}
+};
+
+
+USTRUCT(BlueprintType)
 struct FPubnubMessageAction
 {
 	GENERATED_BODY()
