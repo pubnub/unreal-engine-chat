@@ -59,14 +59,14 @@ UPubnubChannel* UPubnubChat::CreatePublicConversation(FString ChannelID, FPubnub
 	return nullptr;
 }
 
-FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData)
+FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData MembershipData)
 {
 	if(!IsInternalChatValid()) {return FPubnubCreatedChannelWrapper();}
 	
 	try
 	{
 		auto CppUsers = UPubnubChatUtilities::UnrealUsersToCppUsers(Users);
-		auto CppWrapper = InternalChat->create_group_conversation(CppUsers, UPubnubChatUtilities::FStringToPubnubString(ChannelID), ChannelData.GetCppChatChannelData(), UPubnubChatUtilities::FStringToPubnubString(MembershipData));
+		auto CppWrapper = InternalChat->create_group_conversation(CppUsers, UPubnubChatUtilities::FStringToPubnubString(ChannelID), ChannelData.GetCppChatChannelData(), MembershipData.GetCppChatMembershipData());
 		FPubnubCreatedChannelWrapper UEWrapper(CppWrapper);
 		return UEWrapper;
 	}
@@ -77,13 +77,23 @@ FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnub
 	return FPubnubCreatedChannelWrapper();
 }
 
-FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData)
+FPubnubCreatedChannelWrapper UPubnubChat::CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData)
+{
+	return this->CreateGroupConversation(Users, ChannelID, ChannelData, FPubnubChatMembershipData(MembershipData, "", ""));
+}
+
+FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData MembershipData)
 {
 	if(!IsInternalChatValid()) {return FPubnubCreatedChannelWrapper();}
+	if(!User)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Create Direct Conversation error: User is invalid"));
+		return FPubnubCreatedChannelWrapper();
+	}
 	
 	try
 	{
-		auto CppWrapper = InternalChat->create_direct_conversation(*User->GetInternalUser(), UPubnubChatUtilities::FStringToPubnubString(ChannelID), ChannelData.GetCppChatChannelData(), UPubnubChatUtilities::FStringToPubnubString(MembershipData));
+		auto CppWrapper = InternalChat->create_direct_conversation(*User->GetInternalUser(), UPubnubChatUtilities::FStringToPubnubString(ChannelID), ChannelData.GetCppChatChannelData(), MembershipData.GetCppChatMembershipData());
 		FPubnubCreatedChannelWrapper UEWrapper(CppWrapper);
 		return UEWrapper;
 	}
@@ -92,6 +102,11 @@ FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* 
 		UE_LOG(PubnubChatLog, Error, TEXT("Create Direct Conversation error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubCreatedChannelWrapper();
+}
+
+FPubnubCreatedChannelWrapper UPubnubChat::CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData)
+{
+	return this->CreateDirectConversation(User, ChannelID, ChannelData, FPubnubChatMembershipData(MembershipData, "", ""));
 }
 
 UPubnubChannel* UPubnubChat::GetChannel(FString ChannelID)

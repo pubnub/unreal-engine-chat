@@ -133,8 +133,7 @@ void UPubnubChannel::Disconnect()
 		UE_LOG(PubnubChatLog, Error, TEXT("Channel Disconnect error: %s"), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
-
-UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData)
+UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData)
 {
 	if(!IsInternalChannelValid()) {return nullptr;}
 
@@ -149,7 +148,7 @@ UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived Messag
 			});
 
 		};
-		auto CppCallbackStop = InternalChannel->join(lambda, UPubnubChatUtilities::FStringToPubnubString(CustomData));
+		auto CppCallbackStop = InternalChannel->join(lambda, MembershipData.GetCppChatMembershipData());
 		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
@@ -157,6 +156,10 @@ UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived Messag
 		UE_LOG(PubnubChatLog, Error, TEXT("Channel Join error: %s"), UTF8_TO_TCHAR(Exception.what()));
 		return nullptr;
 	}
+}
+UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData)
+{
+	return this->Join(MessageCallback, FPubnubChatMembershipData(CustomData, "", ""));
 }
 
 void UPubnubChannel::Leave()

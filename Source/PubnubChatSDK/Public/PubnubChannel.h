@@ -105,7 +105,8 @@ public:
 	void Disconnect();
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
-	UPubnubCallbackStop* Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData = "");
+	UPubnubCallbackStop* Join(FOnPubnubChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
+	UPubnubCallbackStop* Join(FOnPubnubChannelMessageReceived MessageCallback, FString CustomData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Channel")
 	void Leave();

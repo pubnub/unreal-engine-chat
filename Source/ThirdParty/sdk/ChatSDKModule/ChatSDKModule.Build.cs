@@ -23,8 +23,9 @@ public class ChatSDKModule : ModuleRules
 			
 			PublicDelayLoadDLLs.Add("pubnub-chat.dll");
 			
-			// Ensure that the DLL is staged along with the executable
+			// Ensure that the DLL is staged along with the executable and pdb in Debug/Development build
 			RuntimeDependencies.Add("$(BinaryOutputDir)/pubnub-chat.dll", "$(PluginDir)/Source/ThirdParty/sdk/lib/win64/pubnub-chat.dll");
+			RuntimeDependencies.Add("$(BinaryOutputDir)/pubnub-chat.pdb", "$(PluginDir)/Source/ThirdParty/sdk/lib/win64/pubnub-chat.pdb", StagedFileType.DebugNonUFS);
 		}
 		else if(Target.Platform == UnrealTargetPlatform.Mac)
 		{

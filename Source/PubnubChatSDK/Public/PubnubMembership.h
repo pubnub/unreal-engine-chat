@@ -39,12 +39,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership")
 	FPubnubChatMembershipData GetMembershipData();
-
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
+	UPubnubMembership* Update(FPubnubChatMembershipData MembershipData);
 	UPubnubMembership* Update(FString CustomData);
-
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
-	UPubnubMembership* UpdateMembership(FPubnubChatMembershipData MembershipData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	UPubnubCallbackStop* StreamUpdates(FOnPubnubMembershipStreamUpdateReceived MembershipUpdateCallback);

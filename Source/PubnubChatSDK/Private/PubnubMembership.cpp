@@ -51,21 +51,10 @@ FPubnubChatMembershipData UPubnubMembership::GetMembershipData()
 
 UPubnubMembership* UPubnubMembership::Update(FString CustomData)
 {
-	if(!IsInternalMembershipValid()) {return nullptr;}
-
-	try
-	{
-		auto CppMembership = InternalMembership->update(UPubnubChatUtilities::FStringToPubnubString(CustomData));
-		return Create(CppMembership);
-	}
-	catch (std::exception& Exception)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Update error: %s"), UTF8_TO_TCHAR(Exception.what()));
-	}
-	return nullptr;
+	return this->Update(FPubnubChatMembershipData{CustomData, "", ""});
 }
 
-UPubnubMembership* UPubnubMembership::UpdateMembership(FPubnubChatMembershipData MembershipData)
+UPubnubMembership* UPubnubMembership::Update(FPubnubChatMembershipData MembershipData)
 {
 	if(!IsInternalMembershipValid()) {return nullptr;}
 
