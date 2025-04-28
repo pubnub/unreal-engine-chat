@@ -40,6 +40,7 @@ public class ChatSDKModule : ModuleRules
 			PublicAdditionalLibraries.Add(LibPath);
 			PublicDelayLoadDLLs.Add(LibPath);
 			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.so", LibPath);
+			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.so.debug", Path.Combine(SDKPath, "lib", "Linux", "libpubnub-chat.so.debug"), StagedFileType.DebugNonUFS);
 		}
 
 		PublicIncludePaths.AddRange(
