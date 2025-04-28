@@ -31,6 +31,7 @@ public class ChatSDKModule : ModuleRules
 		{
 			PublicDelayLoadDLLs.Add(Path.Combine(SDKPath, "lib", "macos", "libpubnub-chat.dylib"));
 			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.dylib", "$(PluginDir)/Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dylib");
+			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.dSYM", "$(PluginDir)/Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dSYM", StagedFileType.DebugNonUFS);
 		}
 		else if(Target.Platform == UnrealTargetPlatform.Linux)
 		{
