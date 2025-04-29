@@ -40,6 +40,7 @@ namespace Pubnub
     class User;
     class MessageDraft;
     struct EventsHistoryWrapper;
+    struct ChatMembershipData;
 
     struct ChatChannelData
     {
@@ -81,6 +82,7 @@ namespace Pubnub
             Pubnub::Channel update(const ChatChannelData& in_additional_channel_data) const;
             Pubnub::CallbackHandle connect(std::function<void(Message)> message_callback) const;
             Pubnub::CallbackHandle join(std::function<void(Message)> message_callback, const Pubnub::String& additional_params = "") const;
+            Pubnub::CallbackHandle join(std::function<void(Message)> message_callback, const Pubnub::ChatMembershipData& membership_data) const;
             void disconnect() const;
             void leave() const;
             void delete_channel() const;

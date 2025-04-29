@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <ostream>
 #include <string>
+#include <cstring>
 
 namespace Pubnub {
     /**

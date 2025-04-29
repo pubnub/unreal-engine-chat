@@ -23,13 +23,15 @@ public class ChatSDKModule : ModuleRules
 			
 			PublicDelayLoadDLLs.Add("pubnub-chat.dll");
 			
-			// Ensure that the DLL is staged along with the executable
+			// Ensure that the DLL is staged along with the executable and pdb in Debug/Development build
 			RuntimeDependencies.Add("$(BinaryOutputDir)/pubnub-chat.dll", "$(PluginDir)/Source/ThirdParty/sdk/lib/win64/pubnub-chat.dll");
+			RuntimeDependencies.Add("$(BinaryOutputDir)/pubnub-chat.pdb", "$(PluginDir)/Source/ThirdParty/sdk/lib/win64/pubnub-chat.pdb", StagedFileType.DebugNonUFS);
 		}
 		else if(Target.Platform == UnrealTargetPlatform.Mac)
 		{
 			PublicDelayLoadDLLs.Add(Path.Combine(SDKPath, "lib", "macos", "libpubnub-chat.dylib"));
 			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.dylib", "$(PluginDir)/Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dylib");
+			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.dSYM", "$(PluginDir)/Source/ThirdParty/sdk/lib/macos/libpubnub-chat.dSYM", StagedFileType.DebugNonUFS);
 		}
 		else if(Target.Platform == UnrealTargetPlatform.Linux)
 		{
@@ -38,6 +40,7 @@ public class ChatSDKModule : ModuleRules
 			PublicAdditionalLibraries.Add(LibPath);
 			PublicDelayLoadDLLs.Add(LibPath);
 			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.so", LibPath);
+			RuntimeDependencies.Add("$(BinaryOutputDir)/libpubnub-chat.so.debug", Path.Combine(SDKPath, "lib", "Linux", "libpubnub-chat.so.debug"), StagedFileType.DebugNonUFS);
 		}
 
 		PublicIncludePaths.AddRange(

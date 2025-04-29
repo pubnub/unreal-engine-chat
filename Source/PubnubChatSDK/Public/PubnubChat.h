@@ -228,10 +228,12 @@ public:
 	UPubnubChannel* CreatePublicConversation(FString ChannelID, FPubnubChatChannelData ChannelData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
-	FPubnubCreatedChannelWrapper CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData = "");
+	FPubnubCreatedChannelWrapper CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
+	FPubnubCreatedChannelWrapper CreateGroupConversation(TArray<UPubnubUser*> Users, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
-	FPubnubCreatedChannelWrapper CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData = "");
+	FPubnubCreatedChannelWrapper CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
+	FPubnubCreatedChannelWrapper CreateDirectConversation(UPubnubUser* User, FString ChannelID, FPubnubChatChannelData ChannelData, FString MembershipData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	UPubnubChannel* GetChannel(FString ChannelID);

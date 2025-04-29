@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include <pubnub_chat/membership.hpp>
+#include "PubnubChatStructLibrary.h"
 #include "PubnubMembership.generated.h"
 
 class UPubnubChannel;
@@ -32,10 +33,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership")
 	UPubnubUser* GetUser() {return User;};
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership", meta=(DeprecatedFunction,
+		DeprecationMessage="Function has been deprecated, Please use function GetMembershipData instead - it returns more Membership information"))
 	FString GetCustomData();
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership")
+	FPubnubChatMembershipData GetMembershipData();
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
+	UPubnubMembership* Update(FPubnubChatMembershipData MembershipData);
 	UPubnubMembership* Update(FString CustomData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
