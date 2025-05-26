@@ -20,6 +20,7 @@ os.remove(temporary_dir + "/make_packages.py")
 os.remove(temporary_dir + "/.gitignore")
 os.remove(temporary_dir + "/.git")
 os.remove(temporary_dir + "/README.md")
+os.remove(temporary_dir + ".pubnub.yml")
 os.remove(temporary_dir + "/Config/FilterPlugin.ini")
     
 shutil.rmtree(temporary_dir + "/.github", ignore_errors=True)

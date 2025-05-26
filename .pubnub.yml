@@ -1,0 +1,72 @@
+name: unreal-engine-chat
+version: v0.4.0
+schema: 1
+scm: github.com/pubnub/unreal-engine-chat
+changelog:
+  - date: 2025-05-12
+    version: v0.4.0
+    changes:
+      - type: feature
+        text: "Add dedicated structure to hold Membership CustomJson, Status and Type and replace setting CustomJson with this structure."
+      - type: improvement
+        text: "Add debugging symbols."
+      - type: bug
+        text: "Fix bugs that sometimes Membership CustomData was set from Channel CustomData."
+
+sdks:
+  - 
+      full-name: PubNub Unreal Engine Chat SDK
+      short-name: UE Chat
+      artifacts:
+        -
+          artifact-type: package
+          language: C++
+          tier: 2
+          tags:
+            - Desktop
+            - Game Engine
+          source-repository: https://github.com/pubnub/unreal-engine-chat
+          documentation: https://www.pubnub.com/docs/chat/unreal-chat-sdk
+          distributions:
+            -
+              distribution-type: source-code
+              distribution-repository: GitHub release
+              package-name: pubnub
+              location: https://github.com/pubnub/unreal-engine-chat
+              supported-platforms:
+                supported-operating-systems:
+                  Linux:
+                    runtime-version:
+                      - Unreal Engine 5
+                    minimum-os-version:
+                      - Ubuntu 12.04
+                    maximum-os-version:
+                      - Ubuntu 20.04 LTS
+                    target-architecture:
+                      - x86-64
+                  macOS:
+                    runtime-version:
+                      - Unreal Engine 5
+                    minimum-os-version:
+                      - macOS 10.12
+                    maximum-os-version:
+                      - macOS 11.0.1
+                    target-architecture:
+                      - x86-64
+                  Windows:
+                    runtime-version:
+                      - Unreal Engine 5
+                    minimum-os-version:
+                      - Windows Vista Ultimate
+                    maximum-os-version:
+                      - Windows 11 Home
+                    target-architecture:
+                      - x86-64
+
+
+supported-platforms:
+  - version: PubNub Unreal Engine Chat SDK
+    platforms:
+      - Windows
+      - Mac OS     
+      - Unix 
