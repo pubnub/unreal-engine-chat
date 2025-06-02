@@ -483,3 +483,12 @@ struct FPubnubMessageDraftConfig
 		});
 	}
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubConnectionStatusData
+{
+	GENERATED_BODY()
+	
+	/**Error details in case of ConnectionError.*/
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Reason = "";
+};

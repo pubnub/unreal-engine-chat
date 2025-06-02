@@ -110,6 +110,12 @@ namespace Pubnub {
         bool is_more;
     };
 
+    struct ConnectionStatusData
+    {
+        /**Error details in case of ConnectionError.*/
+        Pubnub::String reason = "";
+    };
+
 
 
     class Chat {
@@ -170,10 +176,18 @@ namespace Pubnub {
             PN_CHAT_EXPORT void remove_thread_channel(const Pubnub::Message& message) const;
 
             /* PAM */
+
             PN_CHAT_EXPORT Pubnub::AccessManager access_manager() const;
 
             /* LOG */
+
             PN_CHAT_EXPORT void register_logger_callback(std::function<void(Pubnub::pn_log_level, const char*)> callback);
+
+            /* CONNECTION STATUS */
+            
+            PN_CHAT_EXPORT void add_connection_status_listener(std::function<void(Pubnub::pn_connection_status status, Pubnub::ConnectionStatusData status_data)> connection_status_callback) const;
+            PN_CHAT_EXPORT bool reconnect_subscriptions() const;
+            PN_CHAT_EXPORT bool disconnect_subscriptions() const;
 
         private:
             Chat(const Pubnub::String& publish_key, const Pubnub::String& subscribe_key, const Pubnub::String& user_id, const ChatConfig& config);

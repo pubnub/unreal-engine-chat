@@ -37,6 +37,7 @@ UPubnubChat* UPubnubChatSubsystem::InitChat(FString PublishKey, FString Subscrib
 	UPubnubChatUtilities::FStringToPubnubString(SubscribeKey),UPubnubChatUtilities::FStringToPubnubString(UserID), CppConfig));
 		//Bind OnChatDestroyed, so Subsystem can clear a variable when Chat is destroyed manually by an user
 		Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+		Chat->InitConnectionListener();
 		
 		return Chat;
 	}

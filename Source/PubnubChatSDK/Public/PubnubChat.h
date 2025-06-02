@@ -12,6 +12,8 @@
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubEventReceived, FPubnubEvent, Event);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPubnubChatDestroyed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnConnectionStatusChanged, EPubnubConnectionStatus, Status, const FPubnubConnectionStatusData&, StatusData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnConnectionStatusChangedNative, EPubnubConnectionStatus Status, const FPubnubConnectionStatusData& StatusData);
 
 class UPubnubChannel;
 class UPubnubUser;
@@ -152,20 +154,19 @@ struct FPubnubEventsHistoryWrapper
 	}
 };
 
-// TODO: Probably it should be moved into new directory but I'm not sure if it requires any additional actions:
-// -->
+
 USTRUCT(BlueprintType)
 struct FPubnubUserMentionData 
 {
     GENERATED_BODY();
 
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID;
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubEvent Event;
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubMessage* Message = nullptr;
 
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ParentChannelID;
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ThreadChannelID;
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ParentChannelID = "";
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ThreadChannelID = "";
 
     FPubnubUserMentionData() = default;
     FPubnubUserMentionData(Pubnub::UserMentionData& MentionData) :
@@ -197,7 +198,7 @@ struct FPubnubUserMentionDataList
         }
     }
 };
-// <--
+
 
 /**
  * 
@@ -216,7 +217,14 @@ public:
 		}
 	}
 
-	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat")
+	/**Listener to react for connection status changed */
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnConnectionStatusChanged OnConnectionStatusChanged;
+
+	/**Listener to react for connection status changed , equivalent that accepts lambdas*/
+	FOnConnectionStatusChangedNative OnConnectionStatusChangedNative;
+
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyed;
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat")
@@ -332,8 +340,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Access Manager")
 	UPubnubAccessManager* GetAccessManager();
 
+	
+	/* CONNECTION STATUS */
+
+	/**
+	 * Tries to reconnect all existing subscriptions. Mostly call this if DisconnectSubscriptions was called previously
+	 * or if received ConnectionError from OnConnectionStatusChanged to restore all existing subscriptions and listeners.
+	 * @return true if operation succeeded.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status")
+	bool ReconnectSubscriptions();
+
+	/**
+	 * Tries to disconnect (pause) all active subscriptions - listeners. This will be called for all objects: channels, users,
+	 * messages, etc. Call ReconnectSubscriptions to restore them.
+	 * @return true if operation succeeded.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status")
+	bool DisconnectSubscriptions();
+	
+
 	//Internal usage only
 	static UPubnubChat* Create(Pubnub::Chat Chat);
+	//Internal usage only, to listen for Connection Statuses use OnConnectionStatusChanged or OnConnectionStatusChangedNative
+	void InitConnectionListener();
     
 private:
 	bool IsInternalChatValid();

@@ -33,7 +33,21 @@ UPubnubChat* UPubnubChat::Create(Pubnub::Chat Chat)
 		};
 	};
 	Chat.register_logger_callback(PubnubChatLogLambda);
+	
 	return NewChat;
+}
+
+void UPubnubChat::InitConnectionListener()
+{
+	if(!IsInternalChatValid()) {return;}
+	
+	auto ConnectionStatusListener = [this](Pubnub::pn_connection_status status, Pubnub::ConnectionStatusData status_data)
+	{
+		FPubnubConnectionStatusData StatusData = FPubnubConnectionStatusData({UPubnubChatUtilities::PubnubStringToFString(status_data.reason)});
+		OnConnectionStatusChanged.Broadcast((EPubnubConnectionStatus)status, StatusData);
+		OnConnectionStatusChangedNative.Broadcast((EPubnubConnectionStatus)status, StatusData);
+	};
+	InternalChat->add_connection_status_listener(ConnectionStatusListener);
 }
 
 void UPubnubChat::DestroyChat()
@@ -544,6 +558,38 @@ UPubnubAccessManager* UPubnubChat::GetAccessManager()
 	if(!IsInternalChatValid()) {return nullptr;}
 	
 	return UPubnubAccessManager::Create(InternalChat->access_manager());
+}
+
+bool UPubnubChat::ReconnectSubscriptions()
+{
+	if(!IsInternalChatValid()) {return false;}
+
+	try
+	{
+		return InternalChat->reconnect_subscriptions();
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Reconnect Subscriptions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+
+	return false;
+}
+
+bool UPubnubChat::DisconnectSubscriptions()
+{
+	if(!IsInternalChatValid()) {return false;}
+
+	try
+	{
+		return InternalChat->disconnect_subscriptions();
+	}
+	catch (std::exception& Exception)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Disconnect Subscriptions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+	}
+
+	return false;
 }
 
 bool UPubnubChat::IsInternalChatValid()
