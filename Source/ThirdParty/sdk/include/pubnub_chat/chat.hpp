@@ -186,6 +186,7 @@ namespace Pubnub {
             /* CONNECTION STATUS */
             
             PN_CHAT_EXPORT void add_connection_status_listener(std::function<void(Pubnub::pn_connection_status status, Pubnub::ConnectionStatusData status_data)> connection_status_callback) const;
+            PN_CHAT_EXPORT void remove_connection_status_listener() const;
             PN_CHAT_EXPORT bool reconnect_subscriptions() const;
             PN_CHAT_EXPORT bool disconnect_subscriptions() const;
 

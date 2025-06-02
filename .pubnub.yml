@@ -1,8 +1,13 @@
 name: unreal-engine-chat
-version: v0.4.0
+version: v0.4.1
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2025-06-02
+    version: v0.4.1
+    changes:
+      - type: feature
+        text: "Add Connection Status Listener and Reconnect/DisconnectSubscriptions methods."
   - date: 2025-05-12
     version: v0.4.0
     changes:
