@@ -47,6 +47,12 @@ enum pn_log_level {
     Trace
 };
 
+enum pn_connection_status {
+    PCS_CONNECTION_ONLINE,
+    PCS_CONNECTION_OFFLINE,
+    PCS_CONNECTION_ERROR
+};
+
 }
 
 #endif // PN_ENUMS_HPP

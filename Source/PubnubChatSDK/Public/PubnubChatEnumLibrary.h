@@ -67,3 +67,11 @@ enum class EPubnubMessageDraftSuggestionSource : uint8
 	PMDSS_Channel			UMETA(DisplayName="Channel"),
 	PMDSS_Global			UMETA(DisplayName="Global"),
 };
+
+UENUM(BlueprintType)
+enum class EPubnubConnectionStatus : uint8
+{
+	PCS_CONNECTION_ONLINE		UMETA(DisplayName="ConnectionOnline"),
+	PCS_CONNECTION_OFFLINE		UMETA(DisplayName="ConnectionOffline"),
+	PCS_CONNECTION_ERROR		UMETA(DisplayName="ConnectionError")
+};
