@@ -12,8 +12,8 @@
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubEventReceived, FPubnubEvent, Event);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPubnubChatDestroyed);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnConnectionStatusChanged, EPubnubConnectionStatus, Status, const FPubnubConnectionStatusData&, StatusData);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnConnectionStatusChangedNative, EPubnubConnectionStatus Status, const FPubnubConnectionStatusData& StatusData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubConnectionStatusChanged, EPubnubConnectionStatus, Status, const FPubnubConnectionStatusData&, StatusData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubConnectionStatusChangedNative, EPubnubConnectionStatus Status, const FPubnubConnectionStatusData& StatusData);
 
 class UPubnubChannel;
 class UPubnubUser;
@@ -219,10 +219,10 @@ public:
 
 	/**Listener to react for connection status changed */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnConnectionStatusChanged OnConnectionStatusChanged;
+	FOnPubnubConnectionStatusChanged OnConnectionStatusChanged;
 
 	/**Listener to react for connection status changed , equivalent that accepts lambdas*/
-	FOnConnectionStatusChangedNative OnConnectionStatusChangedNative;
+	FOnPubnubConnectionStatusChangedNative OnConnectionStatusChangedNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyed;
