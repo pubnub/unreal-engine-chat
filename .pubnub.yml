@@ -44,27 +44,27 @@ sdks:
                     runtime-version:
                       - Unreal Engine 5
                     minimum-os-version:
-                      - Ubuntu 12.04
+                      - Ubuntu 20.04
                     maximum-os-version:
-                      - Ubuntu 20.04 LTS
+                      - Ubuntu 25.04
                     target-architecture:
                       - x86-64
                   macOS:
                     runtime-version:
                       - Unreal Engine 5
                     minimum-os-version:
-                      - macOS 10.12
+                      - macOS 12.5
                     maximum-os-version:
-                      - macOS 11.0.1
+                      - macOS 15.5
                     target-architecture:
                       - x86-64
                   Windows:
                     runtime-version:
                       - Unreal Engine 5
                     minimum-os-version:
-                      - Windows Vista Ultimate
+                      - Windows 10
                     maximum-os-version:
-                      - Windows 11 Home
+                      - Windows 11
                     target-architecture:
                       - x86-64
 
