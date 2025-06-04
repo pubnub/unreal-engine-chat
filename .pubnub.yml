@@ -62,9 +62,9 @@ sdks:
                     runtime-version:
                       - Unreal Engine 5
                     minimum-os-version:
-                      - Windows 10
+                      - Windows 10 Home
                     maximum-os-version:
-                      - Windows 11
+                      - Windows 11 Pro
                     target-architecture:
                       - x86-64
 
