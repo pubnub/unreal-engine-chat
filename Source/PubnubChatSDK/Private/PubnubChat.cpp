@@ -17,22 +17,7 @@ UPubnubChat* UPubnubChat::Create(Pubnub::Chat Chat)
 {
 	UPubnubChat* NewChat = NewObject<UPubnubChat>();
 	NewChat->InternalChat = new Pubnub::Chat(Chat);
-	auto PubnubChatLogLambda = [=](Pubnub::pn_log_level log_level, const char* message)
-	{
-		switch (log_level)
-		{
-		case Pubnub::pn_log_level::Warning:
-			UE_LOG(PubnubChatLog, Warning, TEXT("%s"), UTF8_TO_TCHAR(message));
-			break;
-		case Pubnub::pn_log_level::Error:
-			UE_LOG(PubnubChatLog, Error, TEXT("%s"), UTF8_TO_TCHAR(message));
-			break;
-		default:
-			UE_LOG(PubnubChatLog, Log, TEXT("%s"), UTF8_TO_TCHAR(message));
-			break;
-		};
-	};
-	Chat.register_logger_callback(PubnubChatLogLambda);
+	Chat.register_logger_callback(LogCppChatMessage);
 	
 	return NewChat;
 }
@@ -52,6 +37,7 @@ void UPubnubChat::InitConnectionListener()
 
 void UPubnubChat::DestroyChat()
 {
+	InternalChat->remove_connection_status_listener();
 	delete InternalChat;
 	InternalChat = nullptr;
 	OnChatDestroyed.Broadcast();
@@ -600,4 +586,48 @@ bool UPubnubChat::IsInternalChatValid()
 		return false;
 	}
 	return true;
+}
+
+//Logs from C-Core that are false warnings as they are sent during normal C-Core operations flow
+TArray<FString> UPubnubChat::FalseCCoreLogPhrases =
+	{
+	"errno=0('No error')",
+	"errno=9('Bad file descriptor')",
+	"errno=2('No such file or directory')",
+	"errno=35('Resource temporarily unavailable')"
+};
+
+bool UPubnubChat::ShouldCCoreLogBeSkipped(FString Message)
+{
+	for(FString& LogSkipPhrases : FalseCCoreLogPhrases)
+	{
+		if(Message.Contains(LogSkipPhrases))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void UPubnubChat::LogCppChatMessage(Pubnub::pn_log_level log_level, const char* message)
+{
+	//This is temporal solution to skip false warnings from C-Core.
+	//It should be fixed on C-Core level, but until it's done we filter them out here
+	if(ShouldCCoreLogBeSkipped(FString(message)))
+	{
+		return;
+	}
+	
+	switch (log_level)
+	{
+	case Pubnub::pn_log_level::Warning:
+		UE_LOG(PubnubChatLog, Warning, TEXT("%s"), UTF8_TO_TCHAR(message));
+		break;
+	case Pubnub::pn_log_level::Error:
+		UE_LOG(PubnubChatLog, Error, TEXT("%s"), UTF8_TO_TCHAR(message));
+		break;
+	default:
+		UE_LOG(PubnubChatLog, Log, TEXT("%s"), UTF8_TO_TCHAR(message));
+		break;
+	};
 }
