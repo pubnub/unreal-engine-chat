@@ -7,7 +7,9 @@
 #include "PubnubMessage.h"
 #include "PubnubUser.h"
 #include "PubnubCallbackStop.h"
+#include "PubnubMacroUtilities.h"
 #include "Async/Async.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 UPubnubMembership* UPubnubMembership::Create(Pubnub::Membership Membership)
@@ -29,7 +31,7 @@ FString UPubnubMembership::GetCustomData()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Get Custom Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -44,7 +46,7 @@ FPubnubChatMembershipData UPubnubMembership::GetMembershipData()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get Membership Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubChatMembershipData();
 }
@@ -65,7 +67,7 @@ UPubnubMembership* UPubnubMembership::Update(FPubnubChatMembershipData Membershi
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Update Membership error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -90,7 +92,7 @@ UPubnubCallbackStop* UPubnubMembership::StreamUpdates(FOnPubnubMembershipStreamU
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Stream Updates error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -119,12 +121,14 @@ UPubnubCallbackStop* UPubnubMembership::StreamUpdatesOn(TArray<UPubnubMembership
 	
 		auto CppMemberships = UPubnubChatUtilities::UnrealMembershipsToCppMemberships(Memberships);
 
+		PUBNUB_RETURN_IF_EMPTY_CPP_VECTOR(CppMemberships, nullptr);
+		
 		auto CppCallbackStop = InternalMembership->stream_updates_on(CppMemberships, lambda);
 		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Stream Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -139,7 +143,7 @@ FString UPubnubMembership::LastReadMessageTimetoken()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Last Read Message Timetoken error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -147,6 +151,8 @@ FString UPubnubMembership::LastReadMessageTimetoken()
 UPubnubMembership* UPubnubMembership::SetLastReadMessageTimetoken(FString Timetoken)
 {
 	if(!IsInternalMembershipValid()) {return nullptr;}
+
+	PUBNUB_RETURN_IF_EMPTY(Timetoken, nullptr);
 
 	try
 	{
@@ -156,7 +162,7 @@ UPubnubMembership* UPubnubMembership::SetLastReadMessageTimetoken(FString Timeto
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Set Last Read Message Timetoken error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -164,6 +170,8 @@ UPubnubMembership* UPubnubMembership::SetLastReadMessageTimetoken(FString Timeto
 UPubnubMembership* UPubnubMembership::SetLastReadMessage(UPubnubMessage* Message)
 {
 	if(!IsInternalMembershipValid() || !Message) {return nullptr;}
+
+	PUBNUB_RETURN_IF_NULL(Message, nullptr);
 
 	try
 	{
@@ -173,7 +181,7 @@ UPubnubMembership* UPubnubMembership::SetLastReadMessage(UPubnubMessage* Message
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Set Last Read Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -188,7 +196,7 @@ int UPubnubMembership::GetUnreadMessageCount()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Membership Get Unread Message Count error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return 0;
 }

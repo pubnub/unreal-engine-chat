@@ -5,7 +5,9 @@
 #include "PubnubThreadChannel.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubCallbackStop.h"
+#include "PubnubMacroUtilities.h"
 #include "Async/Async.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 UPubnubMessage* UPubnubMessage::Create(Pubnub::Message Message)
@@ -34,7 +36,7 @@ FString UPubnubMessage::GetTimetoken()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Get Timetoken error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -51,7 +53,7 @@ FPubnubChatMessageData UPubnubMessage::GetMessageData()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Get Message Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubChatMessageData();
 }
@@ -60,13 +62,15 @@ void UPubnubMessage::EditText(FString NewText)
 {
 	if(!IsInternalMessageValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(NewText);
+	
 	try
 	{
 		InternalMessage->edit_text(UPubnubChatUtilities::FStringToPubnubString(NewText));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Edit Text error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -80,7 +84,7 @@ FString UPubnubMessage::Text()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Text error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -95,7 +99,7 @@ UPubnubMessage* UPubnubMessage::DeleteMessage()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Delete Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -110,7 +114,7 @@ bool UPubnubMessage::DeleteMessageHard()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Delete Message Hard error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -125,7 +129,7 @@ bool UPubnubMessage::Deleted()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Deleted error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -140,7 +144,7 @@ UPubnubMessage* UPubnubMessage::Restore()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Restore error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -155,7 +159,7 @@ EPubnubChatMessageType UPubnubMessage::Type()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Type error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return EPubnubChatMessageType::PCMT_TEXT;
 }
@@ -170,7 +174,7 @@ void UPubnubMessage::Pin()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Pin error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -184,13 +188,15 @@ void UPubnubMessage::Unpin()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Unpin error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
 UPubnubMessage* UPubnubMessage::ToggleReaction(FString Reaction)
 {
 	if(!IsInternalMessageValid()) {return nullptr;}
+
+	PUBNUB_RETURN_IF_EMPTY(Reaction, nullptr);
 
 	try
 	{
@@ -199,7 +205,7 @@ UPubnubMessage* UPubnubMessage::ToggleReaction(FString Reaction)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Toggle Reaction error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -215,7 +221,7 @@ TArray<FPubnubMessageAction> UPubnubMessage::Reactions()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Reactions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -223,14 +229,16 @@ TArray<FPubnubMessageAction> UPubnubMessage::Reactions()
 bool UPubnubMessage::HasUserReaction(FString Reaction)
 {
 	if(!IsInternalMessageValid()) {return false;}
-
+	
+	PUBNUB_RETURN_IF_EMPTY(Reaction, false);
+	
 	try
 	{
 		return InternalMessage->has_user_reaction(UPubnubChatUtilities::FStringToPubnubString(Reaction));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Reactions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -238,6 +246,8 @@ bool UPubnubMessage::HasUserReaction(FString Reaction)
 void UPubnubMessage::Forward(FString ChannelID)
 {
 	if(!IsInternalMessageValid()) {return;}
+	
+	PUBNUB_RETURN_IF_EMPTY(ChannelID);
 
 	try
 	{
@@ -245,13 +255,15 @@ void UPubnubMessage::Forward(FString ChannelID)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Forward error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
 void UPubnubMessage::Report(FString Reason)
 {
 	if(!IsInternalMessageValid()) {return;}
+	
+	PUBNUB_RETURN_IF_EMPTY(Reason);
 
 	try
 	{
@@ -259,7 +271,7 @@ void UPubnubMessage::Report(FString Reason)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Report error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -283,7 +295,7 @@ UPubnubCallbackStop* UPubnubMessage::StreamUpdates(FOnPubnubMessageStreamUpdateR
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Stream Updates error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -313,12 +325,14 @@ UPubnubCallbackStop* UPubnubMessage::StreamUpdatesOn(TArray<UPubnubMessage*> Mes
 	
 		auto CppMessages = UPubnubChatUtilities::UnrealMessagesToCppMessages(Messages);
 
+		PUBNUB_RETURN_IF_EMPTY_CPP_VECTOR(CppMessages, nullptr);
+
 		auto CppCallbackStop = InternalMessage->stream_updates_on(CppMessages, lambda);
 		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Stream Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -334,7 +348,7 @@ UPubnubThreadChannel* UPubnubMessage::CreateThread()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Create Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -350,7 +364,7 @@ UPubnubThreadChannel* UPubnubMessage::GetThread()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Get Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -365,7 +379,7 @@ bool UPubnubMessage::HasThread()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Has Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -380,7 +394,7 @@ void UPubnubMessage::RemoveThread()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Remove Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -401,7 +415,7 @@ TArray<FPubnubMentionedUser> UPubnubMessage::MentionedUsers()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Mentioned Users error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -423,7 +437,7 @@ TArray<FPubnubReferencedChannel> UPubnubMessage::ReferencedChannels()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Referenced Channels error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -444,7 +458,7 @@ UPubnubMessage* UPubnubMessage::QuotedMessage()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Quoted Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -466,7 +480,7 @@ TArray<FPubnubTextLink> UPubnubMessage::TextLinks()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Text Links error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }

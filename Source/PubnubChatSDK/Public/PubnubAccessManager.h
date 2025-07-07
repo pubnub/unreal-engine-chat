@@ -8,8 +8,6 @@
 #include "PubnubAccessManager.generated.h"
 
 
-
-
 /**
  * 
  */
@@ -52,6 +50,8 @@ public:
 
 	//Internal usage only
 	static UPubnubAccessManager* Create(Pubnub::AccessManager AccessManager);
+	
 private:
+	bool IsInternalAccessManagerValid();
 	Pubnub::AccessManager* InternalAccessManager;
 };

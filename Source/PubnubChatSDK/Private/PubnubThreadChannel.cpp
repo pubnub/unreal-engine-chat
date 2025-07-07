@@ -5,6 +5,8 @@
 #include "PubnubMessage.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubThreadMessage.h"
+#include "PubnubMacroUtilities.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 
@@ -26,7 +28,7 @@ UPubnubMessage* UPubnubThreadChannel::GetParentMessage()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Get Parent Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -41,7 +43,7 @@ FString UPubnubThreadChannel::GetParentChannelID()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Get Parent Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -59,7 +61,7 @@ TArray<UPubnubThreadMessage*> UPubnubThreadChannel::GetThreadHistory(int Limit, 
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Get Thread History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -68,13 +70,15 @@ UPubnubThreadChannel* UPubnubThreadChannel::PinMessageToThread(UPubnubThreadMess
 {
 	if(!IsInternalThreadChannelValid()) {return nullptr;}
 
+	PUBNUB_RETURN_IF_NULL(ThreadMessage, nullptr);
+
 	try
 	{
 		return Create(GetInternalThreadChannel()->pin_message_to_thread((*ThreadMessage->GetInternalThreadMessage())));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Pin Message To Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -89,7 +93,7 @@ UPubnubThreadChannel* UPubnubThreadChannel::UnpinMessageFromThread()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Unpin Message from Thread error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -97,6 +101,8 @@ UPubnubThreadChannel* UPubnubThreadChannel::UnpinMessageFromThread()
 UPubnubChannel* UPubnubThreadChannel::PinMessageToParentChannel(UPubnubThreadMessage* ThreadMessage)
 {
 	if(!IsInternalThreadChannelValid()) {return nullptr;}
+	
+	PUBNUB_RETURN_IF_NULL(ThreadMessage, nullptr);
 
 	try
 	{
@@ -104,7 +110,7 @@ UPubnubChannel* UPubnubThreadChannel::PinMessageToParentChannel(UPubnubThreadMes
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Pin Message To Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -119,7 +125,7 @@ UPubnubChannel* UPubnubThreadChannel::UnpinMessageFromParentChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Channel Unpin Message From Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }

@@ -123,11 +123,11 @@ TArray<FPubnubMessageAction> UPubnubChatUtilities::CppMessageActionsToUnrealMess
 
 Pubnub::Vector<Pubnub::Channel> UPubnubChatUtilities::UnrealChannelsToCppChannels(TArray<UPubnubChannel*> &PubnubChannels)
 {
-	//Pubnub::Vector<Pubnub::Channel> CppChannels;
 	std::vector<Pubnub::Channel> CppChannels;
 
 	for(auto &PubnubChannel : PubnubChannels)
 	{
+		if(nullptr == PubnubChannel) {continue;}
 		CppChannels.push_back(*PubnubChannel->GetInternalChannel());
 	}
 	return Pubnub::Vector<Pubnub::Channel>(std::move(CppChannels));
@@ -139,6 +139,7 @@ Pubnub::Vector<Pubnub::User> UPubnubChatUtilities::UnrealUsersToCppUsers(TArray<
 
 	for(auto &PubnubUser : PubnubUsers)
 	{
+		if(nullptr == PubnubUser) {continue;}
 		CppUsers.push_back(*PubnubUser->GetInternalUser());
 	}
 	return CppUsers;
@@ -150,6 +151,7 @@ Pubnub::Vector<Pubnub::Message> UPubnubChatUtilities::UnrealMessagesToCppMessage
 
 	for(auto &PubnubMessage : PubnubMessages)
 	{
+		if(nullptr == PubnubMessage) {continue;}
 		CppMessages.push_back(*PubnubMessage->GetInternalMessage());
 	}
 	return CppMessages;
@@ -161,6 +163,7 @@ Pubnub::Vector<Pubnub::ThreadMessage> UPubnubChatUtilities::UnrealThreadMessages
 
 	for(auto &PubnubMessage : PubnubThreadMessages)
 	{
+		if(nullptr == PubnubMessage) {continue;}
 		CppMessages.push_back(*PubnubMessage->GetInternalThreadMessage());
 	}
 	return CppMessages;
@@ -172,6 +175,7 @@ Pubnub::Vector<Pubnub::Membership> UPubnubChatUtilities::UnrealMembershipsToCppM
 
 	for(auto &PubnubMembership : PubnubMemberships)
 	{
+		if(nullptr == PubnubMembership) {continue;}
 		CppMemberships.push_back(*PubnubMembership->GetInternalMembership());
 	}
 	return CppMemberships;

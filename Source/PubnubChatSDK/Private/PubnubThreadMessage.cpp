@@ -6,7 +6,9 @@
 #include "PubnubChannel.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubCallbackStop.h"
+#include "PubnubMacroUtilities.h"
 #include "Async/Async.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 
@@ -28,7 +30,7 @@ FString UPubnubThreadMessage::GetParentChannelID()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Get Parent Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -43,7 +45,7 @@ UPubnubChannel* UPubnubThreadMessage::PinToParentChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Pin To Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -58,7 +60,7 @@ UPubnubChannel* UPubnubThreadMessage::UnpinFromParentChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Unpin From Parent Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -88,12 +90,14 @@ UPubnubCallbackStop* UPubnubThreadMessage::StreamThreadMessageUpdatesOn(TArray<U
 	
 		auto CppMessages = UPubnubChatUtilities::UnrealThreadMessagesToCppTMessages(Messages);
 
+		PUBNUB_RETURN_IF_EMPTY_CPP_VECTOR(CppMessages, nullptr);
+
 		auto CppCallbackStop = GetInternalThreadMessage()->stream_updates_on(CppMessages, lambda);
 		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Thread Message Stream Thread Message Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }

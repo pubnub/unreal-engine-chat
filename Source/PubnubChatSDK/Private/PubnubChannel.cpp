@@ -2,6 +2,7 @@
 
 
 #include "PubnubChannel.h"
+#include "PubnubMacroUtilities.h"
 #include "PubnubMessage.h"
 #include "PubnubMembership.h"
 #include "PubnubChatSubsystem.h"
@@ -10,6 +11,7 @@
 #include "PubnubMessageDraft.h"
 #include "Async/Async.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 
 
 FPubnubMembersResponseWrapper::FPubnubMembersResponseWrapper(Pubnub::MembersResponseWrapper& Wrapper) :
@@ -60,7 +62,7 @@ FString UPubnubChannel::GetChannelID()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get Channel ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -75,7 +77,7 @@ FPubnubChatChannelData UPubnubChannel::GetChannelData()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get Channel Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubChatChannelData();
 }
@@ -91,7 +93,7 @@ UPubnubChannel* UPubnubChannel::Update(FPubnubChatChannelData ChannelData)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Update error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -115,7 +117,7 @@ UPubnubCallbackStop* UPubnubChannel::Connect(FOnPubnubChannelMessageReceived Mes
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Connect error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 		return nullptr;
 	}
 }
@@ -130,7 +132,7 @@ void UPubnubChannel::Disconnect()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Disconnect error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData)
@@ -153,7 +155,7 @@ UPubnubCallbackStop* UPubnubChannel::Join(FOnPubnubChannelMessageReceived Messag
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Join error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 		return nullptr;
 	}
 }
@@ -172,7 +174,7 @@ void UPubnubChannel::Leave()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Leave error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -186,7 +188,7 @@ void UPubnubChannel::DeleteChannel()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Delete Channel error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -194,13 +196,15 @@ void UPubnubChannel::SendText(FString Message, FPubnubSendTextParams SendTextPar
 {
 	if(!IsInternalChannelValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(Message);
+
 	try
 	{
 		InternalChannel->send_text(UPubnubChatUtilities::FStringToPubnubString(Message), SendTextParams.GetCppSendTextParams());
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Send Text error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -224,7 +228,7 @@ UPubnubCallbackStop* UPubnubChannel::StreamUpdates(FOnPubnubChannelStreamUpdateR
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Stream Updates error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -254,12 +258,14 @@ UPubnubCallbackStop* UPubnubChannel::StreamUpdatesOn(TArray<UPubnubChannel*> Cha
 	
 		auto CppChannels = UPubnubChatUtilities::UnrealChannelsToCppChannels(Channels);
 
+		PUBNUB_RETURN_IF_EMPTY_CPP_VECTOR(CppChannels, nullptr);
+
 		auto CppCallbackStop = InternalChannel->stream_updates_on(Pubnub::Vector<Pubnub::Channel>(std::move(CppChannels)), lambda);
 		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Stream Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -292,7 +298,7 @@ UPubnubCallbackStop* UPubnubChannel::StreamPresence(FOnPubnubChannelStreamPresen
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Stream Presence error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -310,7 +316,7 @@ TArray<FString> UPubnubChannel::WhoIsPresent()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Who Is Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -318,6 +324,8 @@ TArray<FString> UPubnubChannel::WhoIsPresent()
 bool UPubnubChannel::IsPresent(FString UserID)
 {
 	if(!IsInternalChannelValid()) {return false;}
+	
+	PUBNUB_RETURN_IF_EMPTY(UserID, false);
 
 	try
 	{
@@ -325,7 +333,7 @@ bool UPubnubChannel::IsPresent(FString UserID)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Is Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -334,13 +342,15 @@ void UPubnubChannel::SetRestrictions(FString UserID, FPubnubRestriction Restrict
 {
 	if(!IsInternalChannelValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(UserID);
+
 	try
 	{
 		InternalChannel->set_restrictions(UPubnubChatUtilities::FStringToPubnubString(UserID), Restrictions.GetCppRestriction());
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Set Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -348,13 +358,15 @@ FPubnubRestriction UPubnubChannel::GetUserRestrictions(UPubnubUser* User)
 {
 	if(!IsInternalChannelValid()) {return FPubnubRestriction();}
 
+	PUBNUB_RETURN_IF_NULL(User, FPubnubRestriction());
+
 	try
 	{
 		return FPubnubRestriction(InternalChannel->get_user_restrictions(*User->GetInternalUser()));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get User Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubRestriction();
 }
@@ -371,7 +383,7 @@ FPubnubUsersRestrictionsWrapper UPubnubChannel::GetUsersRestrictions(FString Sor
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Users Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubUsersRestrictionsWrapper();
 }
@@ -380,6 +392,8 @@ UPubnubMessage* UPubnubChannel::GetMessage(FString Timetoken)
 {
 	if(!IsInternalChannelValid()) {return nullptr;}
 
+	PUBNUB_RETURN_IF_EMPTY(Timetoken, nullptr);
+	
 	try
 	{
 		auto CppMessage = InternalChannel->get_message(UPubnubChatUtilities::FStringToPubnubString(Timetoken));
@@ -387,7 +401,7 @@ UPubnubMessage* UPubnubChannel::GetMessage(FString Timetoken)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -406,7 +420,7 @@ TArray<UPubnubMessage*> UPubnubChannel::GetHistory(FString StartTimetoken, FStri
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -423,7 +437,7 @@ FPubnubMembersResponseWrapper UPubnubChannel::GetMembers(FString Filter, FString
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Members error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubMembersResponseWrapper();
 }
@@ -432,6 +446,8 @@ UPubnubMembership* UPubnubChannel::Invite(UPubnubUser* User)
 {
 	if(!IsInternalChannelValid()) {return nullptr;}
 
+	PUBNUB_RETURN_IF_NULL(User, nullptr);
+
 	try
 	{
 		auto CppMembership = InternalChannel->invite(*User->GetInternalUser());
@@ -439,7 +455,7 @@ UPubnubMembership* UPubnubChannel::Invite(UPubnubUser* User)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Invite error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -449,9 +465,11 @@ TArray<UPubnubMembership*> UPubnubChannel::InviteMultiple(TArray<UPubnubUser*> U
 	TArray<UPubnubMembership*> FinalMemberships;
 	if(!IsInternalChannelValid()) {return FinalMemberships;}
 
+	auto CppUsers = UPubnubChatUtilities::UnrealUsersToCppUsers(Users);
+	PUBNUB_RETURN_IF_EMPTY_CPP_VECTOR(CppUsers, FinalMemberships);
+
 	try
 	{
-		auto CppUsers = UPubnubChatUtilities::UnrealUsersToCppUsers(Users);
 		auto CppMemberships = InternalChannel->invite_multiple(std::move(CppUsers));
 		FinalMemberships = UPubnubChatUtilities::CppMembershipsToUnrealMemberships(CppMemberships);
 	
@@ -459,7 +477,7 @@ TArray<UPubnubMembership*> UPubnubChannel::InviteMultiple(TArray<UPubnubUser*> U
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Invite Multiple error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -474,7 +492,7 @@ void UPubnubChannel::StartTyping()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Start Typing error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -488,7 +506,7 @@ void UPubnubChannel::StopTyping()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Stop Typing error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -517,7 +535,7 @@ UPubnubCallbackStop* UPubnubChannel::GetTyping(FOnPubnubChannelTypingReceived Ty
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Typing error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -526,13 +544,15 @@ UPubnubChannel* UPubnubChannel::PinMessage(UPubnubMessage* Message)
 {
 	if(!IsInternalChannelValid()) {return nullptr;}
 
+	PUBNUB_RETURN_IF_NULL(Message, nullptr);
+
 	try
 	{
 		return Create(InternalChannel->pin_message(*Message->GetInternalMessage()));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Pin Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -547,7 +567,7 @@ UPubnubChannel* UPubnubChannel::UnpinMessage()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Unpin Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -562,7 +582,7 @@ UPubnubMessage* UPubnubChannel::GetPinnedMessage()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Pinned Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -571,13 +591,15 @@ void UPubnubChannel::ForwardMessage(UPubnubMessage* Message)
 {
 	if(!IsInternalChannelValid()) {return;}
 
+	PUBNUB_RETURN_IF_NULL(Message);
+
 	try
 	{
 		InternalChannel->forward_message(*Message->GetInternalMessage());
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Forward Message error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -585,13 +607,17 @@ void UPubnubChannel::EmitUserMention(FString UserID, FString Timetoken, FString 
 {
 	if(!IsInternalChannelValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(UserID);
+	PUBNUB_RETURN_IF_EMPTY(Timetoken);
+	PUBNUB_RETURN_IF_EMPTY(Text);
+
 	try
 	{
 		InternalChannel->emit_user_mention(UPubnubChatUtilities::FStringToPubnubString(UserID), UPubnubChatUtilities::FStringToPubnubString(Timetoken), UPubnubChatUtilities::FStringToPubnubString(Text));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Emit User Mention error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -626,7 +652,7 @@ UPubnubCallbackStop* UPubnubChannel::StreamReadReceipts(FOnPubnubChannelStreamRe
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Stream Read Receipts error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -650,7 +676,7 @@ UPubnubCallbackStop* UPubnubChannel::StreamMessageReports(FOnPubnubStreamMessage
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Stream Message Reports error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -667,7 +693,7 @@ FPubnubMessageReportsHistoryWrapper UPubnubChannel::GetMessageReportsHistory(FSt
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Get Message Reports History error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubMessageReportsHistoryWrapper();
 }
@@ -682,7 +708,7 @@ UPubnubMessageDraft* UPubnubChannel::CreateMessageDraft(FPubnubMessageDraftConfi
 	}
 	catch(std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Channel Create Message Draft error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
