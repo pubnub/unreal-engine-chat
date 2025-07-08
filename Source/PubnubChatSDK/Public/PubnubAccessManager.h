@@ -1,4 +1,4 @@
-// Copyright 2024 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -6,8 +6,6 @@
 #include <pubnub_chat/access_manager.hpp>
 #include "PubnubChatEnumLibrary.h"
 #include "PubnubAccessManager.generated.h"
-
-
 
 
 /**
@@ -52,6 +50,8 @@ public:
 
 	//Internal usage only
 	static UPubnubAccessManager* Create(Pubnub::AccessManager AccessManager);
+	
 private:
+	bool IsInternalAccessManagerValid();
 	Pubnub::AccessManager* InternalAccessManager;
 };

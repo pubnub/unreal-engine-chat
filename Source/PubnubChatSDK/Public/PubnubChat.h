@@ -1,4 +1,4 @@
-// Copyright 2024 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -368,5 +368,9 @@ public:
 private:
 	bool IsInternalChatValid();
 	Pubnub::Chat* InternalChat = nullptr;
+
+	static TArray<FString> FalseCCoreLogPhrases;
+	static bool ShouldCCoreLogBeSkipped(FString Message);
+	static void LogCppChatMessage(Pubnub::pn_log_level log_level, const char* message);
 
 };

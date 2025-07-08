@@ -1,11 +1,12 @@
-// Copyright 2024 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 
 #include "PubnubMessageDraft.h"
 #include "PubnubChatSubsystem.h"
-#include "PubnubCallbackStop.h"
 #include "PubnubChat.h"
+#include "PubnubMacroUtilities.h"
 #include "Async/Async.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 
@@ -25,16 +26,22 @@ UPubnubMentionTarget::~UPubnubMentionTarget()
 
 UPubnubMentionTarget* UPubnubMentionTarget::CreateUserMentionTarget(const FString UserID)
 {
+	PUBNUB_RETURN_IF_EMPTY(UserID, nullptr);
+	
 	return Create(Pubnub::MentionTarget::user(UPubnubChatUtilities::FStringToPubnubString(UserID)));
 }
 
 UPubnubMentionTarget* UPubnubMentionTarget::CreateChannelMentionTarget(const FString Channel)
 {
+	PUBNUB_RETURN_IF_EMPTY(Channel, nullptr);
+	
 	return Create(Pubnub::MentionTarget::channel(UPubnubChatUtilities::FStringToPubnubString(Channel)));
 }
 
 UPubnubMentionTarget* UPubnubMentionTarget::CreateUrlMentionTarget(const FString Url)
 {
+	PUBNUB_RETURN_IF_EMPTY(Url, nullptr);
+	
 	return Create(Pubnub::MentionTarget::url(UPubnubChatUtilities::FStringToPubnubString(Url)));
 }
 
@@ -122,13 +129,15 @@ void UPubnubMessageDraft::InsertText(int Position, const FString Text)
 {
 	if(!IsInternalMessageDraftValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(Text);
+
 	try
 	{
 		InternalMessageDraft->insert_text(Position, UPubnubChatUtilities::FStringToPubnubString(Text));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft InsertText Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -142,7 +151,7 @@ void UPubnubMessageDraft::RemoveText(int Position, int Length)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft InsertText Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -150,13 +159,16 @@ void UPubnubMessageDraft::InsertSuggestedMention(FPubnubSuggestedMention Suggest
 {
 	if(!IsInternalMessageDraftValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(Text);
+	PUBNUB_RETURN_IF_NULL(SuggestedMention.Target);
+
 	try
 	{
 		InternalMessageDraft->insert_suggested_mention(SuggestedMention.GetCppSuggestedMention(), UPubnubChatUtilities::FStringToPubnubString(Text));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft InsertSuggestedMention Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -164,13 +176,15 @@ void UPubnubMessageDraft::AddMention(int Position, int Length, UPubnubMentionTar
 {
 	if(!IsInternalMessageDraftValid()) {return;}
 
+	PUBNUB_RETURN_IF_NULL(MentionTarget);
+
 	try
 	{
 		InternalMessageDraft->add_mention(Position, Length, *MentionTarget->GetInternalMentionTarget());
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft AddMention Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -184,7 +198,7 @@ void UPubnubMessageDraft::RemoveMention(int Position)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft RemoveMention Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -198,7 +212,7 @@ void UPubnubMessageDraft::Update(FString Text)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Update Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -212,7 +226,7 @@ void UPubnubMessageDraft::Send(FPubnubSendTextParams SendTextParams)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Send Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -242,7 +256,7 @@ void UPubnubMessageDraft::AddChangeListener(FOnPubnubDraftUpdated DraftUpdateCal
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Add Change Listener Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -280,7 +294,7 @@ void UPubnubMessageDraft::AddChangeListenerWithSuggestions(FOnPubnubDraftUpdated
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Message Draft Add Change Listener With Suggestions Error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 

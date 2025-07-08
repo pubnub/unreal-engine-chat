@@ -1,4 +1,4 @@
-// Copyright 2024 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 
 #include "PubnubUser.h"
@@ -6,7 +6,9 @@
 #include "PubnubCallbackStop.h"
 #include "PubnubChannel.h"
 #include "PubnubMembership.h"
+#include "PubnubMacroUtilities.h"
 #include "Async/Async.h"
+#include "FunctionLibraries/PubnubLogUtilities.h"
 #include "FunctionLibraries/PubnubChatUtilities.h"
 
 
@@ -52,7 +54,7 @@ FString UPubnubUser::GetUserID()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get User ID error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return "";
 }
@@ -67,7 +69,7 @@ FPubnubChatUserData UPubnubUser::GetUserData()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Get User Data error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubChatUserData();
 }
@@ -83,7 +85,7 @@ UPubnubUser* UPubnubUser::Update(FPubnubChatUserData UserData)
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Update error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -98,7 +100,7 @@ void UPubnubUser::DeleteUser()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Delete User error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -115,7 +117,7 @@ TArray<FString> UPubnubUser::WherePresent()
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Where Present error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return {};
 }
@@ -124,13 +126,15 @@ bool UPubnubUser::IsPresentOn(FString ChannelID)
 {
 	if(!IsInternalUserValid()) {return false;}
 
+	PUBNUB_RETURN_IF_EMPTY(ChannelID, false);
+
 	try
 	{
 		return InternalUser->is_present_on(UPubnubChatUtilities::FStringToPubnubString(ChannelID));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Is Present On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return false;
 }
@@ -139,13 +143,15 @@ void UPubnubUser::SetRestrictions(FString ChannelID, FPubnubRestriction Restrict
 {
 	if(!IsInternalUserValid()) {return;}
 
+	PUBNUB_RETURN_IF_EMPTY(ChannelID);
+
 	try
 	{
 		InternalUser->set_restrictions(UPubnubChatUtilities::FStringToPubnubString(ChannelID), Restrictions.GetCppRestriction());
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Set Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 }
 
@@ -153,13 +159,15 @@ FPubnubRestriction UPubnubUser::GetChannelRestrictions(UPubnubChannel* Channel)
 {
 	if(!IsInternalUserValid()) {return FPubnubRestriction();}
 
+	PUBNUB_RETURN_IF_NULL(Channel, FPubnubRestriction());
+
 	try
 	{
 		return FPubnubRestriction(InternalUser->get_channel_restrictions(*Channel->GetInternalChannel()));
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Get Channel Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubRestriction();
 }
@@ -175,7 +183,7 @@ FPubnubChannelsRestrictionsWrapper UPubnubUser::GetChannelsRestrictions(FString 
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Get Channels Restrictions error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubChannelsRestrictionsWrapper();
 }
@@ -193,7 +201,7 @@ FPubnubMembershipsResponseWrapper UPubnubUser::GetMemberships(FString Filter, FS
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Get Memberships error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return FPubnubMembershipsResponseWrapper();
 }
@@ -218,7 +226,7 @@ UPubnubCallbackStop* UPubnubUser::StreamUpdates(FOnPubnubUserStreamUpdateReceive
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Stream Updates error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
@@ -248,12 +256,14 @@ UPubnubCallbackStop* UPubnubUser::StreamUpdatesOn(TArray<UPubnubUser*> Users, FO
 
 		auto CppUsers = UPubnubChatUtilities::UnrealUsersToCppUsers(Users);
 
+		PUBNUB_RETURN_IF_EMPTY_CPP_VECTOR(CppUsers, nullptr);
+
 		auto CppCallbackStop = InternalUser->stream_updates_on(CppUsers, lambda);
 		return UPubnubCallbackStop::Create(CppCallbackStop);
 	}
 	catch (std::exception& Exception)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("User Stream Updates On error: %s"), UTF8_TO_TCHAR(Exception.what()));
+		UPubnubLogUtilities::PrintFunctionError(ANSI_TO_TCHAR(__FUNCTION__), UTF8_TO_TCHAR(Exception.what()));
 	}
 	return nullptr;
 }
