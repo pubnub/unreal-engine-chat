@@ -3,6 +3,15 @@ version: v0.4.2
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2025-07-08
+    version: v0.4.3
+    changes:
+      - type: bug
+        text: "Fix crashes that could happen when empty or invalid parameters were passed to some functions. Add needed guard checks and print to log in case of incorrect input."
+      - type: bug
+        text: "Remove false warnings that were printed from C-Core."
+      - type: bug
+        text: "Adjust Copyrights in files and FabUrl to fix issues reported by FAB."
   - date: 2025-06-16
     version: v0.4.2
     changes:
