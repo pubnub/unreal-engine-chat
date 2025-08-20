@@ -1,4 +1,4 @@
-// Copyright 2024 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -28,6 +28,7 @@ public:
 	//Use to print PubnubChatLog that function array input was empty. As FunctionName can accept __FUNCTION__ and will trim the class name
 	static void PrintEmptyArrayFieldLog(FString FunctionName, FString FieldName);
 
+	//Use to print PubnubChatLog with error, usually from cpp exception
 	static void PrintFunctionError(FString FunctionName, FString Error);
 
 };

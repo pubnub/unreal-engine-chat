@@ -30,9 +30,21 @@ void UPubnubChat::InitConnectionListener()
 	
 	auto ConnectionStatusListener = [this](Pubnub::pn_connection_status status, Pubnub::ConnectionStatusData status_data)
 	{
-		FPubnubConnectionStatusData StatusData = FPubnubConnectionStatusData({UPubnubChatUtilities::PubnubStringToFString(status_data.reason)});
-		OnConnectionStatusChanged.Broadcast((EPubnubConnectionStatus)status, StatusData);
-		OnConnectionStatusChangedNative.Broadcast((EPubnubConnectionStatus)status, StatusData);
+		const EPubnubConnectionStatus Status = (EPubnubConnectionStatus)status;
+		const FPubnubConnectionStatusData StatusData = FPubnubConnectionStatusData({UPubnubChatUtilities::PubnubStringToFString(status_data.reason)});
+
+		TWeakObjectPtr<UPubnubChat> WeakThis(this);
+		AsyncTask(ENamedThreads::GameThread, [WeakThis, Status, StatusData]()
+		{
+			if(!WeakThis.IsValid())
+			{
+				return;
+			}
+
+			UPubnubChat* StrongThis = WeakThis.Get();
+			StrongThis->OnConnectionStatusChanged.Broadcast(Status, StatusData);
+			StrongThis->OnConnectionStatusChangedNative.Broadcast(Status, StatusData);
+		});
 	};
 	InternalChat->add_connection_status_listener(ConnectionStatusListener);
 }

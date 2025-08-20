@@ -213,7 +213,7 @@ public:
 	{
 		if(InternalChat)
 		{
-			delete InternalChat;
+			DestroyChat();
 		}
 	}
 
