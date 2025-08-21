@@ -1,8 +1,13 @@
 name: unreal-engine-chat
-version: v0.4.3
+version: v0.4.4
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2025-08-21
+    version: v0.4.4
+    changes:
+      - type: bug
+        text: "Fix crash that could be caused by Connection Status Listener, because it was not executed on Game Thread."
   - date: 2025-07-08
     version: v0.4.3
     changes:
