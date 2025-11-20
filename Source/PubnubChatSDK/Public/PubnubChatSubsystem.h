@@ -4,25 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "PubnubChatStructLibrary.h"
 #include "PubnubChatSubsystem.generated.h"
 
+class UPubnubClient;
 class UPubnubChat;
 
 DECLARE_LOG_CATEGORY_EXTERN(PubnubChatLog, Log, All);
-
-USTRUCT(BlueprintType)
-struct FPubnubChatConfig
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Config") FString AuthKey = "";
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Config") int TypingTimeout = 5000;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Config") int TypingTimeoutDifference = 1000;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Config") int StoreUserActivityInterval = 600000;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Config") bool StoreUserActivityTimestamps = false;
-	
-};
-
 
 
 UCLASS()
@@ -46,7 +34,10 @@ public:
 private:
 	UPROPERTY()
 	UPubnubChat* Chat = nullptr;
+	
 	UFUNCTION()
 	void OnChatDestroyed();
+
+	UPubnubClient* CreatePubnubClient(FString PublishKey, FString SubscribeKey, FString UserID);
 
 };

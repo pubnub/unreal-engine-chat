@@ -28,8 +28,8 @@ public class PubnubChatSDK : ModuleRules
 			new string[]
 			{
 				"Core",
-				"ChatSDKModule",
-				"Projects"
+				"Projects",
+				"PubnubLibrary"
 			}
 			);
 			
