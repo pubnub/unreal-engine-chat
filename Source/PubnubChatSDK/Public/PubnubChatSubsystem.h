@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PubnubChatStructLibrary.h"
+#include "PubnubChat.h"
 #include "PubnubChatSubsystem.generated.h"
 
 class UPubnubClient;
-class UPubnubChat;
 
 DECLARE_LOG_CATEGORY_EXTERN(PubnubChatLog, Log, All);
 
@@ -22,13 +22,13 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat")
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
 	UPubnubChat* InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config = FPubnubChatConfig());
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PubnubChat")
 	UPubnubChat* GetChat();
 
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat")
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
 	void DestroyChat();
 
 private:

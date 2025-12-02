@@ -4,12 +4,21 @@
 
 #include "CoreMinimal.h"
 #include "PubnubChatStructLibrary.h"
+#include "PubnubChatEnumLibrary.h"
+#include "PubnubChatUser.h"
+
+
 #include "PubnubChat.generated.h"
 
 class UPubnubClient;
+enum class EPubnubSubscriptionStatus  : uint8;
+struct FPubnubSubscriptionStatusData;
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPubnubChatDestroyed);
+DECLARE_MULTICAST_DELEGATE(FOnPubnubChatDestroyedNative);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChanged, EPubnubChatConnectionStatus, Status, const FPubnubChatConnectionStatusData&, StatusData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChangedNative, EPubnubChatConnectionStatus Status, const FPubnubChatConnectionStatusData& StatusData);
 
 /**
  * 
@@ -23,11 +32,25 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	
 public:
 
-	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyed;
 
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat")
+	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
+	FOnPubnubChatDestroyed OnChatDestroyedNative;
+
+	//TODO:: decide if delegate names should have "PubnubChat" or "Chat" or without
+	/**Listener to react for connection status changed */
+	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
+	FOnPubnubChatConnectionStatusChanged OnConnectionStatusChanged;
+
+	/**Listener to react for connection status changed , equivalent that accepts lambdas*/
+	FOnPubnubChatConnectionStatusChangedNative OnConnectionStatusChangedNative;
+
+	UFUNCTION(BlueprintCallable, Category="PubnubChat")
 	void DestroyChat();
+
+	UFUNCTION(BlueprintCallable)
+	UPubnubChatUser* GetUserForInit(const FString UserID);
 
 
 private:
@@ -39,6 +62,10 @@ private:
 
 	bool IsInitialized = false;
 
-	void InitChat(FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
+	void InitChat(const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
+	UFUNCTION()
+	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);
+	
+	
 
 };
