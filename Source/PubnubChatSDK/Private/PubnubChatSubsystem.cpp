@@ -15,6 +15,15 @@ void UPubnubChatSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPubnubChatSubsystem::Deinitialize()
 {
+	// Ensure Chat is destroyed before subsystem deinitialization
+	// This prevents crashes when the engine shuts down subsystems
+	if(Chat)
+	{
+		Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+		Chat->DestroyChat();
+		Chat = nullptr;
+	}
+	
 	Super::Deinitialize();
 }
 
@@ -42,6 +51,7 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FSt
 
 	FinalResult.Result.Merge(InitChatResult.Result);
 	FinalResult.Result.MarkSuccess();
+	FinalResult.Chat = Chat;
 
 	return FinalResult;
 }

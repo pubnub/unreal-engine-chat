@@ -29,6 +29,16 @@
 				"Mac",
 				"Linux"
 			]
+		},
+		{
+			"Name": "PubnubChatSDKTests",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
 		}
 	],
 	"Plugins": [

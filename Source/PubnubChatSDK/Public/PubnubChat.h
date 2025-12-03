@@ -33,6 +33,9 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	
 public:
 
+
+	/*  DELEGATES  */
+	
 	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyed;
 
@@ -47,6 +50,9 @@ public:
 	/**Listener to react for connection status changed , equivalent that accepts lambdas*/
 	FOnPubnubChatConnectionStatusChangedNative OnConnectionStatusChangedNative;
 
+
+	/*  GENERAL  */
+
 	UFUNCTION(BlueprintCallable, Category="PubnubChat")
 	void DestroyChat();
 
@@ -57,10 +63,10 @@ public:
 	UPubnubChatUser* GetCurrentUser();
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	FPubnubChatUserResult CreateUser(FString UserID, FPubnubChatUserData UserData);
+	FPubnubChatUserResult CreateUser(const FString UserID, FPubnubChatUserData UserData = FPubnubChatUserData());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	FPubnubChatUserResult GetUser(FString UserID);
+	FPubnubChatUserResult GetUser(const FString UserID);
 
 
 private:
