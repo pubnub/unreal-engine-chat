@@ -19,9 +19,67 @@ void UPubnubChat::DestroyChat()
 {
 	
 	PubnubClient->OnPubnubSubscriptionStatusChanged.RemoveDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
+
+	IsInitialized = false;
 	
 	OnChatDestroyed.Broadcast();
 	OnChatDestroyedNative.Broadcast();
+}
+
+UPubnubChatUser* UPubnubChat::GetCurrentUser()
+{
+	return CurrentUser;
+}
+
+FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserData UserData)
+{
+	FPubnubChatUserResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+
+	//Check if such user doesn't exist. If it does, just return an error
+	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
+	if(!GetUserResult.Result.Error)
+	{
+		FString ErrorMessage = FString::Printf(TEXT("[%s]: This user already exists. Try using GetUser instead."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
+		FinalResult.Result.CreateError(0, ErrorMessage);
+		FinalResult.Result.AddStep("GetUserMetadata", GetUserResult.Result);
+	}
+
+	//SetUserMetadata by PubnubClient
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserData());
+	FinalResult.Result.AddStep("SetUserMetadata", SetUserResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(SetUserResult.Result.Error)
+	{return FinalResult;}
+	
+	//Create and return the user object
+	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	NewUser->InitUser(PubnubClient, UserID, UserData);
+	FinalResult.User = NewUser;
+	return FinalResult;
+}
+
+FPubnubChatUserResult UPubnubChat::GetUser(FString UserID)
+{
+	FPubnubChatUserResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+
+	//GetUserMetadata from PubnubClient
+	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
+	FinalResult.Result.AddStep("GetUserMetadata", GetUserResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(GetUserResult.Result.Error)
+	{return FinalResult;}
+
+	//Create and return the user object
+	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	NewUser->InitUser(PubnubClient, UserID, FPubnubChatUserData::FromPubnubUserData(GetUserResult.UserData));
+	FinalResult.User = NewUser;
+	return FinalResult;
 }
 
 void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData)
@@ -95,15 +153,14 @@ FPubnubChatUserResult UPubnubChat::GetUserForInit(const FString InUserID)
 		FinalResult.Result.AddStep("SetUserMetadata", SetUserResult.Result);
 
 		if(SetUserResult.Result.Error)
-		{
-			return FinalResult;
-		}
+		{return FinalResult;}
+		
 		FinalUserData = GetUserResult.UserData;
 	}
     
 	// Create and return the user object
 	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, FinalUserData);
+	NewUser->InitUser(PubnubClient, InUserID, FPubnubChatUserData::FromPubnubUserData(FinalUserData));
 	FinalResult.User = NewUser;
 	return FinalResult;
 }

@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
 
 
 FPubnubChatOperationResult& FPubnubChatOperationResult::MarkSuccess()

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChat.h"
 #include "PubnubChatSubsystem.generated.h"
 

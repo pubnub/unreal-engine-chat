@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "PubnubStructLibrary.h"
+#include "StructLibraries/PubnubChatUserStructLibrary.h"
+
 #include "PubnubChatUser.generated.h"
 
 class UPubnubClient;
@@ -20,13 +21,18 @@ class PUBNUBCHATSDK_API UPubnubChatUser : public UObject
 	friend class UPubnubChat;
 public:
 
+	virtual void BeginDestroy() override;
+
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 	UPROPERTY()
-	FPubnubUserData UserData;
+	FPubnubChatUserData UserData;
+	UPROPERTY()
+	FString UserID = "";
+	
 
 	bool IsInitialized = false;
 
-	void InitUser(UPubnubClient* InPubnubClient, const FPubnubUserData& InUserData);
+	void InitUser(UPubnubClient* InPubnubClient, const FString InUserID, const FPubnubChatUserData& InUserData);
 };

@@ -3,7 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "PubnubChatEnumLibrary.h"
 #include "PubnubChatUser.h"
 
@@ -48,6 +49,18 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="PubnubChat")
 	void DestroyChat();
+
+	
+	/*  USER  */
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	UPubnubChatUser* GetCurrentUser();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatUserResult CreateUser(FString UserID, FPubnubChatUserData UserData);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatUserResult GetUser(FString UserID);
 
 
 private:

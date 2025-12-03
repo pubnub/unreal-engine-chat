@@ -7,14 +7,21 @@
 #include "PubnubChatSubsystem.h"
 
 
-void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, const FPubnubUserData& InUserData)
+void UPubnubChatUser::BeginDestroy()
+{
+	UObject::BeginDestroy();
+	IsInitialized = false;
+}
+
+void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, const FString InUserID, const FPubnubChatUserData& InUserData)
 {
 	if(!InPubnubClient)
 	{
 		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, PubnubClient is invalid"));
 		return;
 	}
-	
+
+	UserID = InUserID;
 	PubnubClient = InPubnubClient;
 	UserData = InUserData;
 	

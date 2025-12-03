@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChatEnumLibrary.h"
 #include "PubnubStructLibrary.h"
 #include "PubnubEnumLibrary.h"
