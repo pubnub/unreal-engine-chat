@@ -6,6 +6,9 @@
 #include "PubnubStructLibrary.h"
 #include "PubnubChatStructLibrary.generated.h"
 
+class UPubnubChat;
+class UPubnubChatUser;
+
 
 
 USTRUCT(BlueprintType)
@@ -87,9 +90,14 @@ struct FPubnubChatOperationResult
 	TArray<FPubnubChatOperationStepResult> StepResults;
 
 	/**
-	 * Creates a successful result
+	 * Sets Status to 200 and Error to false, without affecting steps
 	 */
-	static FPubnubChatOperationResult CreateSuccess();
+	FPubnubChatOperationResult& MarkSuccess();
+
+	/**
+	 * Creates an error result
+	 */
+	static FPubnubChatOperationResult CreateError(int InStatus, FString InErrorMessage = "");
 
 	/**
 	 * Creates a result from a single Pubnub operation result
@@ -114,7 +122,28 @@ struct FPubnubChatOperationResult
 	 * @return Reference to this result for chaining
 	 */
 	FPubnubChatOperationResult& Merge(const FPubnubChatOperationResult& OtherResult);
-
 };
 
+USTRUCT(BlueprintType)
+struct FPubnubChatInitChatResult
+{
+	GENERATED_BODY()
 
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChat* Chat = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatUserResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatUser* User = nullptr;
+};

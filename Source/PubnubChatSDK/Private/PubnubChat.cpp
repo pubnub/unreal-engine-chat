@@ -1,12 +1,14 @@
 // Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChat.h"
+
+#include "PubnubChatInternalMacros.h"
 #include "PubnubClient.h"
 #include "PubnubEnumLibrary.h"
 #include "PubnubStructLibrary.h"
 #include "PubnubChatSubsystem.h"
-#include "PubnubMacroUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
+#include "FunctionLibraries/PubnubChatLogUtilities.h"
 
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
@@ -20,25 +22,6 @@ void UPubnubChat::DestroyChat()
 	
 	OnChatDestroyed.Broadcast();
 	OnChatDestroyedNative.Broadcast();
-}
-
-
-
-void UPubnubChat::InitChat(const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient)
-{
-	if(!InPubnubClient)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Chat, PubnubClient is invalid"));
-		return;
-	}
-
-	ChatConfig = InChatConfig;
-	PubnubClient = InPubnubClient;
-
-	//Add callback for subscription status - it will be translated to chat connection status
-	PubnubClient->OnPubnubSubscriptionStatusChanged.AddDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
-
-	IsInitialized = true;
 }
 
 void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData)
@@ -60,30 +43,60 @@ void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus St
 	});
 }
 
-UPubnubChatUser* UPubnubChat::GetUserForInit(const FString UserID)
+FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient)
 {
-	if(!PubnubClient)
+	FPubnubChatInitChatResult FinalResult;
+	
+	if(!InPubnubClient)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("GetUserForInit failed: PubnubClient is invalid"));
-		return nullptr;
+		FString ErrorMessage = TEXT("Can't init Chat, PubnubClient is invalid");
+		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorMessage);
+		FinalResult.Result = FPubnubChatOperationResult::CreateError(0, ErrorMessage);
+		return FinalResult;
 	}
 
+	ChatConfig = InChatConfig;
+	PubnubClient = InPubnubClient;
+	
+	//Add callback for subscription status - it will be translated to chat connection status
+	PubnubClient->OnPubnubSubscriptionStatusChanged.AddDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
+
+	//Get or create user for this chat instance
+	FPubnubChatUserResult GetUserForInitResult = GetUserForInit(InUserID);
+
+	//Return if any error happened on the way
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(FinalResult, GetUserForInitResult);
+
+	FinalResult.Result.Merge(GetUserForInitResult.Result);
+		
+	CurrentUser = GetUserForInitResult.User;
+	IsInitialized = true;
+	FinalResult.Chat = this;
+
+	return FinalResult;
+}
+
+FPubnubChatUserResult UPubnubChat::GetUserForInit(const FString InUserID)
+{
+	FPubnubChatUserResult FinalResult;
 	FPubnubUserData FinalUserData;
 	
 	//Try to get user from the server
-	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
+	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(InUserID, FPubnubGetMetadataInclude::FromValue(true));
 	if(!GetUserResult.Result.Error)
 	{
 		FinalUserData = GetUserResult.UserData;
+		FinalResult.Result.AddStep("GetUserMetadata", GetUserResult.Result);
 	}
 	else
 	{
 		//If user doesn't exist on the server, just create it
-		FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, FPubnubUserData());
+		FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(InUserID, FPubnubUserData());
+		FinalResult.Result.AddStep("SetUserMetadata", SetUserResult.Result);
+
 		if(SetUserResult.Result.Error)
 		{
-			//TODO:: Print error log here
-			return nullptr;
+			return FinalResult;
 		}
 		FinalUserData = GetUserResult.UserData;
 	}
@@ -91,5 +104,6 @@ UPubnubChatUser* UPubnubChat::GetUserForInit(const FString UserID)
 	// Create and return the user object
 	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
 	NewUser->InitUser(PubnubClient, FinalUserData);
-	return NewUser;
+	FinalResult.User = NewUser;
+	return FinalResult;
 }

@@ -3,6 +3,7 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
+#include "PubnubChatInternalMacros.h"
 #include "PubnubSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -17,29 +18,30 @@ void UPubnubChatSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-UPubnubChat* UPubnubChatSubsystem::InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config)
+FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config)
 {
 	//TODO:: Add checks for empty keys and userID
+	//TODO:: Maybe add support for multiple chats??
+
+	FPubnubChatInitChatResult FinalResult;
 	
 	if(Chat)
 	{
 		UE_LOG(PubnubChatLog, Warning, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Char"));
-		return Chat;
+		FinalResult.Result = FPubnubChatOperationResult(0, true, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Char"));
+		return FinalResult;
 	}
 
 	Chat = NewObject<UPubnubChat>(this);
 	Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
-	Chat->InitChat(Config, CreatePubnubClient(PublishKey, SubscribeKey, UserID));
+	FPubnubChatInitChatResult InitChatResult = Chat->InitChat(UserID, Config, CreatePubnubClient(PublishKey, SubscribeKey, UserID));
 
-	//Make sure Chat was correctly initialized
-	if(!Chat->IsInitialized)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("InitChat Error - Chat was not initialized correctly"));
-		Chat = nullptr;
-		return nullptr;
-	}
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(FinalResult, InitChatResult);
 
-	return Chat;
+	FinalResult.Result.Merge(InitChatResult.Result);
+	FinalResult.Result.MarkSuccess();
+
+	return FinalResult;
 }
 
 UPubnubChat* UPubnubChatSubsystem::GetChat()

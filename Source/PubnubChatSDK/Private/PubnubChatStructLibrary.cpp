@@ -4,13 +4,16 @@
 #include "PubnubChatStructLibrary.h"
 
 
-FPubnubChatOperationResult FPubnubChatOperationResult::CreateSuccess()
+FPubnubChatOperationResult& FPubnubChatOperationResult::MarkSuccess()
 {
-	FPubnubChatOperationResult Result;
-	Result.Status = 200;
-	Result.Error = false;
-	Result.ErrorMessage = "";
-	return Result;
+	Status = 200;
+	Error = false;
+	return *this;
+}
+
+FPubnubChatOperationResult FPubnubChatOperationResult::CreateError(int InStatus, FString InErrorMessage)
+{
+	return FPubnubChatOperationResult(InStatus, true, InErrorMessage);
 }
 
 FPubnubChatOperationResult FPubnubChatOperationResult::FromSingleStep(const FString& StepName, const FPubnubOperationResult& OperationResult)

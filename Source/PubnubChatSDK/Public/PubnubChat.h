@@ -49,22 +49,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category="PubnubChat")
 	void DestroyChat();
 
-	UFUNCTION(BlueprintCallable)
-	UPubnubChatUser* GetUserForInit(const FString UserID);
-
 
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 
 	UPROPERTY()
+	TObjectPtr<UPubnubChatUser> CurrentUser = nullptr;
+
+	UPROPERTY()
 	FPubnubChatConfig ChatConfig;
+	
 
 	bool IsInitialized = false;
-
-	void InitChat(const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
 	UFUNCTION()
 	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);
+
+	FPubnubChatInitChatResult InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
+	FPubnubChatUserResult GetUserForInit(const FString InUserID);
+
+
 	
 	
 

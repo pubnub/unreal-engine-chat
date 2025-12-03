@@ -23,7 +23,7 @@ public:
 	virtual void Deinitialize() override;
 	
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
-	UPubnubChat* InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config = FPubnubChatConfig());
+	FPubnubChatInitChatResult InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config = FPubnubChatConfig());
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PubnubChat")
 	UPubnubChat* GetChat();

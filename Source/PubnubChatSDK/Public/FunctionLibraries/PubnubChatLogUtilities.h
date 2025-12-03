@@ -4,20 +4,23 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "PubnubLogUtilities.generated.h"
+#include "PubnubChatLogUtilities.generated.h"
 
 
 /**
  * 
  */
 UCLASS()
-class PUBNUBCHATSDK_API UPubnubLogUtilities : public UBlueprintFunctionLibrary
+class PUBNUBCHATSDK_API UPubnubChatLogUtilities : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 public:
 
 	//This is to remove class name from __FUNCTION__ macro output
 	static FString GetNameFromFunctionMacro(FString FunctionName);
+
+	//Converts __FUNCTION__ macro output into "[<Class>] [<Function>]" string
+	static FString ConvertFunctionNameMacroToLog(FString FunctionName);
 	
 	//Use to print PubnubChatLog that function input was empty. As FunctionName can accept __FUNCTION__ and will trim the class name
 	static void PrintEmptyFieldLog(FString FunctionName, FString FieldName);
