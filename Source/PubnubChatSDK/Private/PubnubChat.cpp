@@ -155,7 +155,7 @@ FPubnubChatUserResult UPubnubChat::GetUserForInit(const FString InUserID)
 		if(SetUserResult.Result.Error)
 		{return FinalResult;}
 		
-		FinalUserData = GetUserResult.UserData;
+		FinalUserData = SetUserResult.UserData;
 	}
     
 	// Create and return the user object
