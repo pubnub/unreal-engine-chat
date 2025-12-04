@@ -68,6 +68,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult GetUser(const FString UserID);
 
+	//TODO:: GetUsers
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatUserResult UpdateUser(const FString UserID, FPubnubChatUserData UserData);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatUserResult DeleteUser(const FString UserID, bool Soft = false);
+
 
 private:
 	UPROPERTY()

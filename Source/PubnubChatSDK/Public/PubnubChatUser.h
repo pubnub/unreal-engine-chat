@@ -9,6 +9,7 @@
 #include "PubnubChatUser.generated.h"
 
 class UPubnubClient;
+class UPubnubChat;
 
 /**
  * 
@@ -27,6 +28,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 	UPROPERTY()
+	UPubnubChat* Chat = nullptr;
+	UPROPERTY()
 	FPubnubChatUserData UserData;
 	UPROPERTY()
 	FString UserID = "";
@@ -34,5 +37,5 @@ private:
 
 	bool IsInitialized = false;
 
-	void InitUser(UPubnubClient* InPubnubClient, const FString InUserID, const FPubnubChatUserData& InUserData);
+	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID, const FPubnubChatUserData& InUserData);
 };

@@ -9,6 +9,7 @@
 #include "PubnubChatSubsystem.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "FunctionLibraries/PubnubChatInternalUtilities.h"
 
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
@@ -56,7 +57,7 @@ FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserDat
 	
 	//Create and return the user object
 	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, UserID, UserData);
+	NewUser->InitUser(PubnubClient, this, UserID, UserData);
 	FinalResult.User = NewUser;
 	return FinalResult;
 }
@@ -77,7 +78,71 @@ FPubnubChatUserResult UPubnubChat::GetUser(FString UserID)
 
 	//Create and return the user object
 	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, UserID, FPubnubChatUserData::FromPubnubUserData(GetUserResult.UserData));
+	NewUser->InitUser(PubnubClient, this, UserID, FPubnubChatUserData::FromPubnubUserData(GetUserResult.UserData));
+	FinalResult.User = NewUser;
+	return FinalResult;
+}
+
+FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatUserData UserData)
+{
+	FPubnubChatUserResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+
+	//SetUserMetadata by PubnubClient
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserData());
+	FinalResult.Result.AddStep("SetUserMetadata", SetUserResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(SetUserResult.Result.Error)
+	{return FinalResult;}
+
+	//Create and return the user object
+	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	NewUser->InitUser(PubnubClient, this, UserID, UserData);
+	FinalResult.User = NewUser;
+	return FinalResult;
+}
+
+FPubnubChatUserResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
+{
+	FPubnubChatUserResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+
+	//If it's not soft, remove user metadata from the server
+	if(!Soft)
+	{
+		//RemoveUserMetadata by PubnubClient
+		FPubnubOperationResult RemoveUserResult = PubnubClient->RemoveUserMetadata(UserID);
+		FinalResult.Result.AddStep("RemoveUserMetadata", RemoveUserResult);
+		return FinalResult;
+	}
+
+	//Soft Delete - just update User Metadata
+
+	//GetUserMetadata from PubnubClient to have up to date data
+	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
+	FinalResult.Result.AddStep("GetUserMetadata", GetUserResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(GetUserResult.Result.Error)
+	{return FinalResult;}
+
+	//Add Deleted property to Custom field
+	GetUserResult.UserData.Custom = UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(GetUserResult.UserData.Custom);
+
+	//SetUserMetadata updated metadata
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, GetUserResult.UserData);
+	FinalResult.Result.AddStep("SetUserMetadata", SetUserResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(SetUserResult.Result.Error)
+	{return FinalResult;}
+
+	//Create and return the user object
+	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	NewUser->InitUser(PubnubClient, this, UserID, FPubnubChatUserData::FromPubnubUserData(GetUserResult.UserData));
 	FinalResult.User = NewUser;
 	return FinalResult;
 }
@@ -160,7 +225,7 @@ FPubnubChatUserResult UPubnubChat::GetUserForInit(const FString InUserID)
     
 	// Create and return the user object
 	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, InUserID, FPubnubChatUserData::FromPubnubUserData(FinalUserData));
+	NewUser->InitUser(PubnubClient, this, InUserID, FPubnubChatUserData::FromPubnubUserData(FinalUserData));
 	FinalResult.User = NewUser;
 	return FinalResult;
 }
