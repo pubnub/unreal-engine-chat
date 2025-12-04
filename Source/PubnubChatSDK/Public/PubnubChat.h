@@ -79,8 +79,9 @@ private:
 	UPROPERTY()
 	FPubnubChatConfig ChatConfig;
 	
-
+	UPROPERTY()
 	bool IsInitialized = false;
+	
 	UFUNCTION()
 	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);
 

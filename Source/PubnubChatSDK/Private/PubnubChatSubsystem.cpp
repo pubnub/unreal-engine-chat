@@ -29,17 +29,16 @@ void UPubnubChatSubsystem::Deinitialize()
 
 FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config)
 {
-	//TODO:: Add checks for empty keys and userID
-	//TODO:: Maybe add support for multiple chats??
-
 	FPubnubChatInitChatResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, PublishKey);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, SubscribeKey);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
 	
 	if(Chat)
 	{
 		UE_LOG(PubnubChatLog, Warning, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
 		FinalResult.Result = FPubnubChatOperationResult(0, true, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
 		FinalResult.Chat = Chat;
-		FinalResult.Result.MarkSuccess();
 		return FinalResult;
 	}
 
@@ -71,7 +70,7 @@ void UPubnubChatSubsystem::DestroyChat()
 {
 	if(!Chat)
 	{
-		UE_LOG(PubnubChatLog, Warning, TEXT("Can't destroy chat as it doesn't exists"));
+		UE_LOG(PubnubChatLog, Warning, TEXT("Can't destroy chat as it doesn't exist"));
 		return;
 	}
 	

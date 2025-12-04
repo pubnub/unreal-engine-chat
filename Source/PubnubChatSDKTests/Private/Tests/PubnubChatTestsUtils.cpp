@@ -44,6 +44,10 @@ bool FPubnubChatAutomationTestBase::InitTest()
 	if (!TestNotNull("PubnubChat Subsystem exists", ChatSubsystem))
 	{return false;}
 
+	//Until we have advanced logger, we need to disable logs, because they would make tests fail
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
 	return true;
 }
 
