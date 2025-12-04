@@ -12,6 +12,7 @@
 #include "PubnubChat.generated.h"
 
 class UPubnubClient;
+class UPubnubChatObjectsRepository;
 enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
 
@@ -30,6 +31,8 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	GENERATED_BODY()
 
 	friend class UPubnubChatSubsystem;
+	friend class UPubnubChatUser;
+	friend class UPubnubChatChannel;
 	
 public:
 
@@ -89,6 +92,10 @@ private:
 	
 	UPROPERTY()
 	bool IsInitialized = false;
+
+	/** Repository that manages shared data for all User and Channel objects */
+	UPROPERTY()
+	TObjectPtr<UPubnubChatObjectsRepository> ObjectsRepository = nullptr;
 	
 	UFUNCTION()
 	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);

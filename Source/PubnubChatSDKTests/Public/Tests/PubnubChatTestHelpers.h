@@ -11,6 +11,7 @@
 
 // Forward declarations
 class UPubnubClient;
+class UPubnubChatObjectsRepository;
 
 /**
  * Test helper utilities for accessing private members via Unreal Engine's reflection system.
@@ -55,6 +56,13 @@ namespace PubnubChatTestHelpers
 	 * @return The IsInitialized flag value, or false if not accessible
 	 */
 	bool GetIsInitializedFromChat(UPubnubChat* Chat);
+	
+	/**
+	 * Gets the ObjectsRepository from UPubnubChat using reflection.
+	 * @param Chat The Chat object to get the repository from
+	 * @return The ObjectsRepository object, or nullptr if not found or not accessible
+	 */
+	UPubnubChatObjectsRepository* GetObjectsRepositoryFromChat(UPubnubChat* Chat);
 }
 
 #endif // WITH_DEV_AUTOMATION_TESTS

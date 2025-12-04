@@ -128,6 +128,30 @@ namespace PubnubChatTestHelpers
 		
 		return *InitPtr;
 	}
+
+	UPubnubChatObjectsRepository* GetObjectsRepositoryFromChat(UPubnubChat* Chat)
+	{
+		if (!Chat)
+		{
+			return nullptr;
+		}
+		
+		// Use reflection to access the private "ObjectsRepository" UPROPERTY
+		FProperty* RepositoryProperty = Chat->GetClass()->FindPropertyByName(TEXT("ObjectsRepository"));
+		if (!RepositoryProperty)
+		{
+			return nullptr;
+		}
+		
+		// Get the value of the property
+		TObjectPtr<UPubnubChatObjectsRepository>* RepositoryPtr = RepositoryProperty->ContainerPtrToValuePtr<TObjectPtr<UPubnubChatObjectsRepository>>(Chat);
+		if (!RepositoryPtr)
+		{
+			return nullptr;
+		}
+		
+		return RepositoryPtr->Get();
+	}
 }
 
 #endif // WITH_DEV_AUTOMATION_TESTS

@@ -161,6 +161,10 @@ bool FPubnubChatInitChatHappyPathTest::RunTest(const FString& Parameters)
 		bool bIsInitialized = GetIsInitializedFromChat(Chat);
 		TestTrue("Chat should be initialized", bIsInitialized);
 		
+		// Verify repository is created during InitChat
+		UPubnubChatObjectsRepository* Repository = GetObjectsRepositoryFromChat(Chat);
+		TestNotNull("Repository should be created during InitChat", Repository);
+		
 		// Verify subsystem's internal Chat pointer matches
 		UPubnubChat* SubsystemChat = GetChatFromSubsystem(ChatSubsystem);
 		TestEqual("Subsystem's internal Chat should match returned Chat", SubsystemChat, Chat);

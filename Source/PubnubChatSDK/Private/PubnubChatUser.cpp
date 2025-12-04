@@ -1,19 +1,44 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
 #include "PubnubChatSubsystem.h"
+#include "PubnubChatObjectsRepository.h"
 
 
 void UPubnubChatUser::BeginDestroy()
 {
+	// Unregister from repository before destruction
+	if (IsInitialized && Chat && Chat->ObjectsRepository && !UserID.IsEmpty())
+	{
+		Chat->ObjectsRepository->UnregisterUser(UserID);
+	}
+	
 	UObject::BeginDestroy();
 	IsInitialized = false;
 }
 
-void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID, const FPubnubChatUserData& InUserData)
+FPubnubChatUserData UPubnubChatUser::GetUserData() const
+{
+	if (!IsInitialized || !Chat || !Chat->ObjectsRepository)
+	{
+		UE_LOG(PubnubChatLog, Warning, TEXT("User is not initialized, Chat is invalid, or Repository is invalid"));
+		return FPubnubChatUserData();
+	}
+
+	// Get user data from repository
+	FPubnubChatInternalUser* InternalUser = Chat->ObjectsRepository->GetUserData(UserID);
+	if (InternalUser)
+	{
+		return InternalUser->UserData;
+	}
+
+	UE_LOG(PubnubChatLog, Warning, TEXT("User data not found in repository for UserID: %s"), *UserID);
+	return FPubnubChatUserData();
+}
+
+void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)
 {
 	if(!InPubnubClient)
 	{
@@ -21,16 +46,27 @@ void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InCha
 		return;
 	}
 	
-	if(!InPubnubClient)
+	if(!InChat)
 	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, PubnubClient is invalid"));
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, Chat is invalid"));
+		return;
+	}
+
+	if(InUserID.IsEmpty())
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, UserID is empty"));
 		return;
 	}
 
 	UserID = InUserID;
 	PubnubClient = InPubnubClient;
 	Chat = InChat;
-	UserData = InUserData;
+	
+	// Register this user object with the repository
+	if (Chat->ObjectsRepository)
+	{
+		Chat->ObjectsRepository->RegisterUser(UserID);
+	}
 	
 	IsInitialized = true;
 }

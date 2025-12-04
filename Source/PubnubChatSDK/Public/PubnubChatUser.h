@@ -23,19 +23,23 @@ class PUBNUBCHATSDK_API UPubnubChatUser : public UObject
 public:
 
 	virtual void BeginDestroy() override;
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FPubnubChatUserData GetUserData() const;
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FString GetUserID() const { return UserID; }
 
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 	UPROPERTY()
-	UPubnubChat* Chat = nullptr;
-	UPROPERTY()
-	FPubnubChatUserData UserData;
+	TObjectPtr<UPubnubChat> Chat = nullptr;
 	UPROPERTY()
 	FString UserID = "";
 	
 
 	bool IsInitialized = false;
 
-	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID, const FPubnubChatUserData& InUserData);
+	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID);
 };
