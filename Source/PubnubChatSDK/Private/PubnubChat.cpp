@@ -51,8 +51,9 @@ FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserDat
 	if(!GetUserResult.Result.Error)
 	{
 		FString ErrorMessage = FString::Printf(TEXT("[%s]: This user already exists. Try using GetUser instead."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
-		FinalResult.Result.CreateError(0, ErrorMessage);
+		FinalResult.Result = FPubnubChatOperationResult::CreateError(0, ErrorMessage);
 		FinalResult.Result.AddStep("GetUserMetadata", GetUserResult.Result);
+		return FinalResult;
 	}
 
 	//SetUserMetadata by PubnubClient
