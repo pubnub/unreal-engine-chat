@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "PubnubChatEnumLibrary.h"
 #include "PubnubChatUser.h"
 
@@ -81,6 +83,23 @@ public:
 	FPubnubChatUserResult DeleteUser(const FString UserID, bool Soft = false);
 
 
+	/*  CHANNEL  */
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatChannelResult CreatePublicConversation(const FString ChannelID, FPubnubChatChannelData ChannelData = FPubnubChatChannelData());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatChannelResult GetChannel(const FString ChannelID);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatGetChannelsResult GetChannels(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatChannelResult UpdateChannel(const FString ChannelID, FPubnubChatChannelData ChannelData);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatChannelResult DeleteChannel(const FString ChannelID, bool Soft = false);
+
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
@@ -106,6 +125,9 @@ private:
 
 	UPubnubChatUser* CreateUserObject(const FString UserID, const FPubnubChatUserData& ChatUserData);
 	UPubnubChatUser* CreateUserObject(const FString UserID, const FPubnubUserData& UserData);
+
+	UPubnubChatChannel* CreateChannelObject(const FString ChannelID, const FPubnubChatChannelData& ChatChannelData);
+	UPubnubChatChannel* CreateChannelObject(const FString ChannelID, const FPubnubChannelData& ChannelData);
 
 	
 	

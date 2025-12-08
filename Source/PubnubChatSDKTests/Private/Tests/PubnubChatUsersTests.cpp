@@ -24,7 +24,7 @@ using namespace PubnubChatTestHelpers;
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetCurrentUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetCurrentUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetCurrentUserNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -46,7 +46,7 @@ bool FPubnubChatGetCurrentUserNotInitializedTest::RunTest(const FString& Paramet
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetCurrentUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetCurrentUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetCurrentUserHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -90,7 +90,7 @@ bool FPubnubChatGetCurrentUserHappyPathTest::RunTest(const FString& Parameters)
 // ADVANCED SCENARIO TESTS
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserAfterDestroyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetCurrentUser.4Advanced.AfterDestroy", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserAfterDestroyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetCurrentUser.4Advanced.AfterDestroy", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetCurrentUserAfterDestroyTest::RunTest(const FString& Parameters)
 {
@@ -130,7 +130,7 @@ bool FPubnubChatGetCurrentUserAfterDestroyTest::RunTest(const FString& Parameter
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetCurrentUser.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetCurrentUserConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetCurrentUser.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetCurrentUserConsistencyTest::RunTest(const FString& Parameters)
 {
@@ -175,7 +175,7 @@ bool FPubnubChatGetCurrentUserConsistencyTest::RunTest(const FString& Parameters
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.CreateUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCreateUserNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -210,7 +210,7 @@ bool FPubnubChatCreateUserNotInitializedTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.CreateUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCreateUserEmptyUserIDTest::RunTest(const FString& Parameters)
 {
@@ -248,7 +248,7 @@ bool FPubnubChatCreateUserEmptyUserIDTest::RunTest(const FString& Parameters)
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.CreateUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCreateUserHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -301,7 +301,7 @@ bool FPubnubChatCreateUserHappyPathTest::RunTest(const FString& Parameters)
 // FULL PARAMETER TESTS (All Parameters)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.CreateUser.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUser.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCreateUserFullParametersTest::RunTest(const FString& Parameters)
 {
@@ -369,7 +369,7 @@ bool FPubnubChatCreateUserFullParametersTest::RunTest(const FString& Parameters)
 // ADVANCED SCENARIO TESTS
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserDuplicateTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.CreateUser.4Advanced.DuplicateUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserDuplicateTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUser.4Advanced.DuplicateUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCreateUserDuplicateTest::RunTest(const FString& Parameters)
 {
@@ -414,7 +414,7 @@ bool FPubnubChatCreateUserDuplicateTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserDataSharingTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.CreateUser.4Advanced.DataSharing", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserDataSharingTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUser.4Advanced.DataSharing", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCreateUserDataSharingTest::RunTest(const FString& Parameters)
 {
@@ -480,7 +480,7 @@ bool FPubnubChatCreateUserDataSharingTest::RunTest(const FString& Parameters)
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUserNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -513,7 +513,7 @@ bool FPubnubChatGetUserNotInitializedTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUserEmptyUserIDTest::RunTest(const FString& Parameters)
 {
@@ -551,7 +551,7 @@ bool FPubnubChatGetUserEmptyUserIDTest::RunTest(const FString& Parameters)
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUserHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -608,7 +608,7 @@ bool FPubnubChatGetUserHappyPathTest::RunTest(const FString& Parameters)
 // ADVANCED SCENARIO TESTS
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserNonExistentTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUser.4Advanced.NonExistentUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserNonExistentTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUser.4Advanced.NonExistentUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUserNonExistentTest::RunTest(const FString& Parameters)
 {
@@ -644,7 +644,7 @@ bool FPubnubChatGetUserNonExistentTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserMultipleCallsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUser.4Advanced.MultipleCalls", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserMultipleCallsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUser.4Advanced.MultipleCalls", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUserMultipleCallsTest::RunTest(const FString& Parameters)
 {
@@ -713,7 +713,7 @@ bool FPubnubChatGetUserMultipleCallsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserCurrentUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUser.4Advanced.GetCurrentUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserCurrentUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUser.4Advanced.GetCurrentUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUserCurrentUserTest::RunTest(const FString& Parameters)
 {
@@ -770,7 +770,7 @@ bool FPubnubChatGetUserCurrentUserTest::RunTest(const FString& Parameters)
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.UpdateUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatUpdateUserNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -804,7 +804,7 @@ bool FPubnubChatUpdateUserNotInitializedTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.UpdateUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatUpdateUserEmptyUserIDTest::RunTest(const FString& Parameters)
 {
@@ -843,7 +843,7 @@ bool FPubnubChatUpdateUserEmptyUserIDTest::RunTest(const FString& Parameters)
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.UpdateUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatUpdateUserHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -900,7 +900,7 @@ bool FPubnubChatUpdateUserHappyPathTest::RunTest(const FString& Parameters)
 // FULL PARAMETER TESTS (All Parameters)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.UpdateUser.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatUpdateUserFullParametersTest::RunTest(const FString& Parameters)
 {
@@ -970,7 +970,7 @@ bool FPubnubChatUpdateUserFullParametersTest::RunTest(const FString& Parameters)
 // ADVANCED SCENARIO TESTS
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserMultipleTimesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.UpdateUser.4Advanced.MultipleUpdates", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserMultipleTimesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.4Advanced.MultipleUpdates", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatUpdateUserMultipleTimesTest::RunTest(const FString& Parameters)
 {
@@ -1044,7 +1044,7 @@ bool FPubnubChatUpdateUserMultipleTimesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserDataSynchronizationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.UpdateUser.4Advanced.DataSynchronization", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserDataSynchronizationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.4Advanced.DataSynchronization", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatUpdateUserDataSynchronizationTest::RunTest(const FString& Parameters)
 {
@@ -1114,7 +1114,7 @@ bool FPubnubChatUpdateUserDataSynchronizationTest::RunTest(const FString& Parame
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.DeleteUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatDeleteUserNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -1147,7 +1147,7 @@ bool FPubnubChatDeleteUserNotInitializedTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.DeleteUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatDeleteUserEmptyUserIDTest::RunTest(const FString& Parameters)
 {
@@ -1185,7 +1185,7 @@ bool FPubnubChatDeleteUserEmptyUserIDTest::RunTest(const FString& Parameters)
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.DeleteUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatDeleteUserHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -1227,7 +1227,7 @@ bool FPubnubChatDeleteUserHappyPathTest::RunTest(const FString& Parameters)
 // FULL PARAMETER TESTS (All Parameters)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHardDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.DeleteUser.3FullParameters.HardDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHardDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.3FullParameters.HardDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatDeleteUserHardDeleteTest::RunTest(const FString& Parameters)
 {
@@ -1268,7 +1268,7 @@ bool FPubnubChatDeleteUserHardDeleteTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserSoftDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.DeleteUser.3FullParameters.SoftDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserSoftDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.3FullParameters.SoftDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatDeleteUserSoftDeleteTest::RunTest(const FString& Parameters)
 {
@@ -1322,7 +1322,7 @@ bool FPubnubChatDeleteUserSoftDeleteTest::RunTest(const FString& Parameters)
 // ============================================================================
 
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHardVsSoftTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.DeleteUser.4Advanced.HardVsSoft", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHardVsSoftTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.4Advanced.HardVsSoft", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatDeleteUserHardVsSoftTest::RunTest(const FString& Parameters)
 {
@@ -1391,7 +1391,7 @@ bool FPubnubChatDeleteUserHardVsSoftTest::RunTest(const FString& Parameters)
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -1427,7 +1427,7 @@ bool FPubnubChatGetUsersNotInitializedTest::RunTest(const FString& Parameters)
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -1468,7 +1468,7 @@ bool FPubnubChatGetUsersHappyPathTest::RunTest(const FString& Parameters)
 // FULL PARAMETER TESTS (All Parameters)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersFullParametersTest::RunTest(const FString& Parameters)
 {
@@ -1538,7 +1538,7 @@ bool FPubnubChatGetUsersFullParametersTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.3FullParameters.WithLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.3FullParameters.WithLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersWithLimitTest::RunTest(const FString& Parameters)
 {
@@ -1597,7 +1597,7 @@ bool FPubnubChatGetUsersWithLimitTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithFilterTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.3FullParameters.WithFilter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithFilterTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.3FullParameters.WithFilter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersWithFilterTest::RunTest(const FString& Parameters)
 {
@@ -1645,7 +1645,7 @@ bool FPubnubChatGetUsersWithFilterTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithSortTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.3FullParameters.WithSort", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithSortTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.3FullParameters.WithSort", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersWithSortTest::RunTest(const FString& Parameters)
 {
@@ -1715,7 +1715,7 @@ bool FPubnubChatGetUsersWithSortTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithPageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.3FullParameters.WithPage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersWithPageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.3FullParameters.WithPage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersWithPageTest::RunTest(const FString& Parameters)
 {
@@ -1769,7 +1769,7 @@ bool FPubnubChatGetUsersWithPageTest::RunTest(const FString& Parameters)
  * Tests GetUsers with multiple users created.
  * Verifies that all created users are returned in the results and that the total count is correct.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersMultipleUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.4Advanced.MultipleUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersMultipleUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.4Advanced.MultipleUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersMultipleUsersTest::RunTest(const FString& Parameters)
 {
@@ -1844,7 +1844,7 @@ bool FPubnubChatGetUsersMultipleUsersTest::RunTest(const FString& Parameters)
  * Tests pagination functionality of GetUsers.
  * Verifies that pagination works correctly with limit parameter, next page navigation, and previous page navigation.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersPaginationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.4Advanced.Pagination", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersPaginationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.4Advanced.Pagination", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersPaginationTest::RunTest(const FString& Parameters)
 {
@@ -1914,7 +1914,7 @@ bool FPubnubChatGetUsersPaginationTest::RunTest(const FString& Parameters)
  * Tests filtering functionality of GetUsers.
  * Verifies that users can be filtered by UserID and by name patterns using filter expressions.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersFilteringTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.4Advanced.Filtering", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersFilteringTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.4Advanced.Filtering", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersFilteringTest::RunTest(const FString& Parameters)
 {
@@ -1996,7 +1996,7 @@ bool FPubnubChatGetUsersFilteringTest::RunTest(const FString& Parameters)
  * Tests sorting functionality of GetUsers.
  * Verifies that users can be sorted by ID and Name in both ascending and descending order.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersSortingTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.4Advanced.Sorting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersSortingTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.4Advanced.Sorting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersSortingTest::RunTest(const FString& Parameters)
 {
@@ -2091,7 +2091,7 @@ bool FPubnubChatGetUsersSortingTest::RunTest(const FString& Parameters)
  * Tests GetUsers with a filter that matches no users.
  * Verifies that the function returns an empty result set with zero total count when no users match the filter criteria.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersEmptyResultTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.4Advanced.EmptyResult", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersEmptyResultTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.4Advanced.EmptyResult", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersEmptyResultTest::RunTest(const FString& Parameters)
 {
@@ -2130,7 +2130,7 @@ bool FPubnubChatGetUsersEmptyResultTest::RunTest(const FString& Parameters)
  * Tests consistency of GetUsers results across multiple calls.
  * Verifies that calling GetUsers multiple times returns consistent total counts and user counts.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.GetUsers.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsers.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatGetUsersConsistencyTest::RunTest(const FString& Parameters)
 {

@@ -101,6 +101,25 @@
 		} \
 	} while (false)
 
+#define PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(...) \
+	do { \
+		if (!IsInitialized) \
+		{ \
+			UE_LOG(PubnubChatLog, Error, TEXT("[%s]: Not initialized. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			return __VA_ARGS__; \
+		} \
+		if (!PubnubClient) \
+		{ \
+			UE_LOG(PubnubChatLog, Error, TEXT("[%s]: Pubnub Client is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			return __VA_ARGS__; \
+		} \
+		if (!Chat) \
+		{ \
+			UE_LOG(PubnubChatLog, Error, TEXT("[%s]: Chat is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			return __VA_ARGS__; \
+		} \
+	} while (false)
+
 
 
 #define PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(ReturnWrapper, OperationResult) \

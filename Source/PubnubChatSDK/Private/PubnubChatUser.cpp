@@ -22,11 +22,7 @@ void UPubnubChatUser::BeginDestroy()
 
 FPubnubChatUserData UPubnubChatUser::GetUserData() const
 {
-	if (!IsInitialized || !Chat || !Chat->ObjectsRepository)
-	{
-		UE_LOG(PubnubChatLog, Warning, TEXT("User is not initialized, Chat is invalid, or Repository is invalid"));
-		return FPubnubChatUserData();
-	}
+	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatUserData());
 
 	// Get user data from repository
 	FPubnubChatInternalUser* InternalUser = Chat->ObjectsRepository->GetUserData(UserID);
@@ -35,7 +31,7 @@ FPubnubChatUserData UPubnubChatUser::GetUserData() const
 		return InternalUser->UserData;
 	}
 
-	UE_LOG(PubnubChatLog, Warning, TEXT("User data not found in repository for UserID: %s"), *UserID);
+	UE_LOG(PubnubChatLog, Error, TEXT("User data not found in repository for UserID: %s"), *UserID);
 	return FPubnubChatUserData();
 }
 
