@@ -30,6 +30,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FString GetUserID() const { return UserID; }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FPubnubChatOperationResult Update(FPubnubChatUserData UserData);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FPubnubChatOperationResult Delete(bool Soft = false);
+
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;

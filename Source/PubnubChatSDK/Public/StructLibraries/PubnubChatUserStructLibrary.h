@@ -3,23 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PubnubStructLibrary.h"
 #include "PubnubChatStructLibrary.h"
 #include "PubnubChatUserStructLibrary.generated.h"
 
 class UPubnubChatUser;
 
-
-USTRUCT(BlueprintType)
-struct FPubnubChatUserResult
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FPubnubChatOperationResult Result;
-	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	UPubnubChatUser* User = nullptr;
-};
 
 USTRUCT(BlueprintType)
 struct FPubnubChatUserData
@@ -43,4 +32,34 @@ struct FPubnubChatUserData
 
 	FPubnubUserData ToPubnubUserData();
 	static FPubnubChatUserData FromPubnubUserData(const FPubnubUserData &PubnubUserData);
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatUserResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatUser* User = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetUsersResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatUser*> Users;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubPage Page;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Total = 0;
 };

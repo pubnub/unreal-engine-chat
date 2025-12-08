@@ -19,7 +19,7 @@ using namespace PubnubChatTestHelpers;
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatEmptyPublishKeyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Validation.EmptyPublishKey", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatEmptyPublishKeyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.1Validation.EmptyPublishKey", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatEmptyPublishKeyTest::RunTest(const FString& Parameters)
 {
@@ -43,7 +43,7 @@ bool FPubnubChatInitChatEmptyPublishKeyTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatEmptySubscribeKeyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Validation.EmptySubscribeKey", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatEmptySubscribeKeyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.1Validation.EmptySubscribeKey", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatEmptySubscribeKeyTest::RunTest(const FString& Parameters)
 {
@@ -67,7 +67,7 @@ bool FPubnubChatInitChatEmptySubscribeKeyTest::RunTest(const FString& Parameters
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatEmptyUserIDTest::RunTest(const FString& Parameters)
 {
@@ -91,7 +91,7 @@ bool FPubnubChatInitChatEmptyUserIDTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatAllEmptyFieldsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Validation.AllEmptyFields", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatAllEmptyFieldsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.1Validation.AllEmptyFields", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatAllEmptyFieldsTest::RunTest(const FString& Parameters)
 {
@@ -116,7 +116,7 @@ bool FPubnubChatInitChatAllEmptyFieldsTest::RunTest(const FString& Parameters)
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -178,7 +178,7 @@ bool FPubnubChatInitChatHappyPathTest::RunTest(const FString& Parameters)
 // FULL PARAMETER TESTS (All Config Parameters)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatFullConfigTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.FullConfig.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatFullConfigTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.3FullConfig.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatFullConfigTest::RunTest(const FString& Parameters)
 {
@@ -234,7 +234,11 @@ bool FPubnubChatInitChatFullConfigTest::RunTest(const FString& Parameters)
 // ADVANCED SCENARIO TESTS
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatDuplicateCallTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Advanced.DuplicateCall", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+/**
+ * Tests calling InitChat multiple times with the same parameters.
+ * Verifies that subsequent calls return the existing Chat object and indicate that chat already exists.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatDuplicateCallTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.4Advanced.DuplicateCall", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatDuplicateCallTest::RunTest(const FString& Parameters)
 {
@@ -274,7 +278,11 @@ bool FPubnubChatInitChatDuplicateCallTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatStepResultsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Advanced.StepResults", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+/**
+ * Tests that InitChat properly tracks step results for internal operations.
+ * Verifies that step results contain expected operations like GetUserMetadata and SetUserMetadata.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatStepResultsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.4Advanced.StepResults", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatStepResultsTest::RunTest(const FString& Parameters)
 {
@@ -321,7 +329,11 @@ bool FPubnubChatInitChatStepResultsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatDifferentUserIDsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Advanced.DifferentUserIDs", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+/**
+ * Tests InitChat with different UserIDs after destroying previous chat.
+ * Verifies that destroying and reinitializing with a different UserID creates a new Chat object with the correct user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatDifferentUserIDsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.4Advanced.DifferentUserIDs", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatDifferentUserIDsTest::RunTest(const FString& Parameters)
 {
@@ -372,7 +384,11 @@ bool FPubnubChatInitChatDifferentUserIDsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatConfigPreservationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Advanced.ConfigPreservation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+/**
+ * Tests that ChatConfig parameters are preserved and stored correctly after InitChat.
+ * Verifies that all config values (AuthKey, TypingTimeout, etc.) are stored and can be retrieved from the Chat object.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatConfigPreservationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.4Advanced.ConfigPreservation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatConfigPreservationTest::RunTest(const FString& Parameters)
 {
@@ -421,7 +437,12 @@ bool FPubnubChatInitChatConfigPreservationTest::RunTest(const FString& Parameter
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatSubsystemStateTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Advanced.SubsystemState", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+/**
+ * Tests subsystem state management throughout the Chat lifecycle.
+ * Verifies that GetChat returns null before InitChat, returns Chat after InitChat, and returns null after DestroyChat.
+ * Also verifies internal subsystem state using reflection.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatSubsystemStateTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.4Advanced.SubsystemState", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatSubsystemStateTest::RunTest(const FString& Parameters)
 {
@@ -476,7 +497,11 @@ bool FPubnubChatInitChatSubsystemStateTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatCurrentUserVerificationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.Advanced.CurrentUserVerification", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+/**
+ * Tests that CurrentUser is properly created and accessible after InitChat.
+ * Verifies that CurrentUser exists both via public API and reflection, and that both references match.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatInitChatCurrentUserVerificationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.InitChat.4Advanced.CurrentUserVerification", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatInitChatCurrentUserVerificationTest::RunTest(const FString& Parameters)
 {

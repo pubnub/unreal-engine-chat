@@ -3,6 +3,7 @@
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
+#include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
 
@@ -36,6 +37,22 @@ FPubnubChatUserData UPubnubChatUser::GetUserData() const
 
 	UE_LOG(PubnubChatLog, Warning, TEXT("User data not found in repository for UserID: %s"), *UserID);
 	return FPubnubChatUserData();
+}
+
+FPubnubChatOperationResult UPubnubChatUser::Update(FPubnubChatUserData UserData)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+
+	FPubnubChatUserResult UpdateUserResult = Chat->UpdateUser(UserID, UserData);
+	return UpdateUserResult.Result;
+}
+
+FPubnubChatOperationResult UPubnubChatUser::Delete(bool Soft)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+
+	FPubnubChatUserResult DeleteUserResult = Chat->DeleteUser(UserID, Soft);
+	return DeleteUserResult.Result;
 }
 
 void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)

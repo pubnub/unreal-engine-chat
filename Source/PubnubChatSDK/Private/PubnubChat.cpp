@@ -64,13 +64,8 @@ FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserDat
 	if(SetUserResult.Result.Error)
 	{return FinalResult;}
 	
-	//Update repository with new user data
-	ObjectsRepository->UpdateUserData(UserID, UserData);
-	
-	//Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, this, UserID);
-	FinalResult.User = NewUser;
+	//Create user object and return final result
+	FinalResult.User = CreateUserObject(UserID, UserData);
 	return FinalResult;
 }
 
@@ -88,15 +83,34 @@ FPubnubChatUserResult UPubnubChat::GetUser(FString UserID)
 	if(GetUserResult.Result.Error)
 	{return FinalResult;}
 
-	//Update repository with fetched user data
-	FPubnubChatUserData ChatUserData = FPubnubChatUserData::FromPubnubUserData(GetUserResult.UserData);
-	ObjectsRepository->UpdateUserData(UserID, ChatUserData);
-
-	//Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, this, UserID);
-	FinalResult.User = NewUser;
+	//Create user object and return final result
+	FinalResult.User = CreateUserObject(UserID, GetUserResult.UserData);
 	return FinalResult;
+}
+
+FPubnubChatGetUsersResult UPubnubChat::GetUsers(const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
+{
+	FPubnubChatGetUsersResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	FPubnubGetAllUserMetadataResult GetAllUserResult = PubnubClient->GetAllUserMetadata(FPubnubGetAllInclude::FromValue(true), Limit, Filter, Sort, Page);
+	FinalResult.Result.AddStep("GetAllUserMetadata", GetAllUserResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(GetAllUserResult.Result.Error)
+	{return FinalResult;}
+
+	for (auto &UserData : GetAllUserResult.UsersData)
+	{
+		FinalResult.Users.Add(CreateUserObject(UserData.UserID, UserData));
+	}
+	
+	// Copy pagination and total count information
+	FinalResult.Page = GetAllUserResult.Page;
+	FinalResult.Total = GetAllUserResult.TotalCount;
+
+	return FinalResult;
+
 }
 
 FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatUserData UserData)
@@ -113,13 +127,8 @@ FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatU
 	if(SetUserResult.Result.Error)
 	{return FinalResult;}
 
-	//Update repository with updated user data
-	ObjectsRepository->UpdateUserData(UserID, UserData);
-
-	//Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, this, UserID);
-	FinalResult.User = NewUser;
+	//Create user object and return final result
+	FinalResult.User = CreateUserObject(UserID, UserData);
 	return FinalResult;
 }
 
@@ -165,17 +174,12 @@ FPubnubChatUserResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
 	//Return if there was any error during PubnubClient operation
 	if(SetUserResult.Result.Error)
 	{return FinalResult;}
-
-	//Update repository with soft-deleted user data
-	FPubnubChatUserData ChatUserData = FPubnubChatUserData::FromPubnubUserData(GetUserResult.UserData);
-	ObjectsRepository->UpdateUserData(UserID, ChatUserData);
-
-	//Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, this, UserID);
-	FinalResult.User = NewUser;
+	
+	//Create user object and return final result
+	FinalResult.User = CreateUserObject(UserID, GetUserResult.UserData);
 	return FinalResult;
 }
+
 
 void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData)
 {
@@ -255,14 +259,30 @@ FPubnubChatUserResult UPubnubChat::GetUserForInit(const FString InUserID)
 		
 		FinalUserData = SetUserResult.UserData;
 	}
-    
-	//Update repository with user data
-	FPubnubChatUserData ChatUserData = FPubnubChatUserData::FromPubnubUserData(FinalUserData);
-	ObjectsRepository->UpdateUserData(InUserID, ChatUserData);
 
-	// Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
-	NewUser->InitUser(PubnubClient, this, InUserID);
-	FinalResult.User = NewUser;
+	//Create user object and return final result
+	FinalResult.User = CreateUserObject(InUserID, FinalUserData);
 	return FinalResult;
+}
+
+UPubnubChatUser* UPubnubChat::CreateUserObject(const FString UserID, const FPubnubChatUserData& ChatUserData)
+{
+	//Update repository with updated user data
+	ObjectsRepository->UpdateUserData(UserID, ChatUserData);
+
+	//Create and return the user object
+	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	NewUser->InitUser(PubnubClient, this, UserID);
+	return NewUser;
+}
+
+UPubnubChatUser* UPubnubChat::CreateUserObject(const FString UserID, const FPubnubUserData& UserData)
+{
+	//Update repository with updated user data
+	ObjectsRepository->UpdateUserData(UserID, FPubnubChatUserData::FromPubnubUserData(UserData));
+
+	//Create and return the user object
+	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	NewUser->InitUser(PubnubClient, this, UserID);
+	return NewUser;
 }

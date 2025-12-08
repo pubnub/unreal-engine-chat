@@ -71,7 +71,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult GetUser(const FString UserID);
 
-	//TODO:: GetUsers
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatGetUsersResult GetUsers(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult UpdateUser(const FString UserID, FPubnubChatUserData UserData);
@@ -89,13 +90,13 @@ private:
 
 	UPROPERTY()
 	FPubnubChatConfig ChatConfig;
+
+	/** Repository that manages shared data for all chat objects */
+	UPROPERTY()
+	TObjectPtr<UPubnubChatObjectsRepository> ObjectsRepository = nullptr;
 	
 	UPROPERTY()
 	bool IsInitialized = false;
-
-	/** Repository that manages shared data for all User and Channel objects */
-	UPROPERTY()
-	TObjectPtr<UPubnubChatObjectsRepository> ObjectsRepository = nullptr;
 	
 	UFUNCTION()
 	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);
@@ -103,8 +104,11 @@ private:
 	FPubnubChatInitChatResult InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
 	FPubnubChatUserResult GetUserForInit(const FString InUserID);
 
+	UPubnubChatUser* CreateUserObject(const FString UserID, const FPubnubChatUserData& ChatUserData);
+	UPubnubChatUser* CreateUserObject(const FString UserID, const FPubnubUserData& UserData);
 
 	
 	
 
 };
+
