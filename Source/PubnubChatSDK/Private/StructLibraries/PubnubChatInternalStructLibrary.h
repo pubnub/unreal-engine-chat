@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "PubnubChatInternalStructLibrary.generated.h"
 
 /**
@@ -58,6 +59,34 @@ struct FPubnubChatInternalChannel
 	
 	
 	FPubnubChatInternalChannel()
+		: LastUpdated(FDateTime::Now())
+	{
+	}
+};
+
+/**
+ * Internal Pubnub Chat Message structure. Do not use this directly.
+ * Contains all shared data for a message, including data and future variables like timers.
+ */
+USTRUCT()
+struct FPubnubChatInternalMessage
+{
+	GENERATED_BODY()
+
+	/** Message's data (text, type, etc.) */
+	UPROPERTY()
+	FPubnubChatMessageData MessageData;
+
+	/** Message's unique identifier */
+	UPROPERTY()
+	FString MessageID = "";
+
+	/** Timestamp of last update */
+	UPROPERTY()
+	FDateTime LastUpdated;
+	
+	
+	FPubnubChatInternalMessage()
 		: LastUpdated(FDateTime::Now())
 	{
 	}

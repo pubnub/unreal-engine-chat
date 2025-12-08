@@ -188,15 +188,110 @@ bool UPubnubChatObjectsRepository::RemoveChannelData(const FString& ChannelID)
 	return Channels.Remove(ChannelID) > 0;
 }
 
+void UPubnubChatObjectsRepository::RegisterMessage(const FString& MessageID)
+{
+	if (MessageID.IsEmpty())
+	{
+		return;
+	}
+
+	FScopeLock Lock(&MessagesCriticalSection);
+	
+	// Increment reference count
+	int32& Count = MessageReferenceCounts.FindOrAdd(MessageID, 0);
+	Count++;
+	
+	// If this is the first reference, ensure data exists
+	if (Count == 1)
+	{
+		if (!Messages.Contains(MessageID))
+		{
+			FPubnubChatInternalMessage NewMessage;
+			NewMessage.MessageID = MessageID;
+			Messages.Add(MessageID, NewMessage);
+		}
+	}
+}
+
+void UPubnubChatObjectsRepository::UnregisterMessage(const FString& MessageID)
+{
+	if (MessageID.IsEmpty())
+	{
+		return;
+	}
+
+	FScopeLock Lock(&MessagesCriticalSection);
+	
+	int32* CountPtr = MessageReferenceCounts.Find(MessageID);
+	if (!CountPtr)
+	{
+		return; // Already cleaned up or never registered
+	}
+	
+	// Decrement reference count
+	(*CountPtr)--;
+	
+	// If no more references, clean up data
+	if (*CountPtr <= 0)
+	{
+		Messages.Remove(MessageID);
+		MessageReferenceCounts.Remove(MessageID);
+	}
+}
+
+FPubnubChatInternalMessage& UPubnubChatObjectsRepository::GetOrCreateMessageData(const FString& MessageID)
+{
+	FScopeLock Lock(&MessagesCriticalSection);
+	
+	if (!Messages.Contains(MessageID))
+	{
+		FPubnubChatInternalMessage NewMessage;
+		NewMessage.MessageID = MessageID;
+		Messages.Add(MessageID, NewMessage);
+	}
+	return Messages[MessageID];
+}
+
+FPubnubChatInternalMessage* UPubnubChatObjectsRepository::GetMessageData(const FString& MessageID)
+{
+	FScopeLock Lock(&MessagesCriticalSection);
+	return Messages.Find(MessageID);
+}
+
+void UPubnubChatObjectsRepository::UpdateMessageData(const FString& MessageID, const FPubnubChatMessageData& MessageData)
+{
+	FScopeLock Lock(&MessagesCriticalSection);
+	
+	if (!Messages.Contains(MessageID))
+	{
+		FPubnubChatInternalMessage NewMessage;
+		NewMessage.MessageID = MessageID;
+		Messages.Add(MessageID, NewMessage);
+	}
+	
+	FPubnubChatInternalMessage& InternalMessage = Messages[MessageID];
+	InternalMessage.MessageData = MessageData;
+	InternalMessage.LastUpdated = FDateTime::Now();
+}
+
+bool UPubnubChatObjectsRepository::RemoveMessageData(const FString& MessageID)
+{
+	FScopeLock Lock(&MessagesCriticalSection);
+	return Messages.Remove(MessageID) > 0;
+}
+
 void UPubnubChatObjectsRepository::ClearAll()
 {
 	// Lock all mutexes to ensure atomic clearing of all data
 	FScopeLock UsersLock(&UsersCriticalSection);
 	FScopeLock ChannelsLock(&ChannelsCriticalSection);
+	FScopeLock MessagesLock(&MessagesCriticalSection);
 	
 	Users.Empty();
 	Channels.Empty();
+	Messages.Empty();
 	UserReferenceCounts.Empty();
 	ChannelReferenceCounts.Empty();
+	MessageReferenceCounts.Empty();
 }
 

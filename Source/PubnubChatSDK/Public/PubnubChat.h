@@ -35,16 +35,17 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	friend class UPubnubChatSubsystem;
 	friend class UPubnubChatUser;
 	friend class UPubnubChatChannel;
+	friend class UPubnubChatMessage;
 	
 public:
 
 
 	/*  DELEGATES  */
 	
-	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyed;
 
-	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyedNative;
 
 	//TODO:: decide if delegate names should have "PubnubChat" or "Chat" or without
@@ -58,7 +59,7 @@ public:
 
 	/*  GENERAL  */
 
-	UFUNCTION(BlueprintCallable, Category="PubnubChat")
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat")
 	void DestroyChat();
 
 	

@@ -13,3 +13,13 @@ enum class EPubnubChatConnectionStatus : uint8
 	PCCS_CONNECTION_OFFLINE		UMETA(DisplayName="ConnectionOffline"),
 	PCCS_CONNECTION_ERROR		UMETA(DisplayName="ConnectionError")
 };
+
+UENUM(BlueprintType)
+enum class EPubnubChatMessageActionType : uint8
+{
+	PCMAT_Reaction		UMETA(DisplayName="Reaction"),
+	PCMAT_Receipt		UMETA(DisplayName="Custom"),
+	PCMAT_Custom		UMETA(DisplayName="Reaction"),
+	PCMAT_Edited		UMETA(DisplayName="Custom"),
+	PCMAT_Deleted		UMETA(DisplayName="Reaction")
+};

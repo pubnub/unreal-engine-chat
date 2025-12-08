@@ -7,6 +7,7 @@
 #include "HAL/CriticalSection.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "StructLibraries/PubnubChatInternalStructLibrary.h"
 #include "PubnubChatObjectsRepository.generated.h"
 
@@ -113,7 +114,49 @@ public:
 	bool RemoveChannelData(const FString& ChannelID);
 
 	/**
-	 * Clears all user and channel data from the repository.
+	 * Registers a Message object. Call this when a Message object is created.
+	 * Increments the reference count for this MessageID.
+	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
+	 */
+	void RegisterMessage(const FString& MessageID);
+
+	/**
+	 * Unregisters a Message object. Call this when a Message object is destroyed.
+	 * Decrements the reference count. If count reaches 0, data is automatically cleaned up.
+	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
+	 */
+	void UnregisterMessage(const FString& MessageID);
+
+	/**
+	 * Gets message data from the repository. Creates entry if it doesn't exist.
+	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
+	 * @return Reference to the internal message data
+	 */
+	FPubnubChatInternalMessage& GetOrCreateMessageData(const FString& MessageID);
+
+	/**
+	 * Gets message data from the repository. Returns nullptr if not found.
+	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
+	 * @return Pointer to the internal message data, or nullptr if not found
+	 */
+	FPubnubChatInternalMessage* GetMessageData(const FString& MessageID);
+
+	/**
+	 * Updates message data in the repository. Creates entry if it doesn't exist.
+	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
+	 * @param MessageData The new message data to store
+	 */
+	void UpdateMessageData(const FString& MessageID, const FPubnubChatMessageData& MessageData);
+
+	/**
+	 * Removes message data from the repository.
+	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
+	 * @return True if message was found and removed, false otherwise
+	 */
+	bool RemoveMessageData(const FString& MessageID);
+
+	/**
+	 * Clears all user, channel, and message data from the repository.
 	 */
 	void ClearAll();
 
@@ -126,16 +169,26 @@ private:
 	UPROPERTY()
 	TMap<FString, FPubnubChatInternalChannel> Channels;
 
+	/** Map of composite MessageID (format: "[ChannelID].[Timetoken]") to internal message data */
+	UPROPERTY()
+	TMap<FString, FPubnubChatInternalMessage> Messages;
+
 	/** Reference counts for User objects - tracks how many User objects exist for each UserID */
 	TMap<FString, int32> UserReferenceCounts;
 
 	/** Reference counts for Channel objects - tracks how many Channel objects exist for each ChannelID */
 	TMap<FString, int32> ChannelReferenceCounts;
 
+	/** Reference counts for Message objects - tracks how many Message objects exist for each composite MessageID (format: "[ChannelID].[Timetoken]") */
+	TMap<FString, int32> MessageReferenceCounts;
+
 	/** Critical section for thread-safe access to user data */
 	mutable FCriticalSection UsersCriticalSection;
 
 	/** Critical section for thread-safe access to channel data */
 	mutable FCriticalSection ChannelsCriticalSection;
+
+	/** Critical section for thread-safe access to message data */
+	mutable FCriticalSection MessagesCriticalSection;
 };
 
