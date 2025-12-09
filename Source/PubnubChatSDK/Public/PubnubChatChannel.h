@@ -9,7 +9,11 @@
 #include "PubnubChatChannel.generated.h"
 
 class UPubnubClient;
+class UPubnubSubscription;
 class UPubnubChat;
+class UPubnubChatMessage;
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
 
 /**
  * 
@@ -20,6 +24,7 @@ class PUBNUBCHATSDK_API UPubnubChatChannel : public UObject
 	GENERATED_BODY()
 
 	friend class UPubnubChat;
+	friend class UPubnubChannel;
 public:
 
 	virtual void BeginDestroy() override;
@@ -30,6 +35,13 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
 	FString GetChannelID() const { return ChannelID; }
 
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceived MessageCallback);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult SendText(const FString Message, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
+	
+
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
@@ -37,9 +49,18 @@ private:
 	TObjectPtr<UPubnubChat> Chat = nullptr;
 	UPROPERTY()
 	FString ChannelID = "";
-	
+	UPROPERTY()
+	UPubnubSubscription* ConnectSubscription = nullptr;
+	UPROPERTY()
+	TArray<UPubnubChatCallbackStop*> ConnectCallbackStops;
 
 	bool IsInitialized = false;
 
 	void InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID);
+	UFUNCTION()
+	void OnPubnubMessageReceived(const FPubnubMessageData& MessageData);
 };
+
+inline void UPubnubChatChannel::OnPubnubMessageReceived(const FPubnubMessageData& MessageData)
+{
+}

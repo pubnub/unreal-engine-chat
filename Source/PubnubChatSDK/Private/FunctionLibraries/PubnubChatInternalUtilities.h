@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "PubnubChatEnumLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChatInternalUtilities.generated.h"
 
 
@@ -17,6 +18,9 @@ class PUBNUBCHATSDK_API UPubnubChatInternalUtilities : public UBlueprintFunction
 	GENERATED_BODY()
 public:
 
+
+	/* SOFT DELETE */
+	
 	UFUNCTION()
 	static FString GetSoftDeletedObjectPropertyKey();
 
@@ -25,4 +29,12 @@ public:
 
 	UFUNCTION()
 	static FString RemoveDeletedPropertyFromCustom(FString CurrentCustom);
+
+	/* PUBLISH MESSAGE */
+
+	UFUNCTION()
+	static FString ChatMessageToPublishString(const FString ChatMessage);
+
+	UFUNCTION()
+	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams);
 };

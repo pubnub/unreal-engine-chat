@@ -53,23 +53,9 @@ FPubnubChatOperationResult UPubnubChatUser::Delete(bool Soft)
 
 void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)
 {
-	if(!InPubnubClient)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, PubnubClient is invalid"));
-		return;
-	}
-	
-	if(!InChat)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, Chat is invalid"));
-		return;
-	}
-
-	if(InUserID.IsEmpty())
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init User, UserID is empty"));
-		return;
-	}
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init User, PubnubClient is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InChat, TEXT("Can't init User, Chat is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(!InUserID.IsEmpty(), TEXT("Can't init User, UserID is empty"));
 
 	UserID = InUserID;
 	PubnubClient = InPubnubClient;

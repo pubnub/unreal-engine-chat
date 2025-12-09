@@ -8,6 +8,7 @@
 
 class UPubnubChat;
 class UPubnubChatUser;
+class UPubnubChatMessage;
 
 
 
@@ -134,4 +135,19 @@ struct FPubnubChatInitChatResult
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	UPubnubChat* Chat = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatSendTextParams
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool StoreInHistory = true;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool SendByPost = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Meta = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMessage* QuotedMessage = nullptr;
 };

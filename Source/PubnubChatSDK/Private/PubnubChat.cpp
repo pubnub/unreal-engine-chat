@@ -11,7 +11,9 @@
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "PubnubChatObjectsRepository.h"
+#include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatMessage.h"
 
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
@@ -437,4 +439,28 @@ UPubnubChatChannel* UPubnubChat::CreateChannelObject(const FString ChannelID, co
 	UPubnubChatChannel* NewChannel = NewObject<UPubnubChatChannel>(this);
 	NewChannel->InitChannel(PubnubClient, this, ChannelID);
 	return NewChannel;
+}
+
+UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData)
+{
+	//Create and init the message object
+	UPubnubChatMessage* NewMessage = NewObject<UPubnubChatMessage>(this);
+	NewMessage->InitMessage(PubnubClient, this, ChatMessageData.ChannelID, Timetoken);
+	
+	//Update repository with updated message data
+	ObjectsRepository->UpdateMessageData(NewMessage->GetInternalMessageID(), ChatMessageData);
+
+	return NewMessage;
+}
+
+UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData)
+{
+	//Create and init the message object
+	UPubnubChatMessage* NewMessage = NewObject<UPubnubChatMessage>(this);
+	NewMessage->InitMessage(PubnubClient, this, MessageData.Channel, Timetoken);
+	
+	//Update repository with updated message data
+	ObjectsRepository->UpdateMessageData(NewMessage->GetInternalMessageID(), FPubnubChatMessageData::FromPubnubMessageData(MessageData));
+
+	return NewMessage;
 }

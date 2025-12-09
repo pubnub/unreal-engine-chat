@@ -26,6 +26,9 @@ struct FPubnubChatMessageAction
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FString UserID = "";
+
+	FPubnubMessageActionData ToPubnubMessageActionData();
+	static FPubnubChatMessageAction FromPubnubMessageActionData(const FPubnubMessageActionData& PubnubMessageActionData);
 };
 
 USTRUCT(BlueprintType)
@@ -50,6 +53,9 @@ struct FPubnubChatMessageData
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TArray<FPubnubChatMessageAction> MessageActions;
+
+	FPubnubMessageData ToPubnubMessageData();
+	static FPubnubChatMessageData FromPubnubMessageData(const FPubnubMessageData& PubnubMessageData);
 };
 
 USTRUCT(BlueprintType)

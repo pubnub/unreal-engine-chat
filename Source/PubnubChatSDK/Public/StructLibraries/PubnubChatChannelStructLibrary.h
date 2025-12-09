@@ -7,6 +7,7 @@
 #include "PubnubChatChannelStructLibrary.generated.h"
 
 class UPubnubChatChannel;
+class UPubnubChatCallbackStop;
 
 
 USTRUCT(BlueprintType)
@@ -58,4 +59,17 @@ struct FPubnubChatGetChannelsResult
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	int Total = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatConnectResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatCallbackStop* CallbackStop = nullptr;
+	
 };

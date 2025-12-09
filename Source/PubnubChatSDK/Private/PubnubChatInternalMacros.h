@@ -121,7 +121,6 @@
 	} while (false)
 
 
-
 #define PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(ReturnWrapper, OperationResult) \
 	do { \
 		if (OperationResult.Result.Error) \
@@ -147,6 +146,16 @@
 		} \
 	} while (false)
 
+#define PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Field) \
+	do { \
+		if (Field.IsEmpty()) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: %s field can't be empty. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), TEXT(#Field)); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			return FPubnubChatOperationResult(0, true, ErrorLogMessage); \
+		} \
+	} while (false)
+
 #define PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(ReturnWrapper, Condition, ErrorMessage) \
 	do { \
 		if (!Condition) \
@@ -156,5 +165,25 @@
 			ReturnWrapper.Result.ErrorMessage = ErrorLogMessage; \
 			ReturnWrapper.Result.Error = true; \
 			return ReturnWrapper; \
+		} \
+	} while (false)
+
+#define PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(Condition, ErrorMessage) \
+	do { \
+		if (!Condition) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: %s. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), ErrorMessage); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			return FPubnubChatOperationResult(0, true, ErrorLogMessage); \
+		} \
+	} while (false)
+
+
+#define PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(Condition, ErrorMessage, ...) \
+	do { \
+		if (!Condition) \
+		{ \
+			UE_LOG(PubnubChatLog, Error, TEXT("[%s]: %s. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), ErrorMessage); \
+			return __VA_ARGS__; \
 		} \
 	} while (false)

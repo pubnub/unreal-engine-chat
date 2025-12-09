@@ -21,6 +21,9 @@ class PUBNUBCHATSDK_API UPubnubChatInternalConverters : public UBlueprintFunctio
 public:
 
 	static EPubnubChatConnectionStatus SubscriptionStatusToChatConnectionStatus(EPubnubSubscriptionStatus SubscriptionStatus);
-	static FPubnubChatConnectionStatusData SubscriptionStatusDataToChatConnectionStatusData(const FPubnubSubscriptionStatusData& SubscriptionStatusData); 
+	static FPubnubChatConnectionStatusData SubscriptionStatusDataToChatConnectionStatusData(const FPubnubSubscriptionStatusData& SubscriptionStatusData);
+	
+	static FString ChatMessageActionTypeToString(EPubnubChatMessageActionType ActionType);
+	static EPubnubChatMessageActionType StringToChatMessageActionType(const FString& ActionTypeString);
 	
 };

@@ -8,12 +8,14 @@
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "PubnubChatEnumLibrary.h"
-#include "PubnubChatUser.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
 
 
 #include "PubnubChat.generated.h"
 
 class UPubnubClient;
+class UPubnubChatUser;
+class UPubnubChatChannel;
 class UPubnubChatObjectsRepository;
 enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
@@ -130,8 +132,8 @@ private:
 	UPubnubChatChannel* CreateChannelObject(const FString ChannelID, const FPubnubChatChannelData& ChatChannelData);
 	UPubnubChatChannel* CreateChannelObject(const FString ChannelID, const FPubnubChannelData& ChannelData);
 
+	UPubnubChatMessage* CreateMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData);
+	UPubnubChatMessage* CreateMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData);
 	
-	
-
 };
 
