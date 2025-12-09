@@ -54,7 +54,7 @@ FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserDat
 	if(!GetUserResult.Result.Error)
 	{
 		FString ErrorMessage = FString::Printf(TEXT("[%s]: This user already exists. Try using GetUser instead."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
-		FinalResult.Result = FPubnubChatOperationResult::CreateError(0, ErrorMessage);
+		FinalResult.Result = FPubnubChatOperationResult::CreateError(ErrorMessage);
 		FinalResult.Result.AddStep("GetUserMetadata", GetUserResult.Result);
 		return FinalResult;
 	}
@@ -340,7 +340,7 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 	{
 		FString ErrorMessage = TEXT("Can't init Chat, PubnubClient is invalid");
 		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorMessage);
-		FinalResult.Result = FPubnubChatOperationResult::CreateError(0, ErrorMessage);
+		FinalResult.Result = FPubnubChatOperationResult::CreateError(ErrorMessage);
 		return FinalResult;
 	}
 

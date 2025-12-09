@@ -135,7 +135,6 @@ bool FPubnubChatInitChatHappyPathTest::RunTest(const FString& Parameters)
 	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	TestEqual("Status should be 200", InitResult.Result.Status, 200);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	TestEqual("Chat object should match GetChat", ChatSubsystem->GetChat(), InitResult.Chat);
 	
@@ -203,7 +202,6 @@ bool FPubnubChatInitChatFullConfigTest::RunTest(const FString& Parameters)
 	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 	
 	TestFalse("InitChat should succeed with full config", InitResult.Result.Error);
-	TestEqual("Status should be 200", InitResult.Result.Status, 200);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
 	// Verify Chat is properly initialized

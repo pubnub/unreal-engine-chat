@@ -1,4 +1,4 @@
-// Copyright 2025 PubNub Inc. All Rights Reserved.
+﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChatChannel.h"
 #include "PubnubClient.h"
@@ -22,6 +22,7 @@ void UPubnubChatChannel::BeginDestroy()
 	}
 	
 	UObject::BeginDestroy();
+	
 	IsInitialized = false;
 }
 
@@ -68,29 +69,47 @@ FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessage
 	auto DisconnectLambda = [ThisWeak, DelegateHandle]()->FPubnubChatOperationResult
 	{
 		if(!ThisWeak.IsValid())
-		{return FPubnubChatOperationResult(0, true, "This Channel was already destroyed");}
+		{return FPubnubChatOperationResult::CreateError("This Channel was already destroyed");}
 
-		if(!ThisWeak.Get()->ConnectSubscription)
-		{return FPubnubChatOperationResult(0, true, "This Channel ConnectionSubscription was already destroyed");}
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+
+		if(!ThisChannel->ConnectSubscription)
+		{return FPubnubChatOperationResult::CreateError("This Channel ConnectionSubscription was already destroyed");}
 
 		//Remove the listener
-		ThisWeak.Get()->ConnectSubscription->OnPubnubMessageNative.Remove(DelegateHandle);
+		ThisChannel->ConnectSubscription->OnPubnubMessageNative.Remove(DelegateHandle);
 
 		//If there are no more listeners, just unsubscribe
-		if(!ThisWeak.Get()->ConnectSubscription->OnPubnubMessageNative.IsBound())
+		if(!ThisChannel->ConnectSubscription->OnPubnubMessageNative.IsBound())
 		{
 			FPubnubChatOperationResult FinalResult;
-			FPubnubOperationResult UnsubscribeResult = ThisWeak.Get()->ConnectSubscription->Unsubscribe();
+			FPubnubOperationResult UnsubscribeResult = ThisChannel->ConnectSubscription->Unsubscribe();
 			FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
 			return FinalResult;
 		}
 
 		//This is ok, we removed listener, but didn't unsubscribe as there are still other active listeners
-		return FPubnubChatOperationResult(0, false, "");
+		FPubnubChatOperationResult SuccessResult;
+		SuccessResult.MarkSuccess();
+		return SuccessResult;
 	};
 	CallbackStop->InitCallbackStop(DisconnectLambda);
 	
 	FinalResult.CallbackStop = CallbackStop;
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::Disconnect()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+
+	//Remove message related delegates
+	ConnectSubscription->OnPubnubMessageNative.Clear();
+
+	//Unsubcribe and return result
+	FPubnubChatOperationResult FinalResult;
+	FPubnubOperationResult UnsubscribeResult = ConnectSubscription->Unsubscribe();
+	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
 	return FinalResult;
 }
 

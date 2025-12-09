@@ -1,4 +1,4 @@
-// Copyright 2025 PubNub Inc. All Rights Reserved.
+﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -39,6 +39,9 @@ public:
 	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceived MessageCallback);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult Disconnect();
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult SendText(const FString Message, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
 	
 
@@ -51,16 +54,10 @@ private:
 	FString ChannelID = "";
 	UPROPERTY()
 	UPubnubSubscription* ConnectSubscription = nullptr;
-	UPROPERTY()
-	TArray<UPubnubChatCallbackStop*> ConnectCallbackStops;
+	
 
 	bool IsInitialized = false;
 
 	void InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID);
-	UFUNCTION()
-	void OnPubnubMessageReceived(const FPubnubMessageData& MessageData);
 };
 
-inline void UPubnubChatChannel::OnPubnubMessageReceived(const FPubnubMessageData& MessageData)
-{
-}

@@ -6,20 +6,21 @@
 
 FPubnubChatOperationResult& FPubnubChatOperationResult::MarkSuccess()
 {
-	Status = 200;
 	Error = false;
 	return *this;
 }
 
-FPubnubChatOperationResult FPubnubChatOperationResult::CreateError(int InStatus, FString InErrorMessage)
+FPubnubChatOperationResult FPubnubChatOperationResult::CreateError(FString InErrorMessage)
 {
-	return FPubnubChatOperationResult(InStatus, true, InErrorMessage);
+	FPubnubChatOperationResult Result;
+	Result.Error = true;
+	Result.ErrorMessage = InErrorMessage;
+	return Result;
 }
 
 FPubnubChatOperationResult FPubnubChatOperationResult::FromSingleStep(const FString& StepName, const FPubnubOperationResult& OperationResult)
 {
 	FPubnubChatOperationResult Result;
-	Result.Status = OperationResult.Status;
 	Result.Error = OperationResult.Error;
 		
 	FPubnubChatOperationStepResult StepResult;
@@ -37,40 +38,28 @@ FPubnubChatOperationResult FPubnubChatOperationResult::FromSingleStep(const FStr
 
 FPubnubChatOperationResult& FPubnubChatOperationResult::AddStep(const FString& StepName, const FPubnubOperationResult& OperationResult)
 {
+	FPubnubChatOperationStepResult StepResult;
+	StepResult.StepName = StepName;
+	StepResult.OperationResult = OperationResult;
+	StepResults.Add(StepResult);
+
+	// If this step failed, mark overall result as error
+	if (OperationResult.Error)
 	{
-		FPubnubChatOperationStepResult StepResult;
-		StepResult.StepName = StepName;
-		StepResult.OperationResult = OperationResult;
-		StepResults.Add(StepResult);
+		Error = true;
 
-		// If this step failed, mark overall result as error
-		if (OperationResult.Error)
+		// Build aggregated error message
+		if (ErrorMessage.IsEmpty())
 		{
-			Error = true;
-			// Use the first failed step's status
-			if (Status == 0 || Status == 200)
-			{
-				Status = OperationResult.Status;
-			}
-
-			// Build aggregated error message
-			if (ErrorMessage.IsEmpty())
-			{
-				ErrorMessage = FString::Printf(TEXT("Operation '%s' failed: %s"), *StepName, *OperationResult.ErrorMessage);
-			}
-			else
-			{
-				ErrorMessage += FString::Printf(TEXT(" | Operation '%s' failed: %s"), *StepName, *OperationResult.ErrorMessage);
-			}
+			ErrorMessage = FString::Printf(TEXT("Operation '%s' failed: %s"), *StepName, *OperationResult.ErrorMessage);
 		}
-		else if (!Error && Status == 0)
+		else
 		{
-			// All steps succeeded so far
-			Status = 200;
+			ErrorMessage += FString::Printf(TEXT(" | Operation '%s' failed: %s"), *StepName, *OperationResult.ErrorMessage);
 		}
-
-		return *this;
 	}
+
+	return *this;
 }
 
 FPubnubChatOperationResult& FPubnubChatOperationResult::Merge(const FPubnubChatOperationResult& OtherResult)
@@ -82,11 +71,6 @@ FPubnubChatOperationResult& FPubnubChatOperationResult::Merge(const FPubnubChatO
 	if (OtherResult.Error)
 	{
 		Error = true;
-		// Use the first failed step's status
-		if (Status == 0 || Status == 200)
-		{
-			Status = OtherResult.Status;
-		}
 
 		// Merge error messages
 		if (ErrorMessage.IsEmpty())
@@ -97,11 +81,6 @@ FPubnubChatOperationResult& FPubnubChatOperationResult::Merge(const FPubnubChatO
 		{
 			ErrorMessage += TEXT(" | ") + OtherResult.ErrorMessage;
 		}
-	}
-	else if (!Error && Status == 0)
-	{
-		// All steps succeeded so far
-		Status = 200;
 	}
 
 	return *this;

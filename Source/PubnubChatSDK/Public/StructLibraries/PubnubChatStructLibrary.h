@@ -68,15 +68,13 @@ struct FPubnubChatOperationStepResult
  * - Join channel operation calls Subscribe and SetMemberships
  * - If Subscribe fails, StepResults will contain the error details
  * - Overall Error will be true and ErrorMessage will describe which step failed
+ * 
+ * Note: For detailed HTTP status codes from server operations, check StepResults[].OperationResult.Status
  */
 USTRUCT(BlueprintType)
 struct FPubnubChatOperationResult
 {
 	GENERATED_BODY()
-
-	/** Overall status code. 200 if all steps succeeded, otherwise the status of the first failed step */
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	int Status = 0;
 
 	/** Overall check whether the operation succeeded (all steps must succeed) */
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
@@ -91,14 +89,14 @@ struct FPubnubChatOperationResult
 	TArray<FPubnubChatOperationStepResult> StepResults;
 
 	/**
-	 * Sets Status to 200 and Error to false, without affecting steps
+	 * Sets Error to false, without affecting steps
 	 */
 	FPubnubChatOperationResult& MarkSuccess();
 
 	/**
 	 * Creates an error result
 	 */
-	static FPubnubChatOperationResult CreateError(int InStatus, FString InErrorMessage = "");
+	static FPubnubChatOperationResult CreateError(FString InErrorMessage = "");
 
 	/**
 	 * Creates a result from a single Pubnub operation result

@@ -20,14 +20,14 @@ FPubnubChatOperationResult UPubnubChatCallbackStop::Stop()
 	{
 		FString WarningMessage = FString::Printf(TEXT("[%s], This callback was already stopped."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
 		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *WarningMessage);
-		return FPubnubChatOperationResult(0, true, WarningMessage);
+		return FPubnubChatOperationResult::CreateError(WarningMessage);
 	}
 	
 	if(!StopCallback)
 	{
 		FString ErrorMessage = FString::Printf(TEXT("[%s], Can't stop callback, the callback is invalid"), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
 		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorMessage);
-		return FPubnubChatOperationResult(0, true, ErrorMessage);
+		return FPubnubChatOperationResult::CreateError(ErrorMessage);
 	}
 
 	FPubnubChatOperationResult StopResult = StopCallback();

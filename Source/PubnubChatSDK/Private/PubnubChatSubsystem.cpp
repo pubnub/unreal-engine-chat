@@ -37,7 +37,7 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FSt
 	if(Chat)
 	{
 		UE_LOG(PubnubChatLog, Warning, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
-		FinalResult.Result = FPubnubChatOperationResult(0, true, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
+		FinalResult.Result = FPubnubChatOperationResult::CreateError(TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
 		FinalResult.Chat = Chat;
 		return FinalResult;
 	}
