@@ -64,6 +64,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat")
 	void DestroyChat();
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat")
+	UPubnubClient* GetPubnubClient() const {return PubnubClient;}
 	
 	/*  USER  */
 

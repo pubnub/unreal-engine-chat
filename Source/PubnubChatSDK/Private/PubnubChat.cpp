@@ -108,7 +108,7 @@ FPubnubChatGetUsersResult UPubnubChat::GetUsers(const int Limit, const FString F
 		FinalResult.Users.Add(CreateUserObject(UserData.UserID, UserData));
 	}
 	
-	// Copy pagination and total count information
+	//Copy pagination and total count information
 	FinalResult.Page = GetAllUserResult.Page;
 	FinalResult.Total = GetAllUserResult.TotalCount;
 

@@ -14,6 +14,7 @@ class UPubnubChat;
 class UPubnubChatMessage;
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
 
 /**
  * 
@@ -37,6 +38,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceived MessageCallback);
+
+	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Disconnect();

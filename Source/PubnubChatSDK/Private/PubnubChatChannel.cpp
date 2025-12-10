@@ -15,7 +15,16 @@
 
 void UPubnubChatChannel::BeginDestroy()
 {
-	// Unregister from repository before destruction
+	//Clean up subscription if channel is being destroyed while connected
+	if (IsInitialized && ConnectSubscription)
+	{
+		//Clear all listeners and unsubscribe
+		ConnectSubscription->OnPubnubMessageNative.Clear();
+		ConnectSubscription->Unsubscribe();
+		ConnectSubscription = nullptr;
+	}
+	
+	//Unregister from repository before destruction
 	if (IsInitialized && Chat && Chat->ObjectsRepository && !ChannelID.IsEmpty())
 	{
 		Chat->ObjectsRepository->UnregisterChannel(ChannelID);
@@ -30,7 +39,7 @@ FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatChannelData());
 
-	// Get channel data from repository
+	//Get channel data from repository
 	FPubnubChatInternalChannel* InternalChannel = Chat->ObjectsRepository->GetChannelData(ChannelID);
 	if (InternalChannel)
 	{
@@ -43,13 +52,23 @@ FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
 
 FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessageReceived MessageCallback)
 {
+	FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative;
+	MessageCallbackNative.BindLambda([MessageCallback](UPubnubChatMessage* Message)
+	{
+		MessageCallback.ExecuteIfBound(Message);
+	});
+	return Connect(MessageCallbackNative);
+}
+
+FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative)
+{
 	FPubnubChatConnectResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	
 	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
 	
 	//Add lister to subscription with provided callback
-	FDelegateHandle DelegateHandle =  ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak, MessageCallback](const FPubnubMessageData& MessageData)
+	FDelegateHandle DelegateHandle =  ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak, MessageCallbackNative](const FPubnubMessageData& MessageData)
 	{
 		if(!ThisWeak.IsValid())
 		{return;}
@@ -57,7 +76,7 @@ FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessage
 		if(!ThisWeak.Get()->Chat)
 		{return;}
 		
-		MessageCallback.ExecuteIfBound(ThisWeak.Get()->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
+		MessageCallbackNative.ExecuteIfBound(ThisWeak.Get()->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
 	});
 	
 	//Subscribe with this channel Subscription
@@ -139,17 +158,17 @@ FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, F
 	//PublishMessage by PubnubClient
 	FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(ChannelID, UPubnubChatInternalUtilities::ChatMessageToPublishString(Message), PublishSettings);
 
-	FPubnubChatOperationResult FinalResul;
-	FinalResul.AddStep("PublishMessage", PublishResult.Result);
+	FPubnubChatOperationResult FinalResult;
+	FinalResult.AddStep("PublishMessage", PublishResult.Result);
 	
-	return FinalResul;
+	return FinalResult;
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InChat, TEXT("Can't init Channel, Chat is invalid"));
-	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(!InChannelID.IsEmpty(), TEXT("Can't init Channel, UserID is empty"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(!InChannelID.IsEmpty(), TEXT("Can't init Channel, ChannelID is empty"));
 
 	ChannelID = InChannelID;
 	PubnubClient = InPubnubClient;

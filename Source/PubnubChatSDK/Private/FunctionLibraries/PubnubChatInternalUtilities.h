@@ -36,5 +36,8 @@ public:
 	static FString ChatMessageToPublishString(const FString ChatMessage);
 
 	UFUNCTION()
+	static FString PublishedStringToChatMessage(const FString PublishedMessage);
+
+	UFUNCTION()
 	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams);
 };

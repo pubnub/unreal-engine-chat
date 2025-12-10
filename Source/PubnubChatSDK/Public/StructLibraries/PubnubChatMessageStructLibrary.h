@@ -53,8 +53,7 @@ struct FPubnubChatMessageData
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TArray<FPubnubChatMessageAction> MessageActions;
-
-	FPubnubMessageData ToPubnubMessageData();
+	
 	static FPubnubChatMessageData FromPubnubMessageData(const FPubnubMessageData& PubnubMessageData);
 };
 

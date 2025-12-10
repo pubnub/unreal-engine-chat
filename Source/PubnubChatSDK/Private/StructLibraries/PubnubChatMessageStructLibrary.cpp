@@ -2,6 +2,7 @@
 
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
+#include "FunctionLibraries/PubnubChatInternalUtilities.h"
 
 FPubnubMessageActionData FPubnubChatMessageAction::ToPubnubMessageActionData()
 {
@@ -27,22 +28,10 @@ FPubnubChatMessageAction FPubnubChatMessageAction::FromPubnubMessageActionData(c
 	return ChatMessageAction;
 }
 
-FPubnubMessageData FPubnubChatMessageData::ToPubnubMessageData()
-{
-	FPubnubMessageData MessageData;
-	MessageData.Message = Text;
-	MessageData.Channel = ChannelID;
-	MessageData.UserID = UserID;
-	MessageData.Metadata = Meta;
-	MessageData.CustomMessageType = Type;
-	
-	return MessageData;
-}
-
 FPubnubChatMessageData FPubnubChatMessageData::FromPubnubMessageData(const FPubnubMessageData& PubnubMessageData)
 {
 	FPubnubChatMessageData ChatMessageData;
-	ChatMessageData.Text = PubnubMessageData.Message;
+	ChatMessageData.Text = UPubnubChatInternalUtilities::PublishedStringToChatMessage(PubnubMessageData.Message);
 	ChatMessageData.ChannelID = PubnubMessageData.Channel;
 	ChatMessageData.UserID = PubnubMessageData.UserID;
 	ChatMessageData.Meta = PubnubMessageData.Metadata;

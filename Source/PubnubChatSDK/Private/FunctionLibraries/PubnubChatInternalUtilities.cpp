@@ -39,6 +39,13 @@ FString UPubnubChatInternalUtilities::ChatMessageToPublishString(const FString C
 	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
+FString UPubnubChatInternalUtilities::PublishedStringToChatMessage(const FString PublishedMessage)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(PublishedMessage, JsonObject);
+	return JsonObject->GetStringField(ANSI_TO_TCHAR("text"));
+}
+
 FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams)
 {
 	bool AnyDataAdded = false;
