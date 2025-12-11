@@ -17,9 +17,29 @@ enum class EPubnubChatConnectionStatus : uint8
 UENUM(BlueprintType)
 enum class EPubnubChatMessageActionType : uint8
 {
-	PCMAT_Reaction		UMETA(DisplayName="Reaction"),
-	PCMAT_Receipt		UMETA(DisplayName="Custom"),
-	PCMAT_Custom		UMETA(DisplayName="Reaction"),
-	PCMAT_Edited		UMETA(DisplayName="Custom"),
-	PCMAT_Deleted		UMETA(DisplayName="Reaction")
+	PCMAT_Reaction				UMETA(DisplayName="Reaction"),
+	PCMAT_Receipt				UMETA(DisplayName="Custom"),
+	PCMAT_Custom				UMETA(DisplayName="Reaction"),
+	PCMAT_Edited				UMETA(DisplayName="Custom"),
+	PCMAT_Deleted				UMETA(DisplayName="Reaction")
+};
+
+UENUM(BlueprintType)
+enum class EPubnubChatEventType : uint8
+{
+	PCET_Typing					UMETA(DisplayName="Typing"),
+	PCET_Report					UMETA(DisplayName="Report"),
+	PCET_Receipt				UMETA(DisplayName="Receipt"),
+	PCET_Mention				UMETA(DisplayName="Mention"),
+	PCET_Invite					UMETA(DisplayName="Invite"),
+	PCET_Custom					UMETA(DisplayName="Custom"),
+	PCET_Moderation				UMETA(DisplayName="Moderation")
+};
+
+UENUM(BlueprintType)
+enum class EPubnubChatEventMethod : uint8
+{
+	PCEM_Default				UMETA(DisplayName="Default"),
+	PCEM_Publish				UMETA(DisplayName="Publish"),
+	PCEM_Signal					UMETA(DisplayName="Signal")
 };

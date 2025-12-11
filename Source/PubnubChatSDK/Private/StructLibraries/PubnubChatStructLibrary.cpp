@@ -85,3 +85,47 @@ FPubnubChatOperationResult& FPubnubChatOperationResult::Merge(const FPubnubChatO
 
 	return *this;
 }
+
+FPubnubMembershipInputData FPubnubChatMembershipData::ToPubnubMembershipInputData(const FString ChannelID) const
+{
+	FPubnubMembershipInputData MembershipInputData;
+	MembershipInputData.Channel = ChannelID;
+	MembershipInputData.Custom = Custom;
+	MembershipInputData.Status = Status;
+	MembershipInputData.Type = Type;
+
+	return MembershipInputData;
+}
+
+FPubnubChannelMemberInputData FPubnubChatMembershipData::ToPubnubChannelMemberInputData(const FString UserID) const
+{
+	FPubnubChannelMemberInputData ChannelMemberInputData;
+	ChannelMemberInputData.User = UserID;
+	ChannelMemberInputData.Custom = Custom;
+	ChannelMemberInputData.Status = Status;
+	ChannelMemberInputData.Type = Type;
+
+	return ChannelMemberInputData;
+}
+
+FPubnubChatMembershipData FPubnubChatMembershipData::FromPubnubMembershipData(const FPubnubMembershipData& PubnubMembershipData)
+{
+	FPubnubChatMembershipData ChatMembershipData;
+
+	ChatMembershipData.Custom = PubnubMembershipData.Custom;
+	ChatMembershipData.Type = PubnubMembershipData.Type;
+	ChatMembershipData.Status = PubnubMembershipData.Status;
+
+	return ChatMembershipData;
+}
+
+FPubnubChatMembershipData FPubnubChatMembershipData::FromPubnubChannelMemberData(const FPubnubChannelMemberData& PubnubChannelMemberData)
+{
+	FPubnubChatMembershipData ChatMembershipData;
+
+	ChatMembershipData.Custom = PubnubChannelMemberData.Custom;
+	ChatMembershipData.Type = PubnubChannelMemberData.Type;
+	ChatMembershipData.Status = PubnubChannelMemberData.Status;
+
+	return ChatMembershipData;
+}

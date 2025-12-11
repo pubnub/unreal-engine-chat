@@ -8,6 +8,7 @@
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatInternalStructLibrary.h"
 #include "PubnubChatObjectsRepository.generated.h"
 
@@ -156,7 +157,49 @@ public:
 	bool RemoveMessageData(const FString& MessageID);
 
 	/**
-	 * Clears all user, channel, and message data from the repository.
+	 * Registers a Membership object. Call this when a Membership object is created.
+	 * Increments the reference count for this MembershipID.
+	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
+	 */
+	void RegisterMembership(const FString& MembershipID);
+
+	/**
+	 * Unregisters a Membership object. Call this when a Membership object is destroyed.
+	 * Decrements the reference count. If count reaches 0, data is automatically cleaned up.
+	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
+	 */
+	void UnregisterMembership(const FString& MembershipID);
+
+	/**
+	 * Gets membership data from the repository. Creates entry if it doesn't exist.
+	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
+	 * @return Reference to the internal membership data
+	 */
+	FPubnubChatInternalMembership& GetOrCreateMembershipData(const FString& MembershipID);
+
+	/**
+	 * Gets membership data from the repository. Returns nullptr if not found.
+	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
+	 * @return Pointer to the internal membership data, or nullptr if not found
+	 */
+	FPubnubChatInternalMembership* GetMembershipData(const FString& MembershipID);
+
+	/**
+	 * Updates membership data in the repository. Creates entry if it doesn't exist.
+	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
+	 * @param MembershipData The new membership data to store
+	 */
+	void UpdateMembershipData(const FString& MembershipID, const FPubnubChatMembershipData& MembershipData);
+
+	/**
+	 * Removes membership data from the repository.
+	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
+	 * @return True if membership was found and removed, false otherwise
+	 */
+	bool RemoveMembershipData(const FString& MembershipID);
+
+	/**
+	 * Clears all user, channel, message, and membership data from the repository.
 	 */
 	void ClearAll();
 
@@ -173,6 +216,10 @@ private:
 	UPROPERTY()
 	TMap<FString, FPubnubChatInternalMessage> Messages;
 
+	/** Map of composite MembershipID (format: "[UserID].[ChannelID]") to internal membership data */
+	UPROPERTY()
+	TMap<FString, FPubnubChatInternalMembership> Memberships;
+
 	/** Reference counts for User objects - tracks how many User objects exist for each UserID */
 	TMap<FString, int32> UserReferenceCounts;
 
@@ -182,6 +229,9 @@ private:
 	/** Reference counts for Message objects - tracks how many Message objects exist for each composite MessageID (format: "[ChannelID].[Timetoken]") */
 	TMap<FString, int32> MessageReferenceCounts;
 
+	/** Reference counts for Membership objects - tracks how many Membership objects exist for each composite MembershipID (format: "[UserID].[ChannelID]") */
+	TMap<FString, int32> MembershipReferenceCounts;
+
 	/** Critical section for thread-safe access to user data */
 	mutable FCriticalSection UsersCriticalSection;
 
@@ -190,5 +240,8 @@ private:
 
 	/** Critical section for thread-safe access to message data */
 	mutable FCriticalSection MessagesCriticalSection;
+
+	/** Critical section for thread-safe access to membership data */
+	mutable FCriticalSection MembershipsCriticalSection;
 };
 

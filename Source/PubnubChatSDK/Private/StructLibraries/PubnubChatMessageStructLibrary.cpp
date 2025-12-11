@@ -4,7 +4,7 @@
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 
-FPubnubMessageActionData FPubnubChatMessageAction::ToPubnubMessageActionData()
+FPubnubMessageActionData FPubnubChatMessageAction::ToPubnubMessageActionData() const
 {
 	FPubnubMessageActionData MessageActionData;
 	

@@ -8,6 +8,7 @@
 
 class UPubnubChatChannel;
 class UPubnubChatCallbackStop;
+class UPubnubChatMembership;
 
 
 USTRUCT(BlueprintType)
@@ -26,7 +27,7 @@ struct FPubnubChatChannelData
 	//User type. Max. 50 characters.
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString Type = "";
 
-	FPubnubChannelData ToPubnubChannelData();
+	FPubnubChannelData ToPubnubChannelData() const;
 	static FPubnubChatChannelData FromPubnubChannelData(const FPubnubChannelData &PubnubChannelData);
 };
 
@@ -40,7 +41,6 @@ struct FPubnubChatChannelResult
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	UPubnubChatChannel* Channel = nullptr;
-	
 };
 
 USTRUCT(BlueprintType)
@@ -71,5 +71,64 @@ struct FPubnubChatConnectResult
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	UPubnubChatCallbackStop* CallbackStop = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatInviteResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
 	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMembership* Membership = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatInviteMultipleResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatMembership*> Memberships;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatCreateGroupConversationResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatChannel* Channel = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMembership* HostMembership = nullptr;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatMembership*> InviteesMemberships;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatCreateDirectConversationResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatChannel* Channel = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMembership* HostMembership = nullptr;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMembership* InviteeMembership;
 };

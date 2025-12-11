@@ -2,6 +2,7 @@
 
 #include "PubnubChat.h"
 
+#include "PubnubChatCallbackStop.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubClient.h"
 #include "PubnubEnumLibrary.h"
@@ -14,10 +15,13 @@
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
+#include "PubnubChatMembership.h"
+#include "Entities/PubnubChannelEntity.h"
+#include "Entities/PubnubSubscription.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
-
 
 
 void UPubnubChat::DestroyChat()
@@ -189,18 +193,67 @@ FPubnubChatChannelResult UPubnubChat::CreatePublicConversation(const FString Cha
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
 
+	//Regardless of the provided Channel Type, this method creates public channel
+	ChannelData.Type = "public";
+
 	//SetChannelMetadata by PubnubClient
-	FPubnubChannelMetadataResult SetUserResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelData());
-	FinalResult.Result.AddStep("SetChannelMetadata", SetUserResult.Result);
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelData());
+	FinalResult.Result.AddStep("SetChannelMetadata", SetChannelResult.Result);
 
 	//Return if there was any error during PubnubClient operation
-	if(SetUserResult.Result.Error)
+	if(SetChannelResult.Result.Error)
 	{return FinalResult;}
 	
 	//Create Channel object and return final result
 	FinalResult.Channel = CreateChannelObject(ChannelID, ChannelData);
 	return FinalResult;
 }
+
+FPubnubChatCreateGroupConversationResult UPubnubChat::CreateGroupConversation(TArray<UPubnubChatUser*> Users, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
+{
+	FPubnubChatCreateGroupConversationResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, (!Users.IsEmpty()), TEXT("At least one user has to be provided"));
+
+	FString FinalChannelID = ChannelID;
+	//If channel ID was not provided, generate Guid
+	if(ChannelID.IsEmpty())
+	{
+		FinalChannelID = FGuid::NewGuid().ToString();
+	}
+
+	//Regardless of the provided Channel Type, this method creates group channel
+	ChannelData.Type = "group";
+
+	//SetChannelMetadata by PubnubClient
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(FinalChannelID, ChannelData.ToPubnubChannelData());
+	FinalResult.Result.AddStep("SetChannelMetadata", SetChannelResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(SetChannelResult.Result.Error)
+	{return FinalResult;}
+	
+	FPubnubMembershipsResult SetMembershipsResult = PubnubClient->SetMemberships(CurrentUserID, {HostMembershipData.ToPubnubMembershipInputData(ChannelID)});
+
+	//TODO:: Finish this function
+	
+
+	
+
+	return FinalResult;
+}
+
+FPubnubChatCreateDirectConversationResult UPubnubChat::CreateDirectConversation(UPubnubChatUser* User, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
+{
+	FPubnubChatCreateDirectConversationResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
+
+	//TODO:: Finish this function
+	
+	return FinalResult;
+}
+
 
 FPubnubChatChannelResult UPubnubChat::GetChannel(const FString ChannelID)
 {
@@ -312,6 +365,119 @@ FPubnubChatChannelResult UPubnubChat::DeleteChannel(const FString ChannelID, boo
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Payload);
+
+	//Add event type to the payload
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(Payload, JsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("type"), UPubnubChatInternalConverters::ChatEventTypeToString(EventType));
+
+	//If event method is default, get dedicated method for this event type
+	if(EventMethod == EPubnubChatEventMethod::PCEM_Default)
+	{
+		EventMethod = UPubnubChatInternalUtilities::GetDefaultChatEventMethodForEventType(EventType);
+	}
+
+	//Use Publish or Signal for sending event depending on specified method
+	if(EventMethod == EPubnubChatEventMethod::PCEM_Publish)
+	{
+		FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject));
+		FinalResult.AddStep("PublishMessage", PublishResult.Result);
+	}
+	else
+	{
+		FPubnubSignalResult SignalResult =  PubnubClient->Signal(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject));
+		FinalResult.AddStep("Signal", SignalResult.Result);
+	}
+
+	return FinalResult;
+}
+
+FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback)
+{
+	FOnPubnubChatEventReceivedNative EventCallbackNative;
+	EventCallbackNative.BindLambda([EventCallback](FPubnubChatEvent Event)
+	{
+		EventCallback.ExecuteIfBound(Event);
+	});
+	return ListenForEvents(ChannelID, EventType, EventCallbackNative);
+}
+
+FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative)
+{
+	FPubnubChatListenForEventsResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+
+
+	UPubnubChannelEntity* ChannelEntity = PubnubClient->CreateChannelEntity(ChannelID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, ChannelEntity, TEXT("Can't ListenForEvents, Failed to create ChannelEntity"));
+
+	UPubnubSubscription* Subscription = ChannelEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, Subscription, TEXT("Can't ListenForEvents, Failed to create Subscription"));
+
+	ListenForEventsSubscriptions.Add(Subscription);
+	
+	TWeakObjectPtr<UPubnubChat> ThisWeak = MakeWeakObjectPtr(this);
+	
+	//Create listener for events
+	auto EventLambda = [ThisWeak, EventType, EventCallbackNative](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+
+		FPubnubChatEvent Event = UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(MessageData);
+		
+		//Execute callback only if received event matches the type that we are listening for
+		if(Event.Type == EventType)
+		{
+			EventCallbackNative.ExecuteIfBound(Event);
+		}
+	};
+
+	//Events can be received as messages and signals, so we need to bind to both of them
+	Subscription->OnPubnubMessageNative.AddLambda(EventLambda);
+	Subscription->OnPubnubSignalNative.AddLambda(EventLambda);
+
+	//Subscribe with this channel Subscription
+	FPubnubOperationResult SubscribeResult = Subscription->Subscribe();
+	FinalResult.Result.AddStep("Subscribe", SubscribeResult);
+
+	//Create CallbackStop with function to unsubscribe (stop listening for events)
+	UPubnubChatCallbackStop* CallbackStop = NewObject<UPubnubChatCallbackStop>(this);
+	auto DisconnectLambda = [ThisWeak, Subscription]()->FPubnubChatOperationResult
+	{
+		if(!ThisWeak.IsValid())
+		{return FPubnubChatOperationResult::CreateError("Chat is already destroyed");}
+		
+		UPubnubChat* ThisChat = ThisWeak.Get();
+
+		if(!ThisChat->IsInitialized)
+		{return FPubnubChatOperationResult::CreateError("Chat is already deinitialized");}
+
+		if(!Subscription)
+		{return FPubnubChatOperationResult::CreateError("This subscription is already destroyed");}
+
+		ThisChat->ListenForEventsSubscriptions.Remove(Subscription);
+		Subscription->OnPubnubMessageNative.Clear();
+		Subscription->OnPubnubSignalNative.Clear();
+
+		FPubnubChatOperationResult FinalResult;
+		FPubnubOperationResult UnsubscribeResult = Subscription->Unsubscribe();
+		FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+		return FinalResult;
+	};
+	CallbackStop->InitCallbackStop(DisconnectLambda);
+	
+	FinalResult.CallbackStop = CallbackStop;
+	return FinalResult;
+}
+
 
 void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData)
 {
@@ -346,6 +512,7 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 
 	ChatConfig = InChatConfig;
 	PubnubClient = InPubnubClient;
+	CurrentUserID = InUserID;
 	
 	//Create repository for managing shared User and Channel data
 	ObjectsRepository = NewObject<UPubnubChatObjectsRepository>(this);
@@ -463,4 +630,41 @@ UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, co
 	ObjectsRepository->UpdateMessageData(NewMessage->GetInternalMessageID(), FPubnubChatMessageData::FromPubnubMessageData(MessageData));
 
 	return NewMessage;
+}
+
+
+UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChatMembershipData& ChatMembershipData)
+{
+	//Create and init the membership object
+	UPubnubChatMembership* NewMembership = NewObject<UPubnubChatMembership>(this);
+	NewMembership->InitMembership(PubnubClient, this, User, Channel);
+	
+	//Update repository with updated membership data
+	ObjectsRepository->UpdateMembershipData(NewMembership->GetInternalMembershipID(), ChatMembershipData);
+
+	return NewMembership;
+}
+
+UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubMembershipData& MembershipData)
+{
+	//Create and init the membership object
+	UPubnubChatMembership* NewMembership = NewObject<UPubnubChatMembership>(this);
+	NewMembership->InitMembership(PubnubClient, this, User, Channel);
+	
+	//Update repository with updated membership data
+	ObjectsRepository->UpdateMembershipData(NewMembership->GetInternalMembershipID(), FPubnubChatMembershipData::FromPubnubMembershipData(MembershipData));
+
+	return NewMembership;
+}
+
+UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChannelMemberData& ChannelMemberData)
+{
+	//Create and init the membership object
+	UPubnubChatMembership* NewMembership = NewObject<UPubnubChatMembership>(this);
+	NewMembership->InitMembership(PubnubClient, this, User, Channel);
+	
+	//Update repository with updated membership data
+	ObjectsRepository->UpdateMembershipData(NewMembership->GetInternalMembershipID(), FPubnubChatMembershipData::FromPubnubChannelMemberData(ChannelMemberData));
+
+	return NewMembership;
 }

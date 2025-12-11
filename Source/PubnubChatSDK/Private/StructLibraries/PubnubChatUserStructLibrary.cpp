@@ -3,7 +3,7 @@
 
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 
-FPubnubUserData FPubnubChatUserData::ToPubnubUserData()
+FPubnubUserData FPubnubChatUserData::ToPubnubUserData() const
 {
 	FPubnubUserData UserData;
 	UserData.UserName = UserName;

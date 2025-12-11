@@ -3,12 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PubnubChatEnumLibrary.h"
 #include "PubnubStructLibrary.h"
 #include "PubnubChatStructLibrary.generated.h"
 
 class UPubnubChat;
 class UPubnubChatUser;
 class UPubnubChatMessage;
+class UPubnubChatMembership;
+class UPubnubChatCallbackStop;
 
 
 
@@ -148,4 +151,49 @@ struct FPubnubChatSendTextParams
 	FString Meta = "";
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	UPubnubChatMessage* QuotedMessage = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatMembershipData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Custom = "";
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Status = "";
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Type = "";
+
+	FPubnubMembershipInputData ToPubnubMembershipInputData(const FString ChannelID) const;
+	FPubnubChannelMemberInputData ToPubnubChannelMemberInputData(const FString UserID) const;
+
+	static FPubnubChatMembershipData FromPubnubMembershipData(const FPubnubMembershipData& PubnubMembershipData);
+	static FPubnubChatMembershipData FromPubnubChannelMemberData(const FPubnubChannelMemberData& PubnubChannelMemberData);
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatListenForEventsResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatCallbackStop* CallbackStop = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatEvent
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Timetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubChatEventType Type = EPubnubChatEventType::PCET_Custom;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Payload = "";
 };

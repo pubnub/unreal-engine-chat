@@ -27,7 +27,7 @@ struct FPubnubChatMessageAction
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FString UserID = "";
 
-	FPubnubMessageActionData ToPubnubMessageActionData();
+	FPubnubMessageActionData ToPubnubMessageActionData() const;
 	static FPubnubChatMessageAction FromPubnubMessageActionData(const FPubnubMessageActionData& PubnubMessageActionData);
 };
 

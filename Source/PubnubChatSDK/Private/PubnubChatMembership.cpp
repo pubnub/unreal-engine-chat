@@ -1,0 +1,139 @@
+// Copyright 2025 PubNUB Inc. All Rights Reserved.
+
+#include "PubnubChatMembership.h"
+#include "PubnubClient.h"
+#include "PubnubChat.h"
+#include "PubnubChatInternalMacros.h"
+#include "PubnubChatSubsystem.h"
+#include "PubnubChatObjectsRepository.h"
+#include "PubnubChatUser.h"
+#include "PubnubChatChannel.h"
+#include "PubnubChatMessage.h"
+
+
+FString UPubnubChatMembership::GetInternalMembershipID() const
+{
+	if (!User || !Channel)
+	{
+		return TEXT("");
+	}
+	return FString::Printf(TEXT("%s.%s"), *Channel->GetChannelID(), *User->GetUserID());
+}
+
+void UPubnubChatMembership::BeginDestroy()
+{
+	// Unregister from repository before destruction
+	if (IsInitialized && Chat && Chat->ObjectsRepository && User && Channel)
+	{
+		Chat->ObjectsRepository->UnregisterMembership(GetInternalMembershipID());
+	}
+	
+	UObject::BeginDestroy();
+	IsInitialized = false;
+}
+
+FPubnubChatMembershipData UPubnubChatMembership::GetMembershipData() const
+{
+	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatMembershipData());
+
+	// Get membership data from repository
+	FPubnubChatInternalMembership* InternalMembership = Chat->ObjectsRepository->GetMembershipData(GetInternalMembershipID());
+	if (InternalMembership)
+	{
+		return InternalMembership->MembershipData;
+	}
+
+	FString UserIDStr = User ? User->GetUserID() : TEXT("");
+	FString ChannelIDStr = Channel ? Channel->GetChannelID() : TEXT("");
+	UE_LOG(PubnubChatLog, Error, TEXT("Membership data not found in repository for UserID: %s, ChannelID: %s"), *UserIDStr, *ChannelIDStr);
+	return FPubnubChatMembershipData();
+}
+
+FString UPubnubChatMembership::GetUserID() const
+{
+	return User ? User->GetUserID() : TEXT("");
+}
+
+FString UPubnubChatMembership::GetChannelID() const
+{
+	return Channel ? Channel->GetChannelID() : TEXT("");
+}
+
+FPubnubChatOperationResult UPubnubChatMembership::Update(const FPubnubChatMembershipData& MembershipData)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+
+	//SetMemberships by PubnubClient
+	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(GetUserID(), {MembershipData.ToPubnubMembershipInputData(GetChannelID())}, FPubnubMembershipInclude::FromValue(false), 1);
+	FinalResult.AddStep("SetMemberships", SetMembershipResult.Result);
+
+	//If there was no error, update Membership data in the repository
+	if(!SetMembershipResult.Result.Error)
+	{
+		//Update repository with updated user data
+		Chat->ObjectsRepository->UpdateMembershipData(GetInternalMembershipID(), MembershipData);
+	}
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(const FString Timetoken)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Timetoken);
+
+	//TODO:: Finish here
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessage(UPubnubChatMessage* Message)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Message);
+
+	return SetLastReadMessageTimetoken(Message->GetMessageTimetoken());
+}
+
+void UPubnubChatMembership::InitMembership(UPubnubClient* InPubnubClient, UPubnubChat* InChat, UPubnubChatUser* InUser, UPubnubChatChannel* InChannel)
+{
+	if(!InPubnubClient)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, PubnubClient is invalid"));
+		return;
+	}
+	
+	if(!InChat)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, Chat is invalid"));
+		return;
+	}
+
+	if(!InUser)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, User is invalid"));
+		return;
+	}
+
+	if(!InChannel)
+	{
+		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, Channel is invalid"));
+		return;
+	}
+
+	User = InUser;
+	Channel = InChannel;
+	PubnubClient = InPubnubClient;
+	Chat = InChat;
+	
+	// Register this membership object with the repository
+	if (Chat->ObjectsRepository)
+	{
+		Chat->ObjectsRepository->RegisterMembership(GetInternalMembershipID());
+	}
+	
+	IsInitialized = true;
+}
+

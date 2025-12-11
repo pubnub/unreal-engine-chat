@@ -4,6 +4,7 @@
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "PubnubChatConst.h"
+#include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"
 
 
@@ -82,4 +83,37 @@ FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSe
 
 	return "";
 	
+}
+
+EPubnubChatEventMethod UPubnubChatInternalUtilities::GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType)
+{
+	switch(EventType)
+	{
+	case EPubnubChatEventType::PCET_Receipt:
+		return EPubnubChatEventMethod::PCEM_Signal;
+	case EPubnubChatEventType::PCET_Typing:
+		return EPubnubChatEventMethod::PCEM_Signal;
+	default:
+		return EPubnubChatEventMethod::PCEM_Publish;
+	}
+}
+
+FPubnubChatEvent UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData)
+{
+	FPubnubChatEvent Event;
+	Event.Timetoken = MessageData.Timetoken;
+	Event.ChannelID = MessageData.Channel;
+	Event.UserID = MessageData.UserID;
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageData.Message, JsonObject);
+
+	//Type is in Message content, so we need to extract it from there
+	Event.Type = UPubnubChatInternalConverters::StringToChatEventType(JsonObject->GetStringField(ANSI_TO_TCHAR("type")));
+
+	//Event type shouldn't be in the payload, so we have to remove it. Remaining message content is the payload
+	JsonObject->RemoveField(ANSI_TO_TCHAR("type"));
+	Event.Payload = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+
+	return Event;
 }

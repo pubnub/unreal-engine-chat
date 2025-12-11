@@ -8,6 +8,7 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatMessage.h"
+#include "PubnubChatUser.h"
 #include "Entities/PubnubChannelEntity.h"
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
@@ -162,6 +163,42 @@ FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, F
 	FinalResult.AddStep("PublishMessage", PublishResult.Result);
 	
 	return FinalResult;
+}
+
+FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
+{
+	FPubnubChatInviteResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
+
+	//GetChannelMembers from PubnubClient to check if the user is not already member of that channel
+	FString Filter = FString::Printf(TEXT("uuid.id == \"%s\""), *User->GetUserID());
+	FPubnubMemberInclude Include = FPubnubMemberInclude({.IncludeCustom=true, .IncludeStatus=true, .IncludeType=true});
+	FPubnubChannelMembersResult GetChannelMembersResult = PubnubClient->GetChannelMembers(ChannelID, Include, 0, Filter);
+	FinalResult.Result.AddStep("GetChannelMembers", GetChannelMembersResult.Result);
+
+	//Return if there was any error during PubnubClient operation
+	if(GetChannelMembersResult.Result.Error)
+	{return FinalResult;}
+	
+	//If User is already member of that channel, we just return the membership
+	if(!GetChannelMembersResult.MembersData.IsEmpty())
+	{
+		FinalResult.Membership = Chat->CreateMembershipObject(User, this, GetChannelMembersResult.MembersData[0]);
+		return FinalResult;
+	}
+
+	//TODO:: finish this function
+
+	FPubnubChatMembershipData MembershipData;
+	MembershipData.Status = "pending";
+	
+	{return FinalResult;}
+}
+
+FPubnubChatInviteMultipleResult UPubnubChatChannel::InviteMultiple(TArray<UPubnubChatUser*> Users)
+{
+	return FPubnubChatInviteMultipleResult();
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)

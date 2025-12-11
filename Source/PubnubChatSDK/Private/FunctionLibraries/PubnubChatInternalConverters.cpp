@@ -42,7 +42,7 @@ FString UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChat
 	case EPubnubChatMessageActionType::PCMAT_Deleted:
 		return TEXT("deleted");
 	default:
-		return TEXT("reaction");
+		return TEXT("custom");
 	}
 }
 
@@ -70,7 +70,67 @@ EPubnubChatMessageActionType UPubnubChatInternalConverters::StringToChatMessageA
 	}
 	else
 	{
-		// Default to Reaction if unknown
-		return EPubnubChatMessageActionType::PCMAT_Reaction;
+		// Default to Custom if unknown
+		return EPubnubChatMessageActionType::PCMAT_Custom;
+	}
+}
+
+FString UPubnubChatInternalConverters::ChatEventTypeToString(EPubnubChatEventType EventType)
+{
+	switch(EventType)
+	{
+	case EPubnubChatEventType::PCET_Typing:
+		return TEXT("typing");
+	case EPubnubChatEventType::PCET_Report:
+		return TEXT("report");
+	case EPubnubChatEventType::PCET_Receipt:
+		return TEXT("receipt");
+	case EPubnubChatEventType::PCET_Mention:
+		return TEXT("mention");
+	case EPubnubChatEventType::PCET_Invite:
+		return TEXT("invite");
+	case EPubnubChatEventType::PCET_Custom:
+		return TEXT("custom");
+	case EPubnubChatEventType::PCET_Moderation:
+		return TEXT("moderation");
+	default:
+		return TEXT("custom");
+	}
+}
+
+EPubnubChatEventType UPubnubChatInternalConverters::StringToChatEventType(const FString& EventTypeString)
+{
+	if (EventTypeString.Equals(TEXT("typing"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Typing;
+	}
+	else if (EventTypeString.Equals(TEXT("report"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Report;
+	}
+	else if (EventTypeString.Equals(TEXT("receipt"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Receipt;
+	}
+	else if (EventTypeString.Equals(TEXT("mention"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Mention;
+	}
+	else if (EventTypeString.Equals(TEXT("invite"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Invite;
+	}
+	else if (EventTypeString.Equals(TEXT("custom"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Custom;
+	}
+	else if (EventTypeString.Equals(TEXT("moderation"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatEventType::PCET_Moderation;
+	}
+	else
+	{
+		// Default to Custom if unknown
+		return EPubnubChatEventType::PCET_Custom;
 	}
 }

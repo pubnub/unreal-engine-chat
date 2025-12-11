@@ -280,18 +280,113 @@ bool UPubnubChatObjectsRepository::RemoveMessageData(const FString& MessageID)
 	return Messages.Remove(MessageID) > 0;
 }
 
+void UPubnubChatObjectsRepository::RegisterMembership(const FString& MembershipID)
+{
+	if (MembershipID.IsEmpty())
+	{
+		return;
+	}
+
+	FScopeLock Lock(&MembershipsCriticalSection);
+	
+	// Increment reference count
+	int32& Count = MembershipReferenceCounts.FindOrAdd(MembershipID, 0);
+	Count++;
+	
+	// If this is the first reference, ensure data exists
+	if (Count == 1)
+	{
+		if (!Memberships.Contains(MembershipID))
+		{
+			FPubnubChatInternalMembership NewMembership;
+			NewMembership.MembershipID = MembershipID;
+			Memberships.Add(MembershipID, NewMembership);
+		}
+	}
+}
+
+void UPubnubChatObjectsRepository::UnregisterMembership(const FString& MembershipID)
+{
+	if (MembershipID.IsEmpty())
+	{
+		return;
+	}
+
+	FScopeLock Lock(&MembershipsCriticalSection);
+	
+	int32* CountPtr = MembershipReferenceCounts.Find(MembershipID);
+	if (!CountPtr)
+	{
+		return; // Already cleaned up or never registered
+	}
+	
+	// Decrement reference count
+	(*CountPtr)--;
+	
+	// If no more references, clean up data
+	if (*CountPtr <= 0)
+	{
+		Memberships.Remove(MembershipID);
+		MembershipReferenceCounts.Remove(MembershipID);
+	}
+}
+
+FPubnubChatInternalMembership& UPubnubChatObjectsRepository::GetOrCreateMembershipData(const FString& MembershipID)
+{
+	FScopeLock Lock(&MembershipsCriticalSection);
+	
+	if (!Memberships.Contains(MembershipID))
+	{
+		FPubnubChatInternalMembership NewMembership;
+		NewMembership.MembershipID = MembershipID;
+		Memberships.Add(MembershipID, NewMembership);
+	}
+	return Memberships[MembershipID];
+}
+
+FPubnubChatInternalMembership* UPubnubChatObjectsRepository::GetMembershipData(const FString& MembershipID)
+{
+	FScopeLock Lock(&MembershipsCriticalSection);
+	return Memberships.Find(MembershipID);
+}
+
+void UPubnubChatObjectsRepository::UpdateMembershipData(const FString& MembershipID, const FPubnubChatMembershipData& MembershipData)
+{
+	FScopeLock Lock(&MembershipsCriticalSection);
+	
+	if (!Memberships.Contains(MembershipID))
+	{
+		FPubnubChatInternalMembership NewMembership;
+		NewMembership.MembershipID = MembershipID;
+		Memberships.Add(MembershipID, NewMembership);
+	}
+	
+	FPubnubChatInternalMembership& InternalMembership = Memberships[MembershipID];
+	InternalMembership.MembershipData = MembershipData;
+	InternalMembership.LastUpdated = FDateTime::Now();
+}
+
+bool UPubnubChatObjectsRepository::RemoveMembershipData(const FString& MembershipID)
+{
+	FScopeLock Lock(&MembershipsCriticalSection);
+	return Memberships.Remove(MembershipID) > 0;
+}
+
 void UPubnubChatObjectsRepository::ClearAll()
 {
 	// Lock all mutexes to ensure atomic clearing of all data
 	FScopeLock UsersLock(&UsersCriticalSection);
 	FScopeLock ChannelsLock(&ChannelsCriticalSection);
 	FScopeLock MessagesLock(&MessagesCriticalSection);
+	FScopeLock MembershipsLock(&MembershipsCriticalSection);
 	
 	Users.Empty();
 	Channels.Empty();
 	Messages.Empty();
+	Memberships.Empty();
 	UserReferenceCounts.Empty();
 	ChannelReferenceCounts.Empty();
 	MessageReferenceCounts.Empty();
+	MembershipReferenceCounts.Empty();
 }
 

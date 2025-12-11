@@ -40,4 +40,12 @@ public:
 
 	UFUNCTION()
 	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams);
+
+	/* EVENTS */
+	
+	UFUNCTION()
+	static EPubnubChatEventMethod GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType);
+
+	UFUNCTION()
+	static FPubnubChatEvent GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
 };

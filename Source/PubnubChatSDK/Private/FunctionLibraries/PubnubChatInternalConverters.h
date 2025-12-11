@@ -25,5 +25,8 @@ public:
 	
 	static FString ChatMessageActionTypeToString(EPubnubChatMessageActionType ActionType);
 	static EPubnubChatMessageActionType StringToChatMessageActionType(const FString& ActionTypeString);
+
+	static FString ChatEventTypeToString(EPubnubChatEventType EventType);
+	static EPubnubChatEventType StringToChatEventType(const FString& EventTypeString);
 	
 };

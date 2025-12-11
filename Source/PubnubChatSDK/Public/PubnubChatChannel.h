@@ -11,6 +11,7 @@
 class UPubnubClient;
 class UPubnubSubscription;
 class UPubnubChat;
+class UPubnubChatUser;
 class UPubnubChatMessage;
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
@@ -47,7 +48,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult SendText(const FString Message, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatInviteResult Invite(UPubnubChatUser* User);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+    FPubnubChatInviteMultipleResult InviteMultiple(TArray<UPubnubChatUser*> Users);
 
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;

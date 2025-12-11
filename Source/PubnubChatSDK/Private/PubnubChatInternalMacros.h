@@ -156,11 +156,32 @@
 		} \
 	} while (false)
 
-#define PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(ReturnWrapper, Condition, ErrorMessage) \
+#define PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(ReturnWrapper, Object) \
+	do { \
+	if (!Object) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: %s has to be a valid object. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), TEXT(#Object)); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			ReturnWrapper.Result = FPubnubChatOperationResult::CreateError(ErrorLogMessage); \
+			return ReturnWrapper; \
+		} \
+	} while (false)
+
+#define PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Object) \
+	do { \
+		if (!Object) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: %s has to be a valid object. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), TEXT(#Object)); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			return FPubnubChatOperationResult::CreateError(ErrorLogMessage); \
+		} \
+	} while (false)
+
+#define PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(ReturnWrapper, Condition, Message) \
 	do { \
 		if (!Condition) \
 		{ \
-			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: %s. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), ErrorMessage); \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: %s. Aborting operation."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)), Message); \
 			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
 			ReturnWrapper.Result.ErrorMessage = ErrorLogMessage; \
 			ReturnWrapper.Result.Error = true; \
