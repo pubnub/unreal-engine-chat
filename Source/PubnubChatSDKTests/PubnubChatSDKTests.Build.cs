@@ -1,5 +1,6 @@
 // Copyright 2025 PubNub Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class PubnubChatSDKTests : ModuleRules
@@ -8,7 +9,7 @@ public class PubnubChatSDKTests : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
-
+		PrivateIncludePaths.Add(Path.Combine(new string[] { ModuleDirectory, "..", "PubnubChatSDK" }));
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]

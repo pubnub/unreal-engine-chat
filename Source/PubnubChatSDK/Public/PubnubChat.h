@@ -17,6 +17,7 @@ class UPubnubSubscription;
 class UPubnubChatUser;
 class UPubnubChatChannel;
 class UPubnubChatMembership;
+class UPubnubChatAccessManager;
 class UPubnubChatObjectsRepository;
 enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
@@ -72,12 +73,12 @@ public:
 	void DestroyChat();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat")
-	UPubnubClient* GetPubnubClient() const {return PubnubClient;}
+	UPubnubClient* GetPubnubClient() const { return PubnubClient; }
 	
 	/*  USER  */
 
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	UPubnubChatUser* GetCurrentUser();
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat|User")
+	UPubnubChatUser* GetCurrentUser() const { return CurrentUser; }
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult CreateUser(const FString UserID, FPubnubChatUserData UserData = FPubnubChatUserData());
@@ -129,12 +130,21 @@ public:
 	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback);
 	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative);
 
+
+	/* ACCESS MANAGER */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat|Access Manager")
+	UPubnubChatAccessManager* GetAccessManager() const { return AccessManager; }
+	
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 
 	UPROPERTY()
 	TObjectPtr<UPubnubChatUser> CurrentUser = nullptr;
+	
+	UPROPERTY()
+	TObjectPtr<UPubnubChatAccessManager> AccessManager = nullptr;
 
 	UPROPERTY()
 	FString CurrentUserID = "";

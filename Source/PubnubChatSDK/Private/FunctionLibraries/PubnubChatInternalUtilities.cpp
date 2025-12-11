@@ -117,3 +117,110 @@ FPubnubChatEvent UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(con
 
 	return Event;
 }
+
+FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
+{
+	return Pubnub_Chat_LRMT_Property_Name;
+}
+
+void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(const FPubnubChatMembershipData& MembershipData, const FString Timetoken)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if(!MembershipData.Custom.IsEmpty())
+	{
+		UPubnubJsonUtilities::StringToJsonObject(MembershipData.Custom, JsonObject);
+	}
+	JsonObject->SetStringField(GetLastReadMessageTimetokenPropertyKey(), Timetoken);
+}
+
+bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
+{
+	if(!ResourcesObject.IsValid() || ResourceTypeStr.IsEmpty() || ResourceName.IsEmpty() || PermissionStr.IsEmpty())
+	{
+		return false;
+	}
+
+	// Get the resource type object (Channels or Uuids)
+	const TSharedPtr<FJsonObject>* ResourceTypeObjectPtr = nullptr;
+	if(!ResourcesObject->TryGetObjectField(ResourceTypeStr, ResourceTypeObjectPtr) || !ResourceTypeObjectPtr || !(*ResourceTypeObjectPtr).IsValid())
+	{
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject>& ResourceTypeObject = *ResourceTypeObjectPtr;
+
+	// Get the specific resource object
+	const TSharedPtr<FJsonObject>* ResourceObjectPtr = nullptr;
+	if(!ResourceTypeObject->TryGetObjectField(ResourceName, ResourceObjectPtr) || !ResourceObjectPtr || !(*ResourceObjectPtr).IsValid())
+	{
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject>& ResourceObject = *ResourceObjectPtr;
+
+	// Check if the permission field exists and is true
+	if(!ResourceObject->HasField(PermissionStr))
+	{
+		return false;
+	}
+
+	return ResourceObject->GetBoolField(PermissionStr);
+}
+
+bool UPubnubChatInternalUtilities::CheckPatternPermission(const TSharedPtr<FJsonObject>& PatternsObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
+{
+	if(!PatternsObject.IsValid() || ResourceTypeStr.IsEmpty() || ResourceName.IsEmpty() || PermissionStr.IsEmpty())
+	{
+		return false;
+	}
+
+	// Get the resource type object (Channels or Uuids)
+	const TSharedPtr<FJsonObject>* ResourceTypeObjectPtr = nullptr;
+	if(!PatternsObject->TryGetObjectField(ResourceTypeStr, ResourceTypeObjectPtr) || !ResourceTypeObjectPtr || !(*ResourceTypeObjectPtr).IsValid())
+	{
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject>& ResourceTypeObject = *ResourceTypeObjectPtr;
+
+	// Iterate through all patterns and check if any match the resource name
+	TArray<FString> PatternKeys;
+	ResourceTypeObject->Values.GetKeys(PatternKeys);
+
+	// Check all matching patterns - return true if ANY pattern grants the permission
+	for(const FString& PatternKey : PatternKeys)
+	{
+		// Check if the pattern matches the resource name using regex
+		FRegexMatcher PatternMatcher(FRegexPattern(PatternKey), ResourceName);
+		if(PatternMatcher.FindNext())
+		{
+			// Verify that the match spans the entire string (full match, not substring)
+			// This ensures patterns like "channel-[A-Za-z0-9]" don't match "channel-abc123"
+			int32 MatchStart = PatternMatcher.GetMatchBeginning();
+			int32 MatchEnd = PatternMatcher.GetMatchEnding();
+			
+			// Only consider it a match if it spans the entire resource name
+			if(MatchStart == 0 && MatchEnd == ResourceName.Len())
+			{
+				// Pattern matches fully, check the permission
+				const TSharedPtr<FJsonObject>* PatternObjectPtr = nullptr;
+				if(ResourceTypeObject->TryGetObjectField(PatternKey, PatternObjectPtr) && PatternObjectPtr && (*PatternObjectPtr).IsValid())
+				{
+					const TSharedPtr<FJsonObject>& PatternObject = *PatternObjectPtr;
+					if(PatternObject->HasField(PermissionStr))
+					{
+						// If this pattern grants permission, return true immediately
+						if(PatternObject->GetBoolField(PermissionStr))
+						{
+							return true;
+						}
+						// If this pattern explicitly denies permission, continue checking other patterns
+						// (another pattern might grant it)
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}

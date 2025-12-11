@@ -9,6 +9,7 @@
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
+#include "FunctionLibraries/PubnubChatInternalUtilities.h"
 
 
 FString UPubnubChatMembership::GetInternalMembershipID() const
@@ -84,6 +85,13 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(co
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Timetoken);
 
+	//Add Timetoken to MembershipData
+	FPubnubChatMembershipData MembershipData = GetMembershipData();
+	UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(MembershipData, Timetoken);
+
+	FPubnubChatOperationResult UpdateResult = Update(MembershipData);
+	FinalResult.Merge(UpdateResult);
+
 	//TODO:: Finish here
 	return FinalResult;
 }
@@ -99,29 +107,10 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessage(UPubnubChat
 
 void UPubnubChatMembership::InitMembership(UPubnubClient* InPubnubClient, UPubnubChat* InChat, UPubnubChatUser* InUser, UPubnubChatChannel* InChannel)
 {
-	if(!InPubnubClient)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, PubnubClient is invalid"));
-		return;
-	}
-	
-	if(!InChat)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, Chat is invalid"));
-		return;
-	}
-
-	if(!InUser)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, User is invalid"));
-		return;
-	}
-
-	if(!InChannel)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Membership, Channel is invalid"));
-		return;
-	}
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Membership, PubnubClient is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InChat, TEXT("Can't init Membership, Chat is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InUser, TEXT("Can't init Membership, User is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InChannel, TEXT("Can't init Membership, Channel is invalid"));
 
 	User = InUser;
 	Channel = InChannel;

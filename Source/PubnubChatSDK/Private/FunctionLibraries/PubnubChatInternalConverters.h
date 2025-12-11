@@ -28,5 +28,8 @@ public:
 
 	static FString ChatEventTypeToString(EPubnubChatEventType EventType);
 	static EPubnubChatEventType StringToChatEventType(const FString& EventTypeString);
+
+	static FString AccessManagerPermissionToString(EPubnubChatAccessManagerPermission Permission);
+	static FString AccessManagerResourceTypeToString(EPubnubChatAccessManagerResourceType ResourceType);
 	
 };

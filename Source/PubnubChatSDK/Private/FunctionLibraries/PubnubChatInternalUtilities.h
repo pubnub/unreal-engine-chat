@@ -8,6 +8,8 @@
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChatInternalUtilities.generated.h"
 
+class FJsonObject;
+
 
 /**
  * 
@@ -48,4 +50,23 @@ public:
 
 	UFUNCTION()
 	static FPubnubChatEvent GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
+
+	/* MEMBERSHIP */
+	
+	UFUNCTION()
+	static FString GetLastReadMessageTimetokenPropertyKey();
+
+	static void AddLastReadMessageTimetokenToMembershipData(const FPubnubChatMembershipData& MembershipData, const FString Timetoken);
+
+	/* ACCESS MANAGER */
+
+	/**
+	 * Checks if a permission exists and is true for a given resource in Resources (exact match).
+	 */
+	static bool CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr);
+
+	/**
+	 * Checks if a permission exists and is true for a given resource in Patterns (regex match).
+	 */
+	static bool CheckPatternPermission(const TSharedPtr<FJsonObject>& PatternsObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr);
 };

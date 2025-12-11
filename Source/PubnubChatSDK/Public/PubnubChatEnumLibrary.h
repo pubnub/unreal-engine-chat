@@ -43,3 +43,22 @@ enum class EPubnubChatEventMethod : uint8
 	PCEM_Publish				UMETA(DisplayName="Publish"),
 	PCEM_Signal					UMETA(DisplayName="Signal")
 };
+
+UENUM(BlueprintType)
+enum class EPubnubChatAccessManagerPermission : uint8
+{
+	PCAMP_Read					UMETA(DisplayName="Read"),
+	PCAMP_Write					UMETA(DisplayName="Write"),
+	PCAMP_Manage				UMETA(DisplayName="Manage"),
+	PCAMP_Delete				UMETA(DisplayName="Delete"),
+	PCAMP_Get					UMETA(DisplayName="Get"),
+	PCAMP_Join					UMETA(DisplayName="Join"),
+	PCAMP_Update				UMETA(DisplayName="Update"),
+};
+
+UENUM(BlueprintType)
+enum class EPubnubChatAccessManagerResourceType : uint8
+{
+	PCAMRT_Users			UMETA(DisplayName="Uuids"),
+	PCAMRT_Channels			UMETA(DisplayName="Channels"),
+};

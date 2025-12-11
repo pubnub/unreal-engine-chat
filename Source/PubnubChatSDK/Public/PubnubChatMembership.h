@@ -60,7 +60,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UPubnubChatChannel> Channel = nullptr;
 	
-
+	UPROPERTY()
 	bool IsInitialized = false;
 
 	void InitMembership(UPubnubClient* InPubnubClient, UPubnubChat* InChat, UPubnubChatUser* InUser, UPubnubChatChannel* InChannel);

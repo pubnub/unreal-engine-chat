@@ -134,3 +134,39 @@ EPubnubChatEventType UPubnubChatInternalConverters::StringToChatEventType(const 
 		return EPubnubChatEventType::PCET_Custom;
 	}
 }
+
+FString UPubnubChatInternalConverters::AccessManagerPermissionToString(EPubnubChatAccessManagerPermission Permission)
+{
+	switch(Permission)
+	{
+	case EPubnubChatAccessManagerPermission::PCAMP_Read:
+		return TEXT("Read");
+	case EPubnubChatAccessManagerPermission::PCAMP_Write:
+		return TEXT("Write");
+	case EPubnubChatAccessManagerPermission::PCAMP_Manage:
+		return TEXT("Manage");
+	case EPubnubChatAccessManagerPermission::PCAMP_Delete:
+		return TEXT("Delete");
+	case EPubnubChatAccessManagerPermission::PCAMP_Get:
+		return TEXT("Get");
+	case EPubnubChatAccessManagerPermission::PCAMP_Join:
+		return TEXT("Join");
+	case EPubnubChatAccessManagerPermission::PCAMP_Update:
+		return TEXT("Update");
+	default:
+		return TEXT("");
+	}
+}
+
+FString UPubnubChatInternalConverters::AccessManagerResourceTypeToString(EPubnubChatAccessManagerResourceType ResourceType)
+{
+	switch(ResourceType)
+	{
+	case EPubnubChatAccessManagerResourceType::PCAMRT_Users:
+		return TEXT("Uuids");
+	case EPubnubChatAccessManagerResourceType::PCAMRT_Channels:
+		return TEXT("Channels");
+	default:
+		return TEXT("");
+	}
+}

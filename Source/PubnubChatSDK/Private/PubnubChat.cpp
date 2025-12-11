@@ -2,6 +2,7 @@
 
 #include "PubnubChat.h"
 
+#include "PubnubChatAccessManager.h"
 #include "PubnubChatCallbackStop.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubClient.h"
@@ -40,11 +41,6 @@ void UPubnubChat::DestroyChat()
 	
 	OnChatDestroyed.Broadcast();
 	OnChatDestroyedNative.Broadcast();
-}
-
-UPubnubChatUser* UPubnubChat::GetCurrentUser()
-{
-	return CurrentUser;
 }
 
 FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserData UserData)
@@ -516,6 +512,16 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 	
 	//Create repository for managing shared User and Channel data
 	ObjectsRepository = NewObject<UPubnubChatObjectsRepository>(this);
+
+	//Create Access Manager
+	AccessManager = NewObject<UPubnubChatAccessManager>(this);
+	AccessManager->InitAccessManager(PubnubClient);
+	
+	//SetAuthToken if any token was provided in config
+	if(!InChatConfig.AuthKey.IsEmpty())
+	{
+		AccessManager->SetAuthToken(InChatConfig.AuthKey);
+	}
 	
 	//Add callback for subscription status - it will be translated to chat connection status
 	PubnubClient->OnPubnubSubscriptionStatusChanged.AddDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
