@@ -133,6 +133,11 @@ void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(c
 	JsonObject->SetStringField(GetLastReadMessageTimetokenPropertyKey(), Timetoken);
 }
 
+FString UPubnubChatInternalUtilities::GetReceiptEventPayload(const FString& Timetoken)
+{
+	return FString::Printf(TEXT(R"({"messageTimetoken": "%s"})"), *Timetoken);
+}
+
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
 {
 	if(!ResourcesObject.IsValid() || ResourceTypeStr.IsEmpty() || ResourceName.IsEmpty() || PermissionStr.IsEmpty())

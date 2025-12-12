@@ -43,7 +43,13 @@ public:
 	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatJoinResult Join(FOnPubnubChatChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Disconnect();
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult Leave();
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult SendText(const FString Message, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());

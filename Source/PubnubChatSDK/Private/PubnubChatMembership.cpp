@@ -3,6 +3,7 @@
 #include "PubnubChatMembership.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
+#include "PubnubChatAccessManager.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
@@ -89,10 +90,29 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(co
 	FPubnubChatMembershipData MembershipData = GetMembershipData();
 	UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(MembershipData, Timetoken);
 
+	//Update Membership with new data
 	FPubnubChatOperationResult UpdateResult = Update(MembershipData);
 	FinalResult.Merge(UpdateResult);
 
-	//TODO:: Finish here
+	//If this is not public channel Emit Receipt Event
+	if(Channel->GetChannelData().Type != "public")
+	{
+		//Check if event can be emitted with provided AccessToken
+		bool CanIEmit = Chat->AccessManager->CanI(EPubnubChatAccessManagerPermission::PCAMP_Write, EPubnubChatAccessManagerResourceType::PCAMRT_Channels, GetChannelID());
+		FPubnubChatOperationResult EmitEventResult;
+		if(CanIEmit)
+		{
+			EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Receipt, GetChannelID(), UPubnubChatInternalUtilities::GetReceiptEventPayload(Timetoken));
+		}
+		else
+		{
+			//It's not an error, but add it to the result
+			EmitEventResult.AddStep("EmitChatEvent", FPubnubOperationResult(0, false, TEXT("Can't emit chat event, user doesn't have permissions")));
+		}
+
+		FinalResult.Merge(EmitEventResult);
+	}
+	
 	return FinalResult;
 }
 

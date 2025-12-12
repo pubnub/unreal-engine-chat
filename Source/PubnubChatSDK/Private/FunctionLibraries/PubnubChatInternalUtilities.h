@@ -58,6 +58,8 @@ public:
 
 	static void AddLastReadMessageTimetokenToMembershipData(const FPubnubChatMembershipData& MembershipData, const FString Timetoken);
 
+	static FString GetReceiptEventPayload(const FString& Timetoken);
+
 	/* ACCESS MANAGER */
 
 	/**

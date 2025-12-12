@@ -5,6 +5,7 @@
 #include "PubnubChat.h"
 #include "PubnubChatCallbackStop.h"
 #include "PubnubChatInternalMacros.h"
+#include "PubnubChatMembership.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatMessage.h"
@@ -12,6 +13,7 @@
 #include "Entities/PubnubChannelEntity.h"
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h" 
 
 
 void UPubnubChatChannel::BeginDestroy()
@@ -119,6 +121,37 @@ FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessage
 	return FinalResult;
 }
 
+FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData)
+{
+	FPubnubChatJoinResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	//SetMemberships by PubnubClient
+	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
+	FinalResult.Result.AddStep("SetMemberships", SetMembershipResult.Result);
+
+	//If there was an error, stop here and return
+	if(SetMembershipResult.Result.Error)
+	{return FinalResult;}
+
+	//Create membership objects
+	UPubnubChatMembership* CreatedMembership = Chat->CreateMembershipObject(Chat->CurrentUser, this, MembershipData);
+
+	//SetLastReadMessageTimetoken for created membership
+	FPubnubChatOperationResult SetLRMTResult =  CreatedMembership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
+	FinalResult.Result.Merge(SetLRMTResult);
+
+	//Connect
+	FPubnubChatConnectResult ConnectResult = Connect(MessageCallback);
+	FinalResult.Result.Merge(ConnectResult.Result);
+
+	//Fill required data to the result
+	FinalResult.CallbackStop = ConnectResult.CallbackStop;
+	FinalResult.Membership = CreatedMembership;
+	
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChatChannel::Disconnect()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -131,6 +164,18 @@ FPubnubChatOperationResult UPubnubChatChannel::Disconnect()
 	FPubnubOperationResult UnsubscribeResult = ConnectSubscription->Unsubscribe();
 	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
 	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::Leave()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+
+	FPubnubChatOperationResult FinalResult = Disconnect();
+
+	//SetMemberships by PubnubClient
+	FPubnubMembershipsResult RemoveMembershipsResult = PubnubClient->RemoveMemberships(Chat->CurrentUserID, {ChannelID}, FPubnubMembershipInclude::FromValue(false), 1);
+	FinalResult.Result.AddStep("SetMemberships", SetMembershipResult.Result);
+	
 }
 
 FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, FPubnubChatSendTextParams SendTextParams)
