@@ -172,10 +172,11 @@ FPubnubChatOperationResult UPubnubChatChannel::Leave()
 
 	FPubnubChatOperationResult FinalResult = Disconnect();
 
-	//SetMemberships by PubnubClient
+	//RemoveMemberships by PubnubClient
 	FPubnubMembershipsResult RemoveMembershipsResult = PubnubClient->RemoveMemberships(Chat->CurrentUserID, {ChannelID}, FPubnubMembershipInclude::FromValue(false), 1);
-	FinalResult.Result.AddStep("SetMemberships", SetMembershipResult.Result);
-	
+	FinalResult.AddStep("RemoveMemberships", RemoveMembershipsResult.Result);
+
+	return FinalResult;
 }
 
 FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, FPubnubChatSendTextParams SendTextParams)
