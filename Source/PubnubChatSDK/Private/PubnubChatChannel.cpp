@@ -234,17 +234,73 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 		return FinalResult;
 	}
 
-	//TODO:: finish this function
-
-	FPubnubChatMembershipData MembershipData;
-	MembershipData.Status = "pending";
+	//Create Membership with "pending" status
+	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = "pending"};
 	
+	//SetMemberships by PubnubClient
+	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
+	FinalResult.Result.AddStep("SetMemberships", SetMembershipResult.Result);
+
+	//If there was an error, stop here and return
+	if(SetMembershipResult.Result.Error)
 	{return FinalResult;}
+
+	//Emit Invite event
+	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Invite, User->GetUserID(), UPubnubChatInternalUtilities::GetInviteEventPayload(GetChannelData().Type, ChannelID));
+	FinalResult.Result.Merge(EmitEventResult);
+
+	//Create Membership Object
+	FinalResult.Membership = Chat->CreateMembershipObject(User, this, MembershipData);
+
+	//Set Last Read Timetoken on created Membership
+	FPubnubChatOperationResult SetLRMTResult = FinalResult.Membership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
+	FinalResult.Result.Merge(SetLRMTResult);
+
+	return FinalResult;
 }
 
 FPubnubChatInviteMultipleResult UPubnubChatChannel::InviteMultiple(TArray<UPubnubChatUser*> Users)
 {
-	return FPubnubChatInviteMultipleResult();
+	FPubnubChatInviteMultipleResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	TArray<UPubnubChatUser*> ValidUsers = UPubnubChatInternalUtilities::RemoveInvalidObjects(Users);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, !ValidUsers.IsEmpty(), TEXT("At least one valid user has to be provided"));
+
+	FString Filter = UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(ValidUsers);
+	TArray<FPubnubChannelMemberInputData> MembersInput;
+	//Create Membership with "pending" status
+	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = "pending"};
+
+	for(auto& User : ValidUsers)
+	{
+		MembersInput.Add(MembershipData.ToPubnubChannelMemberInputData(User->GetUserID()));
+	}
+
+	//SetChannelMembers by PubnubClient
+	FPubnubChannelMembersResult SetMembersResult = PubnubClient->SetChannelMembers(ChannelID, MembersInput, FPubnubMemberInclude::FromValue(false), 1);
+	FinalResult.Result.AddStep("SetChannelMembers", SetMembersResult.Result);
+
+	//In case of error, just return current result
+	if(SetMembersResult.Result.Error)
+	{return FinalResult;}
+
+	//For every invited user create a Membership and send invitation events
+	for(auto& User : ValidUsers)
+	{
+		UPubnubChatMembership* Membership = Chat->CreateMembershipObject(User, this, MembershipData);
+		FinalResult.Memberships.Add(Membership);
+
+		//Emit Invite event
+		FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Invite, User->GetUserID(), UPubnubChatInternalUtilities::GetInviteEventPayload(GetChannelData().Type, ChannelID));
+		FinalResult.Result.Merge(EmitEventResult);
+
+		//Set Last Read Timetoken on created Membership
+		FPubnubChatOperationResult SetLRMTResult = Membership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
+		FinalResult.Result.Merge(SetLRMTResult);
+	}
+	
+	return FinalResult;
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)

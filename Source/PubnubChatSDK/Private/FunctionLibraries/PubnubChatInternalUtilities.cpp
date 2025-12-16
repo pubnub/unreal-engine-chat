@@ -6,6 +6,7 @@
 #include "PubnubChatConst.h"
 #include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"
+#include "PubnubChatUser.h"
 
 
 FString UPubnubChatInternalUtilities::GetSoftDeletedObjectPropertyKey()
@@ -118,6 +119,16 @@ FPubnubChatEvent UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(con
 	return Event;
 }
 
+FString UPubnubChatInternalUtilities::GetReceiptEventPayload(const FString& Timetoken)
+{
+	return FString::Printf(TEXT(R"({"messageTimetoken": "%s"})"), *Timetoken);
+}
+
+FString UPubnubChatInternalUtilities::GetInviteEventPayload(const FString ChannelID, const FString ChannelType)
+{
+	return FString::Printf(TEXT(R"({"channelType": "%s", "channelId": "%s"})"), *ChannelType, *ChannelID);
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;
@@ -133,9 +144,20 @@ void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(c
 	JsonObject->SetStringField(GetLastReadMessageTimetokenPropertyKey(), Timetoken);
 }
 
-FString UPubnubChatInternalUtilities::GetReceiptEventPayload(const FString& Timetoken)
+FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users)
 {
-	return FString::Printf(TEXT(R"({"messageTimetoken": "%s"})"), *Timetoken);
+	FString FinalFilter = "";
+	for(auto& User : Users)
+	{
+		if(!User)
+		{continue;}
+		if(!FinalFilter.IsEmpty())
+		{
+			FinalFilter.Append(" || ");
+		}
+		FinalFilter.Append(FString::Printf(TEXT(R"(uuid.id == "%s")"), *User->GetUserID()));
+	}
+	return FinalFilter;
 }
 
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
