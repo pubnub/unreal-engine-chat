@@ -88,7 +88,7 @@ public:
 		{
 			if(!ObjectsArray[i])
 			{
-				ObjectsArrayCopy.Remove(i);
+				ObjectsArrayCopy.RemoveAt(i);
 			}
 		}
 

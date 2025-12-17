@@ -68,14 +68,10 @@ FPubnubChatOperationResult UPubnubChatMembership::Update(const FPubnubChatMember
 
 	//SetMemberships by PubnubClient
 	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(GetUserID(), {MembershipData.ToPubnubMembershipInputData(GetChannelID())}, FPubnubMembershipInclude::FromValue(false), 1);
-	FinalResult.AddStep("SetMemberships", SetMembershipResult.Result);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
 
-	//If there was no error, update Membership data in the repository
-	if(!SetMembershipResult.Result.Error)
-	{
-		//Update repository with updated user data
-		Chat->ObjectsRepository->UpdateMembershipData(GetInternalMembershipID(), MembershipData);
-	}
+	//Update repository with updated user data
+	Chat->ObjectsRepository->UpdateMembershipData(GetInternalMembershipID(), MembershipData);
 	
 	return FinalResult;
 }
@@ -92,7 +88,7 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(co
 
 	//Update Membership with new data
 	FPubnubChatOperationResult UpdateResult = Update(MembershipData);
-	FinalResult.Merge(UpdateResult);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 
 	//If this is not public channel Emit Receipt Event
 	if(Channel->GetChannelData().Type != "public")

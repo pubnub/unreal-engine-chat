@@ -208,3 +208,39 @@
 			return __VA_ARGS__; \
 		} \
 	} while (false)
+
+#define PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(ReturnWrapper, PubnubResult, MethodName) \
+	do { \
+		ReturnWrapper.Result.AddStep(MethodName, PubnubResult); \
+		if (PubnubResult.Error) \
+		{ \
+			return ReturnWrapper; \
+		} \
+	} while (false)
+
+#define PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(OperationResult, PubnubResult, MethodName) \
+	do { \
+		OperationResult.AddStep(MethodName, PubnubResult); \
+		if (PubnubResult.Error) \
+		{ \
+			return OperationResult; \
+		} \
+	} while (false)
+
+#define PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(ReturnWrapper, ChatOperationResult) \
+	do { \
+		ReturnWrapper.Result.Merge(ChatOperationResult); \
+		if (ChatOperationResult.Error) \
+		{ \
+			return ReturnWrapper; \
+		} \
+	} while (false)
+
+#define PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ChatOperationResult) \
+	do { \
+		FinalResult.Merge(ChatOperationResult); \
+		if (ChatOperationResult.Error) \
+		{ \
+			return FinalResult; \
+		} \
+	} while (false)

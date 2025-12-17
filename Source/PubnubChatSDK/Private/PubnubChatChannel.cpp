@@ -128,22 +128,18 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceiv
 	
 	//SetMemberships by PubnubClient
 	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
-	FinalResult.Result.AddStep("SetMemberships", SetMembershipResult.Result);
-
-	//If there was an error, stop here and return
-	if(SetMembershipResult.Result.Error)
-	{return FinalResult;}
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
 
 	//Create membership objects
 	UPubnubChatMembership* CreatedMembership = Chat->CreateMembershipObject(Chat->CurrentUser, this, MembershipData);
 
-	//SetLastReadMessageTimetoken for created membership
-	FPubnubChatOperationResult SetLRMTResult =  CreatedMembership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
-	FinalResult.Result.Merge(SetLRMTResult);
-
 	//Connect
 	FPubnubChatConnectResult ConnectResult = Connect(MessageCallback);
-	FinalResult.Result.Merge(ConnectResult.Result);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, ConnectResult.Result);
+
+	//SetLastReadMessageTimetoken for created membership
+	FPubnubChatOperationResult SetLRMTResult =  CreatedMembership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetLRMTResult);
 
 	//Fill required data to the result
 	FinalResult.CallbackStop = ConnectResult.CallbackStop;
@@ -220,12 +216,8 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 	//GetChannelMembers from PubnubClient to check if the user is not already member of that channel
 	FString Filter = FString::Printf(TEXT("uuid.id == \"%s\""), *User->GetUserID());
 	FPubnubMemberInclude Include = FPubnubMemberInclude({.IncludeCustom=true, .IncludeStatus=true, .IncludeType=true});
-	FPubnubChannelMembersResult GetChannelMembersResult = PubnubClient->GetChannelMembers(ChannelID, Include, 0, Filter);
-	FinalResult.Result.AddStep("GetChannelMembers", GetChannelMembersResult.Result);
-
-	//Return if there was any error during PubnubClient operation
-	if(GetChannelMembersResult.Result.Error)
-	{return FinalResult;}
+	FPubnubChannelMembersResult GetChannelMembersResult = PubnubClient->GetChannelMembers(ChannelID, Include, 1, Filter);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelMembersResult.Result, "GetChannelMembers");
 	
 	//If User is already member of that channel, we just return the membership
 	if(!GetChannelMembersResult.MembersData.IsEmpty())
@@ -239,15 +231,11 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 	
 	//SetMemberships by PubnubClient
 	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
-	FinalResult.Result.AddStep("SetMemberships", SetMembershipResult.Result);
-
-	//If there was an error, stop here and return
-	if(SetMembershipResult.Result.Error)
-	{return FinalResult;}
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
 
 	//Emit Invite event
 	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Invite, User->GetUserID(), UPubnubChatInternalUtilities::GetInviteEventPayload(GetChannelData().Type, ChannelID));
-	FinalResult.Result.Merge(EmitEventResult);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, EmitEventResult);
 
 	//Create Membership Object
 	FinalResult.Membership = Chat->CreateMembershipObject(User, this, MembershipData);
@@ -279,11 +267,7 @@ FPubnubChatInviteMultipleResult UPubnubChatChannel::InviteMultiple(TArray<UPubnu
 
 	//SetChannelMembers by PubnubClient
 	FPubnubChannelMembersResult SetMembersResult = PubnubClient->SetChannelMembers(ChannelID, MembersInput, FPubnubMemberInclude::FromValue(false), 1);
-	FinalResult.Result.AddStep("SetChannelMembers", SetMembersResult.Result);
-
-	//In case of error, just return current result
-	if(SetMembersResult.Result.Error)
-	{return FinalResult;}
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembersResult.Result, "SetChannelMembers");
 
 	//For every invited user create a Membership and send invitation events
 	for(auto& User : ValidUsers)
