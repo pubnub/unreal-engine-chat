@@ -134,7 +134,7 @@ FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 	return Pubnub_Chat_LRMT_Property_Name;
 }
 
-void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(const FPubnubChatMembershipData& MembershipData, const FString Timetoken)
+void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 	if(!MembershipData.Custom.IsEmpty())
@@ -142,6 +142,7 @@ void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(c
 		UPubnubJsonUtilities::StringToJsonObject(MembershipData.Custom, JsonObject);
 	}
 	JsonObject->SetStringField(GetLastReadMessageTimetokenPropertyKey(), Timetoken);
+	MembershipData.Custom = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
 FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users)

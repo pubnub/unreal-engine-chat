@@ -61,7 +61,7 @@ public:
 	UFUNCTION()
 	static FString GetLastReadMessageTimetokenPropertyKey();
 
-	static void AddLastReadMessageTimetokenToMembershipData(const FPubnubChatMembershipData& MembershipData, const FString Timetoken);
+	static void AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken);
 
 	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
 

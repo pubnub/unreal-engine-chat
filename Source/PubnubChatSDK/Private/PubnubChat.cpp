@@ -178,25 +178,34 @@ FPubnubChatCreateGroupConversationResult UPubnubChat::CreateGroupConversation(TA
 {
 	FPubnubChatCreateGroupConversationResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, (!Users.IsEmpty()), TEXT("At least one user has to be provided"));
+	
+	TArray<UPubnubChatUser*> ValidUsers = UPubnubChatInternalUtilities::RemoveInvalidObjects(Users);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, !ValidUsers.IsEmpty(), TEXT("At least one valid user has to be provided"));
+
 
 	//If channel ID was not provided, generate Guid
-	FString FinalChannelID = ChannelID.IsEmpty() ? FGuid::NewGuid().ToString() : ChannelID;
+	FString FinalChannelID = ChannelID.IsEmpty() ? FGuid::NewGuid().ToString(EGuidFormats::UniqueObjectGuid) : ChannelID;
 
 	//Regardless of the provided Channel Type, this method creates group channel
 	ChannelData.Type = "group";
 
-	//SetChannelMetadata by PubnubClient
+	//SetChannelMetadata by PubnubClient and create Channel
 	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(FinalChannelID, ChannelData.ToPubnubChannelData());
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
-	
-	FPubnubMembershipsResult SetMembershipsResult = PubnubClient->SetMemberships(CurrentUserID, {HostMembershipData.ToPubnubMembershipInputData(ChannelID)});
+	UPubnubChatChannel* CreatedChannel = CreateChannelObject(FinalChannelID, ChannelData);
+	FinalResult.Channel = CreatedChannel;
 
-	//TODO:: Finish this function
+	//SetMemberships by PubnubClient and create host Membership
+	FPubnubMembershipsResult SetMembershipsResult = PubnubClient->SetMemberships(CurrentUserID, {HostMembershipData.ToPubnubMembershipInputData(FinalChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipsResult.Result, "SetMemberships");
+	UPubnubChatMembership* CreatedHostMembership = CreateMembershipObject(CurrentUser, CreatedChannel, HostMembershipData);
+	FinalResult.HostMembership = CreatedHostMembership;
 	
-
+	//Invite User to created channel
+	FPubnubChatInviteMultipleResult InviteMultipleResult =  CreatedChannel->InviteMultiple(ValidUsers);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, InviteMultipleResult.Result);
+	FinalResult.InviteesMemberships = InviteMultipleResult.Memberships;
 	
-
 	return FinalResult;
 }
 
@@ -207,28 +216,27 @@ FPubnubChatCreateDirectConversationResult UPubnubChat::CreateDirectConversation(
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
 	
 	//If channel ID was not provided, generate Guid
-	FString FinalChannelID = ChannelID.IsEmpty() ? FGuid::NewGuid().ToString() : ChannelID;
+	FString FinalChannelID = ChannelID.IsEmpty() ? FGuid::NewGuid().ToString(EGuidFormats::UniqueObjectGuid) : ChannelID;
 
 	//Regardless of the provided Channel Type, this method creates public channel
 	ChannelData.Type = "direct";
 
 	//Set channel metadata by PubnubClient and create the channel
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelData());
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(FinalChannelID, ChannelData.ToPubnubChannelData());
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
 	UPubnubChatChannel* CreatedChannel = CreateChannelObject(FinalChannelID, ChannelData);
 	FinalResult.Channel = CreatedChannel;
 
 	//SetMemberships by PubnubClient and create host membership
-	FPubnubMembershipsResult SetMembershipsResult = PubnubClient->SetMemberships(CurrentUserID, {HostMembershipData.ToPubnubMembershipInputData(ChannelID)});
+	FPubnubMembershipsResult SetMembershipsResult = PubnubClient->SetMemberships(CurrentUserID, {HostMembershipData.ToPubnubMembershipInputData(FinalChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipsResult.Result, "SetMemberships");
-	UPubnubChatMembership* CreatedHostMembership = CreateMembershipObject(User, CreatedChannel, HostMembershipData);
+	UPubnubChatMembership* CreatedHostMembership = CreateMembershipObject(CurrentUser, CreatedChannel, HostMembershipData);
 	FinalResult.HostMembership = CreatedHostMembership;
 
 	//Invite User to created channel
 	FPubnubChatInviteResult InviteResult =  CreatedChannel->Invite(User);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, InviteResult.Result);
-	UPubnubChatMembership* CreatedInviteeMembership = CreateMembershipObject(User, CreatedChannel, HostMembershipData);
-	FinalResult.InviteeMembership = CreatedInviteeMembership;
+	FinalResult.InviteeMembership = InviteResult.Membership;
 	
 	return FinalResult;
 }
