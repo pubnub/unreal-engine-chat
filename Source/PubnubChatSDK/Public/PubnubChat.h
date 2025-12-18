@@ -74,6 +74,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat")
 	UPubnubClient* GetPubnubClient() const { return PubnubClient; }
+
 	
 	/*  USER  */
 
@@ -95,7 +96,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult DeleteUser(const FString UserID, bool Soft = false);
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatGetUserSuggestionsResult GetUserSuggestions(const FString Text, int Limit = 10);
 
+	
 	/*  CHANNEL  */
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
@@ -106,7 +110,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatCreateDirectConversationResult CreateDirectConversation(UPubnubChatUser* User, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
-	
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult GetChannel(const FString ChannelID);
@@ -119,6 +122,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult DeleteChannel(const FString ChannelID, bool Soft = false);
+
+	
 
 
 	/* MODERATION */

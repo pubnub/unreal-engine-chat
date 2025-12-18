@@ -63,3 +63,15 @@ struct FPubnubChatGetUsersResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	int Total = 0;
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetUserSuggestionsResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatUser*> Users;
+};

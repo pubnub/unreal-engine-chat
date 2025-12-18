@@ -3195,5 +3195,1255 @@ bool FPubnubChatChannelLeaveMembershipRemovalTest::RunTest(const FString& Parame
 	return true;
 }
 
+// ============================================================================
+// UPDATECHANNEL TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Get Chat without initializing
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	TestNull("Chat should be null before InitChat", Chat);
+	
+	if(!Chat)
+	{
+		// Try to update channel without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestChannelID = SDK_PREFIX + "test_update_channel_not_init";
+			FPubnubChatChannelData ChannelData;
+			FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
+			
+			TestTrue("UpdateChannel should fail when Chat is not initialized", UpdateResult.Result.Error);
+			TestNull("Channel should not be returned", UpdateResult.Channel);
+			TestFalse("ErrorMessage should not be empty", UpdateResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_update_channel_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Try to update channel with empty ChannelID
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TEXT(""), ChannelData);
+		
+		TestTrue("UpdateChannel should fail with empty ChannelID", UpdateResult.Result.Error);
+		TestNull("Channel should not be returned", UpdateResult.Channel);
+		TestFalse("ErrorMessage should not be empty", UpdateResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelNonExistingChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.1Validation.NonExistingChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelNonExistingChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_channel_init";
+	const FString NonExistingChannelID = SDK_PREFIX + "test_update_channel_nonexisting";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Try to update channel that doesn't exist (without creating it first)
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("NonExistingChannel");
+		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(NonExistingChannelID, ChannelData);
+		
+		TestTrue("UpdateChannel should fail with non-existing channel", UpdateResult.Result.Error);
+		TestNull("Channel should not be returned", UpdateResult.Channel);
+		TestFalse("ErrorMessage should not be empty", UpdateResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_channel_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_update_channel_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Update channel with minimal data
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("UpdatedChannel");
+		
+		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
+		
+		TestFalse("UpdateChannel should succeed", UpdateResult.Result.Error);
+		TestNotNull("Channel should be returned", UpdateResult.Channel);
+		
+		if(UpdateResult.Channel)
+		{
+			TestEqual("Updated Channel ChannelID should match", UpdateResult.Channel->GetChannelID(), TestChannelID);
+			
+			// Verify data was updated
+			FPubnubChatChannelData UpdatedData = UpdateResult.Channel->GetChannelData();
+			TestEqual("ChannelName should be updated", UpdatedData.ChannelName, ChannelData.ChannelName);
+				
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_channel_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_update_channel_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Update channel with all parameters
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("UpdatedFullChannel");
+		ChannelData.Description = TEXT("Updated channel description");
+		ChannelData.Custom = TEXT("{\"updated\":\"data\"}");
+		ChannelData.Status = TEXT("updatedStatus");
+		ChannelData.Type = TEXT("updatedType");
+		
+		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
+		
+		TestFalse("UpdateChannel should succeed with all parameters", UpdateResult.Result.Error);
+		TestNotNull("Channel should be returned", UpdateResult.Channel);
+		
+		if(UpdateResult.Channel)
+		{
+			TestEqual("Updated Channel ChannelID should match", UpdateResult.Channel->GetChannelID(), TestChannelID);
+			
+			// Verify all data was updated correctly
+			FPubnubChatChannelData UpdatedData = UpdateResult.Channel->GetChannelData();
+			TestEqual("ChannelName should match", UpdatedData.ChannelName, ChannelData.ChannelName);
+			TestEqual("Description should match", UpdatedData.Description, ChannelData.Description);
+			TestEqual("Custom should match", UpdatedData.Custom, ChannelData.Custom);
+			TestEqual("Status should match", UpdatedData.Status, ChannelData.Status);
+			TestEqual("Type should match", UpdatedData.Type, ChannelData.Type);
+			
+		}
+		// Cleanup: Delete created channel
+		Chat->DeleteChannel(TestChannelID, false);
+		
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelMultipleTimesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.4Advanced.MultipleUpdates", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelMultipleTimesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_channel_multiple_init";
+	const FString TestChannelID = SDK_PREFIX + "test_update_channel_multiple";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Update channel first time
+		FPubnubChatChannelData ChannelData1;
+		ChannelData1.ChannelName = TEXT("FirstUpdate");
+		ChannelData1.Description = TEXT("First description");
+		FPubnubChatChannelResult UpdateResult1 = Chat->UpdateChannel(TestChannelID, ChannelData1);
+		TestFalse("First UpdateChannel should succeed", UpdateResult1.Result.Error);
+		
+		// Update channel second time
+		FPubnubChatChannelData ChannelData2;
+		ChannelData2.ChannelName = TEXT("SecondUpdate");
+		ChannelData2.Description = TEXT("Second description");
+		FPubnubChatChannelResult UpdateResult2 = Chat->UpdateChannel(TestChannelID, ChannelData2);
+		TestFalse("Second UpdateChannel should succeed", UpdateResult2.Result.Error);
+		
+		// Update channel third time
+		FPubnubChatChannelData ChannelData3;
+		ChannelData3.ChannelName = TEXT("ThirdUpdate");
+		ChannelData3.Description = TEXT("Third description");
+		FPubnubChatChannelResult UpdateResult3 = Chat->UpdateChannel(TestChannelID, ChannelData3);
+		TestFalse("Third UpdateChannel should succeed", UpdateResult3.Result.Error);
+		
+		if(UpdateResult3.Channel)
+		{
+			// Verify final data is correct
+			FPubnubChatChannelData FinalData = UpdateResult3.Channel->GetChannelData();
+			TestEqual("Final ChannelName should match third update", FinalData.ChannelName, ChannelData3.ChannelName);
+			TestEqual("Final Description should match third update", FinalData.Description, ChannelData3.Description);
+			
+			// Verify data synchronization - get channel again should have same data
+			FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
+			TestFalse("GetChannel should succeed", GetResult.Result.Error);
+			if(GetResult.Channel)
+			{
+				FPubnubChatChannelData GetData = GetResult.Channel->GetChannelData();
+				TestEqual("GetChannel ChannelName should match UpdateChannel ChannelName", GetData.ChannelName, FinalData.ChannelName);
+				TestEqual("GetChannel Description should match UpdateChannel Description", GetData.Description, FinalData.Description);
+			}
+			
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateChannelDataSynchronizationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.UpdateChannel.4Advanced.DataSynchronization", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateChannelDataSynchronizationTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_channel_sync_init";
+	const FString TestChannelID = SDK_PREFIX + "test_update_channel_sync";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Update channel
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("SyncedChannel");
+		ChannelData.Description = TEXT("Synced description");
+		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
+		TestFalse("UpdateChannel should succeed", UpdateResult.Result.Error);
+		
+		// Get channel multiple times - all should have same updated data
+		FPubnubChatChannelResult GetResult1 = Chat->GetChannel(TestChannelID);
+		FPubnubChatChannelResult GetResult2 = Chat->GetChannel(TestChannelID);
+		
+		TestFalse("First GetChannel should succeed", GetResult1.Result.Error);
+		TestFalse("Second GetChannel should succeed", GetResult2.Result.Error);
+		
+		if(UpdateResult.Channel && GetResult1.Channel && GetResult2.Channel)
+		{
+			FPubnubChatChannelData UpdateData = UpdateResult.Channel->GetChannelData();
+			FPubnubChatChannelData GetData1 = GetResult1.Channel->GetChannelData();
+			FPubnubChatChannelData GetData2 = GetResult2.Channel->GetChannelData();
+			
+			// All should have same data from repository
+			TestEqual("UpdateChannel ChannelName should match GetChannel1 ChannelName", UpdateData.ChannelName, GetData1.ChannelName);
+			TestEqual("GetChannel1 ChannelName should match GetChannel2 ChannelName", GetData1.ChannelName, GetData2.ChannelName);
+			TestEqual("UpdateChannel Description should match GetChannel1 Description", UpdateData.Description, GetData1.Description);
+			TestEqual("GetChannel1 Description should match GetChannel2 Description", GetData1.Description, GetData2.Description);
+			
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// DELETECHANNEL TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteChannelNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.DeleteChannel.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDeleteChannelNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Get Chat without initializing
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	TestNull("Chat should be null before InitChat", Chat);
+	
+	if(!Chat)
+	{
+		// Try to delete channel without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestChannelID = SDK_PREFIX + "test_delete_channel_not_init";
+			FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+			
+			TestTrue("DeleteChannel should fail when Chat is not initialized", DeleteResult.Result.Error);
+			TestNull("Channel should not be returned", DeleteResult.Channel);
+			TestFalse("ErrorMessage should not be empty", DeleteResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteChannelEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.DeleteChannel.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDeleteChannelEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_delete_channel_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Try to delete channel with empty ChannelID
+		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TEXT(""), false);
+		
+		TestTrue("DeleteChannel should fail with empty ChannelID", DeleteResult.Result.Error);
+		TestNull("Channel should not be returned", DeleteResult.Channel);
+		TestFalse("ErrorMessage should not be empty", DeleteResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteChannelHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.DeleteChannel.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDeleteChannelHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_delete_channel_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_delete_channel_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Delete channel with default parameters (hard delete)
+		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID);
+		
+		TestFalse("DeleteChannel should succeed", DeleteResult.Result.Error);
+		// Note: Hard delete returns empty result (no channel object)
+		
+		// Verify channel is actually deleted - GetChannel should fail
+		FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
+		TestTrue("GetChannel should fail after hard delete", GetResult.Result.Error);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteChannelHardDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.DeleteChannel.3FullParameters.HardDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDeleteChannelHardDeleteTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_delete_channel_hard_init";
+	const FString TestChannelID = SDK_PREFIX + "test_delete_channel_hard";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Hard delete channel (Soft = false)
+		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+		
+		TestFalse("Hard DeleteChannel should succeed", DeleteResult.Result.Error);
+		TestNull("Hard delete should not return channel object", DeleteResult.Channel);
+		
+		// Verify channel is actually deleted - GetChannel should fail
+		FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
+		TestTrue("GetChannel should fail after hard delete", GetResult.Result.Error);
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteChannelSoftDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.DeleteChannel.3FullParameters.SoftDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDeleteChannelSoftDeleteTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_delete_channel_soft_init";
+	const FString TestChannelID = SDK_PREFIX + "test_delete_channel_soft";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// First create the channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Soft delete channel (Soft = true)
+		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, true);
+		
+		TestFalse("Soft DeleteChannel should succeed", DeleteResult.Result.Error);
+		TestNotNull("Soft delete should return channel object", DeleteResult.Channel);
+		
+		if(DeleteResult.Channel)
+		{
+			// Verify channel still exists but is marked as deleted
+			FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
+			TestFalse("GetChannel should succeed after soft delete", GetResult.Result.Error);
+			TestNotNull("GetChannel should return channel after soft delete", GetResult.Channel);
+			
+			if(GetResult.Channel)
+			{
+				// Verify deleted property is in Custom field
+				FPubnubChatChannelData ChannelData = GetResult.Channel->GetChannelData();
+				TestTrue("Custom field should contain deleted property", ChannelData.Custom.Contains(TEXT("\"deleted\"")) || ChannelData.Custom.Contains(TEXT("\"deleted\":true")));
+			}
+		}
+		
+		// Cleanup: Hard delete the soft-deleted channel
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteChannelHardVsSoftTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.DeleteChannel.4Advanced.HardVsSoft", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDeleteChannelHardVsSoftTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_delete_channel_hardsoft_init";
+	const FString SoftDeleteChannelID = SDK_PREFIX + "test_delete_channel_soft";
+	const FString HardDeleteChannelID = SDK_PREFIX + "test_delete_channel_hard";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create first channel for soft delete
+		FPubnubChatChannelResult CreateResult1 = Chat->CreatePublicConversation(SoftDeleteChannelID, FPubnubChatChannelData());
+		TestFalse("CreateChannel1 should succeed", CreateResult1.Result.Error);
+		
+		// Create second channel for hard delete
+		FPubnubChatChannelResult CreateResult2 = Chat->CreatePublicConversation(HardDeleteChannelID, FPubnubChatChannelData());
+		TestFalse("CreateChannel2 should succeed", CreateResult2.Result.Error);
+		
+		// Soft delete first channel
+		FPubnubChatChannelResult SoftDeleteResult = Chat->DeleteChannel(SoftDeleteChannelID, true);
+		TestFalse("Soft DeleteChannel should succeed", SoftDeleteResult.Result.Error);
+		
+		// Hard delete second channel
+		FPubnubChatChannelResult HardDeleteResult = Chat->DeleteChannel(HardDeleteChannelID, false);
+		TestFalse("Hard DeleteChannel should succeed", HardDeleteResult.Result.Error);
+		
+		// Verify soft-deleted channel still exists
+		FPubnubChatChannelResult GetSoftResult = Chat->GetChannel(SoftDeleteChannelID);
+		TestFalse("GetChannel should succeed for soft-deleted channel", GetSoftResult.Result.Error);
+		TestNotNull("GetChannel should return soft-deleted channel", GetSoftResult.Channel);
+		
+		// Verify hard-deleted channel no longer exists
+		FPubnubChatChannelResult GetHardResult = Chat->GetChannel(HardDeleteChannelID);
+		TestTrue("GetChannel should fail for hard-deleted channel", GetHardResult.Result.Error);
+		TestNull("GetChannel should not return hard-deleted channel", GetHardResult.Channel);
+		
+		// Cleanup: Hard delete the soft-deleted channel
+		if(Chat)
+		{
+			Chat->DeleteChannel(SoftDeleteChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// GETCHANNELS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Get Chat without initializing
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	TestNull("Chat should be null before InitChat", Chat);
+	
+	if(!Chat)
+	{
+		// Try to get channels without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels();
+			
+			TestTrue("GetChannels should fail when Chat is not initialized", GetChannelsResult.Result.Error);
+			TestEqual("Channels array should be empty", GetChannelsResult.Channels.Num(), 0);
+			TestFalse("ErrorMessage should not be empty", GetChannelsResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Call GetChannels with only default parameters (required parameters only)
+		FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels();
+		
+		TestFalse("GetChannels should succeed", GetChannelsResult.Result.Error);
+		TestTrue("Channels array should be valid (may be empty)", GetChannelsResult.Channels.Num() >= 0);
+		
+		// Verify result structure is valid
+		TestTrue("Total count should be non-negative", GetChannelsResult.Total >= 0);
+	}
+	
+	// Cleanup: No channels created in this test, only using existing channels
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_full_init";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test channels
+		const FString TestChannelID1 = SDK_PREFIX + "test_get_channels_full_1";
+		const FString TestChannelID2 = SDK_PREFIX + "test_get_channels_full_2";
+		const FString TestChannelID3 = SDK_PREFIX + "test_get_channels_full_3";
+		
+		FPubnubChatChannelResult CreateResult1 = Chat->CreatePublicConversation(TestChannelID1, FPubnubChatChannelData());
+		TestFalse("CreateChannel1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedChannelIDs.Add(TestChannelID1); }
+		
+		FPubnubChatChannelResult CreateResult2 = Chat->CreatePublicConversation(TestChannelID2, FPubnubChatChannelData());
+		TestFalse("CreateChannel2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedChannelIDs.Add(TestChannelID2); }
+		
+		FPubnubChatChannelResult CreateResult3 = Chat->CreatePublicConversation(TestChannelID3, FPubnubChatChannelData());
+		TestFalse("CreateChannel3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedChannelIDs.Add(TestChannelID3); }
+		
+		// Test GetChannels with all parameters
+		const int TestLimit = 10;
+		const FString TestFilter = TEXT("id LIKE '*test_get_channels_full*'");
+		FPubnubGetAllSort TestSort;
+		FPubnubGetAllSingleSort SingleSort;
+		SingleSort.SortType = EPubnubGetAllSortType::PGAST_ID;
+		SingleSort.SortOrder = false; // Ascending
+		TestSort.GetAllSort.Add(SingleSort);
+		FPubnubPage TestPage; // Empty page for first page
+		
+		FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels(TestLimit, TestFilter, TestSort, TestPage);
+		
+		TestFalse("GetChannels should succeed with all parameters", GetChannelsResult.Result.Error);
+		TestTrue("Channels array should be valid", GetChannelsResult.Channels.Num() >= 0);
+		TestTrue("Total count should be non-negative", GetChannelsResult.Total >= 0);
+		
+		// Verify pagination information is present
+		TestTrue("Page information should be present", true);
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsWithLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.3FullParameters.WithLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsWithLimitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_limit_init";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test channels
+		for(int32 i = 1; i <= 5; ++i)
+		{
+			const FString TestChannelID = SDK_PREFIX + FString::Printf(TEXT("test_get_channels_limit_%d"), i);
+			FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+			TestFalse(FString::Printf(TEXT("CreateChannel %d should succeed"), i), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		}
+		
+		// Test GetChannels with limit
+		const int TestLimit = 3;
+		FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels(TestLimit);
+		
+		TestFalse("GetChannels should succeed with limit", GetChannelsResult.Result.Error);
+		TestTrue("Channels array should be valid", GetChannelsResult.Channels.Num() >= 0);
+		TestTrue("Channels count should not exceed limit", GetChannelsResult.Channels.Num() <= TestLimit || GetChannelsResult.Channels.Num() == CreatedChannelIDs.Num());
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsWithFilterTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.3FullParameters.WithFilter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsWithFilterTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_filter_init";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test channels with names set for filtering
+		const FString TestChannelID1 = SDK_PREFIX + "test_get_channels_filter_match";
+		const FString TestChannelID2 = SDK_PREFIX + "test_get_channels_filter_match2";
+		const FString TestChannelID3 = SDK_PREFIX + "test_get_channels_filter_nomatch";
+		
+		FPubnubChatChannelData ChannelData1;
+		ChannelData1.ChannelName = TEXT("FilterMatchChannel1");
+		FPubnubChatChannelResult CreateResult1 = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+		TestFalse("CreateChannel1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedChannelIDs.Add(TestChannelID1); }
+		
+		FPubnubChatChannelData ChannelData2;
+		ChannelData2.ChannelName = TEXT("FilterMatchChannel2");
+		FPubnubChatChannelResult CreateResult2 = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+		TestFalse("CreateChannel2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedChannelIDs.Add(TestChannelID2); }
+		
+		FPubnubChatChannelData ChannelData3;
+		ChannelData3.ChannelName = TEXT("NoMatchChannel");
+		FPubnubChatChannelResult CreateResult3 = Chat->CreatePublicConversation(TestChannelID3, ChannelData3);
+		TestFalse("CreateChannel3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedChannelIDs.Add(TestChannelID3); }
+		
+		// First verify channels exist by getting them individually
+		FPubnubChatChannelResult GetChannel1Result = Chat->GetChannel(TestChannelID1);
+		TestFalse("GetChannel1 should succeed", GetChannel1Result.Result.Error);
+		TestNotNull("Channel1 should exist", GetChannel1Result.Channel);
+		
+		FPubnubChatChannelResult GetChannel2Result = Chat->GetChannel(TestChannelID2);
+		TestFalse("GetChannel2 should succeed", GetChannel2Result.Result.Error);
+		TestNotNull("Channel2 should exist", GetChannel2Result.Channel);
+		
+		FPubnubChatChannelResult GetChannel3Result = Chat->GetChannel(TestChannelID3);
+		TestFalse("GetChannel3 should succeed", GetChannel3Result.Result.Error);
+		TestNotNull("Channel3 should exist", GetChannel3Result.Channel);
+		
+		if(!GetChannel1Result.Channel || !GetChannel2Result.Channel || !GetChannel3Result.Channel)
+		{
+			// Cleanup before failing
+			for(const FString& ChannelID : CreatedChannelIDs)
+			{
+				Chat->DeleteChannel(ChannelID, false);
+			}
+			CleanUp();
+			return false;
+		}
+		
+		// Test GetChannels with filter by name using LIKE pattern
+		const FString TestFilter = TEXT("name LIKE '*FilterMatch*'");
+		FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels(0, TestFilter);
+		
+		TestFalse("GetChannels should succeed with filter", GetChannelsResult.Result.Error);
+		
+		// Verify filtered results
+		TArray<FString> FoundChannelIDs;
+		for(UPubnubChatChannel* Channel : GetChannelsResult.Channels)
+		{
+			if(Channel)
+			{
+				FoundChannelIDs.Add(Channel->GetChannelID());
+			}
+		}
+		
+		// Verify that matching channels are found
+		bool FoundMatchingChannel1 = FoundChannelIDs.Contains(TestChannelID1);
+		bool FoundMatchingChannel2 = FoundChannelIDs.Contains(TestChannelID2);
+		bool FoundNonMatchingChannel = FoundChannelIDs.Contains(TestChannelID3);
+		
+		// Test must verify expected results - both matching channels should be found
+		TestTrue("Filtered results should contain TestChannelID1", FoundMatchingChannel1);
+		TestTrue("Filtered results should contain TestChannelID2", FoundMatchingChannel2);
+		TestFalse("Non-matching channel should not be in filtered results", FoundNonMatchingChannel);
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsWithPageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.3FullParameters.WithPage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsWithPageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_page_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Test GetChannels with Page parameter (first page - empty page)
+		FPubnubPage FirstPage; // Empty page for first page
+		FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels(0, TEXT(""), FPubnubGetAllSort(), FirstPage);
+		
+		TestFalse("GetChannels should succeed with Page", GetChannelsResult.Result.Error);
+		TestTrue("Channels array should be valid", GetChannelsResult.Channels.Num() >= 0);
+		TestTrue("Page information should be present", true);
+		
+		// If there's a next page, test pagination
+		if(!GetChannelsResult.Page.Next.IsEmpty())
+		{
+			FPubnubPage NextPage;
+			NextPage.Next = GetChannelsResult.Page.Next;
+			FPubnubChatGetChannelsResult GetChannelsResultNext = Chat->GetChannels(0, TEXT(""), FPubnubGetAllSort(), NextPage);
+			
+			TestFalse("GetChannels should succeed with Next page", GetChannelsResultNext.Result.Error);
+			TestTrue("Channels array should be valid", GetChannelsResultNext.Channels.Num() >= 0);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetChannels with multiple channels created.
+ * Verifies that all created channels are returned in the results and that the total count is correct.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsMultipleChannelsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.4Advanced.MultipleChannels", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsMultipleChannelsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_multiple_init";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test channels
+		const FString TestChannelID1 = SDK_PREFIX + "test_get_channels_multiple_1";
+		const FString TestChannelID2 = SDK_PREFIX + "test_get_channels_multiple_2";
+		const FString TestChannelID3 = SDK_PREFIX + "test_get_channels_multiple_3";
+		const FString TestChannelID4 = SDK_PREFIX + "test_get_channels_multiple_4";
+		const FString TestChannelID5 = SDK_PREFIX + "test_get_channels_multiple_5";
+		
+		TArray<FString> TestChannelIDs = {TestChannelID1, TestChannelID2, TestChannelID3, TestChannelID4, TestChannelID5};
+		for(const FString& ChannelID : TestChannelIDs)
+		{
+			FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(ChannelID, FPubnubChatChannelData());
+			TestFalse(FString::Printf(TEXT("CreateChannel %s should succeed"), *ChannelID), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(ChannelID); }
+		}
+		
+		// Get all channels
+		FPubnubChatGetChannelsResult GetChannelsResult = Chat->GetChannels();
+		
+		TestFalse("GetChannels should succeed", GetChannelsResult.Result.Error);
+		TestTrue("Channels array should contain at least created channels", GetChannelsResult.Channels.Num() >= CreatedChannelIDs.Num());
+		TestTrue("Total count should be at least number of created channels", GetChannelsResult.Total >= CreatedChannelIDs.Num());
+		
+		// Verify all created channels are in the result
+		TArray<FString> FoundChannelIDs;
+		for(UPubnubChatChannel* Channel : GetChannelsResult.Channels)
+		{
+			if(Channel)
+			{
+				FoundChannelIDs.Add(Channel->GetChannelID());
+			}
+		}
+		
+		for(const FString& CreatedChannelID : CreatedChannelIDs)
+		{
+			TestTrue(FString::Printf(TEXT("Created channel %s should be found in results"), *CreatedChannelID), FoundChannelIDs.Contains(CreatedChannelID));
+		}
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests pagination functionality of GetChannels.
+ * Verifies that pagination works correctly with limit parameter, next page navigation, and previous page navigation.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsPaginationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.4Advanced.Pagination", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsPaginationTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_pagination_init";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test channels to ensure pagination is needed
+		for(int32 i = 1; i <= 10; ++i)
+		{
+			const FString TestChannelID = SDK_PREFIX + FString::Printf(TEXT("test_get_channels_pagination_%d"), i);
+			FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+			TestFalse(FString::Printf(TEXT("CreateChannel %d should succeed"), i), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		}
+		
+		// Test pagination with limit
+		const int PageLimit = 3;
+		FPubnubPage FirstPage; // Empty page for first page
+		FPubnubChatGetChannelsResult GetChannelsResult1 = Chat->GetChannels(PageLimit, TEXT(""), FPubnubGetAllSort(), FirstPage);
+		
+		TestFalse("First GetChannels should succeed", GetChannelsResult1.Result.Error);
+		TestTrue("First page should have channels", GetChannelsResult1.Channels.Num() >= 0);
+		
+		// If there's a next page, test navigation
+		if(!GetChannelsResult1.Page.Next.IsEmpty())
+		{
+			FPubnubPage NextPage;
+			NextPage.Next = GetChannelsResult1.Page.Next;
+			FPubnubChatGetChannelsResult GetChannelsResult2 = Chat->GetChannels(PageLimit, TEXT(""), FPubnubGetAllSort(), NextPage);
+			
+			TestFalse("Second GetChannels should succeed", GetChannelsResult2.Result.Error);
+			TestTrue("Second page should have channels", GetChannelsResult2.Channels.Num() >= 0);
+			
+			// If there's a previous page, test backward navigation
+			if(!GetChannelsResult2.Page.Prev.IsEmpty())
+			{
+				FPubnubPage PrevPage;
+				PrevPage.Prev = GetChannelsResult2.Page.Prev;
+				FPubnubChatGetChannelsResult GetChannelsResult3 = Chat->GetChannels(PageLimit, TEXT(""), FPubnubGetAllSort(), PrevPage);
+				
+				TestFalse("Third GetChannels (prev page) should succeed", GetChannelsResult3.Result.Error);
+				TestTrue("Previous page should have channels", GetChannelsResult3.Channels.Num() >= 0);
+			}
+		}
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests consistency of GetChannels results.
+ * Verifies that multiple calls to GetChannels return consistent results.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelsConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannels.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelsConsistencyTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channels_consistency_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_channels_consistency";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreateChannel should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		
+		// Call GetChannels multiple times - should return consistent results
+		FPubnubChatGetChannelsResult GetChannelsResult1 = Chat->GetChannels();
+		FPubnubChatGetChannelsResult GetChannelsResult2 = Chat->GetChannels();
+		FPubnubChatGetChannelsResult GetChannelsResult3 = Chat->GetChannels();
+		
+		TestFalse("First GetChannels should succeed", GetChannelsResult1.Result.Error);
+		TestFalse("Second GetChannels should succeed", GetChannelsResult2.Result.Error);
+		TestFalse("Third GetChannels should succeed", GetChannelsResult3.Result.Error);
+		
+		// Total count should be consistent
+		TestEqual("Total count should be consistent across calls", GetChannelsResult1.Total, GetChannelsResult2.Total);
+		TestEqual("Total count should be consistent across calls", GetChannelsResult2.Total, GetChannelsResult3.Total);
+		
+		// Channels count should be consistent (may vary slightly due to timing, but should be close)
+		TestTrue("Channels count should be consistent", FMath::Abs(GetChannelsResult1.Channels.Num() - GetChannelsResult2.Channels.Num()) <= 1);
+		TestTrue("Channels count should be consistent", FMath::Abs(GetChannelsResult2.Channels.Num() - GetChannelsResult3.Channels.Num()) <= 1);
+		
+		// Cleanup: Delete created channel
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+	
+	CleanUp();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

@@ -839,6 +839,43 @@ bool FPubnubChatUpdateUserEmptyUserIDTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserNonExistingUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUser.1Validation.NonExistingUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUpdateUserNonExistingUserTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_user_init";
+	const FString NonExistingUserID = SDK_PREFIX + "test_update_user_nonexisting";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Try to update user that doesn't exist (without creating it first)
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("NonExistingUser");
+		FPubnubChatUserResult UpdateResult = Chat->UpdateUser(NonExistingUserID, UserData);
+		
+		TestTrue("UpdateUser should fail with non-existing user", UpdateResult.Result.Error);
+		TestNull("User should not be returned", UpdateResult.User);
+		TestFalse("ErrorMessage should not be empty", UpdateResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
 // ============================================================================
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
@@ -1510,7 +1547,7 @@ bool FPubnubChatGetUsersFullParametersTest::RunTest(const FString& Parameters)
 		
 		// Test GetUsers with all parameters
 		const int TestLimit = 10;
-		const FString TestFilter = TEXT("name LIKE '%test_get_users_full%'");
+		const FString TestFilter = TEXT("name LIKE '*test_get_users_full*'");
 		FPubnubGetAllSort TestSort;
 		FPubnubGetAllSingleSort SingleSort;
 		SingleSort.SortType = EPubnubGetAllSortType::PGAST_ID;
@@ -1975,7 +2012,7 @@ bool FPubnubChatGetUsersFilteringTest::RunTest(const FString& Parameters)
 		TestTrue("Filtered user should be found in results", FoundFilteredUser || FilteredResult.Users.Num() == 0);
 		
 		// Test filtering by name pattern
-		FString FilterByName = TEXT("name LIKE '%FilterUser%'");
+		FString FilterByName = TEXT("name LIKE '*FilterUser*'");
 		FPubnubChatGetUsersResult FilteredByNameResult = Chat->GetUsers(0, FilterByName);
 		
 		TestFalse("GetUsers with name filter should succeed", FilteredByNameResult.Result.Error);
