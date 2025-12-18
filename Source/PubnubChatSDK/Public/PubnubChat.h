@@ -123,6 +123,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult DeleteChannel(const FString ChannelID, bool Soft = false);
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Chanenl")
+	FPubnubChatGetChannelSuggestionsResult GetChannelSuggestions(const FString Text, int Limit = 10);
+
 	
 
 
@@ -144,26 +147,19 @@ public:
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
-
 	UPROPERTY()
 	TObjectPtr<UPubnubChatUser> CurrentUser = nullptr;
-	
 	UPROPERTY()
 	TObjectPtr<UPubnubChatAccessManager> AccessManager = nullptr;
-
 	UPROPERTY()
 	FString CurrentUserID = "";
-
 	UPROPERTY()
 	FPubnubChatConfig ChatConfig;
-
 	/** Repository that manages shared data for all chat objects */
 	UPROPERTY()
 	TObjectPtr<UPubnubChatObjectsRepository> ObjectsRepository = nullptr;
-	
 	UPROPERTY()
 	bool IsInitialized = false;
-
 	//Container for subscriptions used during listen for events - we need to keep them alive
 	UPROPERTY()
 	TArray<UPubnubSubscription*> ListenForEventsSubscriptions;

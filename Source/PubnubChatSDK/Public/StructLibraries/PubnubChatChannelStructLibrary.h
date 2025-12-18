@@ -62,6 +62,18 @@ struct FPubnubChatGetChannelsResult
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatGetChannelSuggestionsResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatChannel*> Channels;
+};
+
+USTRUCT(BlueprintType)
 struct FPubnubChatConnectResult
 {
 	GENERATED_BODY()

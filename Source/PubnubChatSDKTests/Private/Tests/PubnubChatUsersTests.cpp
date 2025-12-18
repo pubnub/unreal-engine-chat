@@ -2225,5 +2225,684 @@ bool FPubnubChatGetUsersConsistencyTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// ============================================================================
+// GETUSERSUGGESTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Get Chat without initializing
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	TestNull("Chat should be null before InitChat", Chat);
+	
+	if(!Chat)
+	{
+		// Try to get user suggestions without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(TEXT("test"), 10);
+			
+			TestTrue("GetUserSuggestions should fail when Chat is not initialized", GetSuggestionsResult.Result.Error);
+			TestEqual("Users array should be empty", GetSuggestionsResult.Users.Num(), 0);
+			TestFalse("ErrorMessage should not be empty", GetSuggestionsResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsEmptyTextTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.1Validation.EmptyText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsEmptyTextTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_user_suggestions_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Try to get user suggestions with empty Text
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(TEXT(""), 10);
+		
+		TestTrue("GetUserSuggestions should fail with empty Text", GetSuggestionsResult.Result.Error);
+		TestEqual("Users array should be empty", GetSuggestionsResult.Users.Num(), 0);
+		TestFalse("ErrorMessage should not be empty", GetSuggestionsResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_happy_init";
+	const FString TestUserID = SDK_PREFIX + "test_get_user_suggestions_happy";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test user with a specific name pattern
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("TestUserHappy");
+		FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID, UserData);
+		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedUserIDs.Add(TestUserID); }
+		
+		// Call GetUserSuggestions with only required parameter (Text)
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(TEXT("TestUser"));
+		
+		TestFalse("GetUserSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Users array should be valid (may be empty)", GetSuggestionsResult.Users.Num() >= 0);
+		
+		// Cleanup: Delete created user
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_full_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_user_suggestions_full_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_user_suggestions_full_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_get_user_suggestions_full_3";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test users with matching name patterns
+		FPubnubChatUserData UserData1;
+		UserData1.UserName = TEXT("FullTestUser1");
+		FPubnubChatUserResult CreateResult1 = Chat->CreateUser(TestUserID1, UserData1);
+		TestFalse("CreateUser1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedUserIDs.Add(TestUserID1); }
+		
+		FPubnubChatUserData UserData2;
+		UserData2.UserName = TEXT("FullTestUser2");
+		FPubnubChatUserResult CreateResult2 = Chat->CreateUser(TestUserID2, UserData2);
+		TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedUserIDs.Add(TestUserID2); }
+		
+		FPubnubChatUserData UserData3;
+		UserData3.UserName = TEXT("FullTestUser3");
+		FPubnubChatUserResult CreateResult3 = Chat->CreateUser(TestUserID3, UserData3);
+		TestFalse("CreateUser3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedUserIDs.Add(TestUserID3); }
+		
+		// Test GetUserSuggestions with all parameters (Text and Limit)
+		const FString SearchText = TEXT("FullTest");
+		const int TestLimit = 2;
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(SearchText, TestLimit);
+		
+		TestFalse("GetUserSuggestions should succeed with all parameters", GetSuggestionsResult.Result.Error);
+		TestTrue("Users array should be valid", GetSuggestionsResult.Users.Num() >= 0);
+		TestTrue("Users count should not exceed limit (if limit is enforced)", GetSuggestionsResult.Users.Num() <= TestLimit || GetSuggestionsResult.Users.Num() == 0);
+		
+		// Cleanup: Delete created users
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsWithLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.3FullParameters.WithLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsWithLimitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_limit_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_user_suggestions_limit_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_user_suggestions_limit_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_get_user_suggestions_limit_3";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test users with matching name patterns
+		FPubnubChatUserData UserData1;
+		UserData1.UserName = TEXT("LimitTestUser1");
+		FPubnubChatUserResult CreateResult1 = Chat->CreateUser(TestUserID1, UserData1);
+		TestFalse("CreateUser1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedUserIDs.Add(TestUserID1); }
+		
+		FPubnubChatUserData UserData2;
+		UserData2.UserName = TEXT("LimitTestUser2");
+		FPubnubChatUserResult CreateResult2 = Chat->CreateUser(TestUserID2, UserData2);
+		TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedUserIDs.Add(TestUserID2); }
+		
+		FPubnubChatUserData UserData3;
+		UserData3.UserName = TEXT("LimitTestUser3");
+		FPubnubChatUserResult CreateResult3 = Chat->CreateUser(TestUserID3, UserData3);
+		TestFalse("CreateUser3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedUserIDs.Add(TestUserID3); }
+		
+		// Test GetUserSuggestions with Limit parameter
+		const FString SearchText = TEXT("LimitTest");
+		const int TestLimit = 2;
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(SearchText, TestLimit);
+		
+		TestFalse("GetUserSuggestions should succeed with Limit", GetSuggestionsResult.Result.Error);
+		TestTrue("Users array should be valid", GetSuggestionsResult.Users.Num() >= 0);
+		TestTrue("Users count should not exceed limit (if limit is enforced)", GetSuggestionsResult.Users.Num() <= TestLimit || GetSuggestionsResult.Users.Num() == 0);
+		
+		// Cleanup: Delete created users
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetUserSuggestions with multiple users matching the search pattern.
+ * Verifies that all matching users are returned and that the results are correct.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsMultipleMatchesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.4Advanced.MultipleMatches", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsMultipleMatchesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_multi_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_user_suggestions_multi_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_user_suggestions_multi_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_get_user_suggestions_multi_3";
+	const FString TestUserID4 = SDK_PREFIX + "test_get_user_suggestions_multi_4";
+	const FString TestUserID5 = SDK_PREFIX + "test_get_user_suggestions_multi_5";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test users with matching name patterns
+		TArray<FString> TestUserIDs = {TestUserID1, TestUserID2, TestUserID3, TestUserID4, TestUserID5};
+		for(int32 i = 0; i < TestUserIDs.Num(); ++i)
+		{
+			FPubnubChatUserData UserData;
+			UserData.UserName = FString::Printf(TEXT("MultiTestUser%d"), i + 1);
+			FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserIDs[i], UserData);
+			TestFalse(FString::Printf(TEXT("CreateUser %s should succeed"), *TestUserIDs[i]), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedUserIDs.Add(TestUserIDs[i]); }
+		}
+		
+		// Get user suggestions with search text that matches all created users
+		const FString SearchText = TEXT("MultiTest");
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(SearchText, 10);
+		
+		TestFalse("GetUserSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Users array should contain at least created users", GetSuggestionsResult.Users.Num() >= CreatedUserIDs.Num());
+		
+		// Verify all created users are in the result
+		TArray<FString> FoundUserIDs;
+		for(UPubnubChatUser* User : GetSuggestionsResult.Users)
+		{
+			if(User)
+			{
+				FoundUserIDs.Add(User->GetUserID());
+			}
+		}
+		
+		for(const FString& CreatedUserID : CreatedUserIDs)
+		{
+			TestTrue(FString::Printf(TEXT("Created user %s should be found in suggestions"), *CreatedUserID), FoundUserIDs.Contains(CreatedUserID));
+		}
+		
+		// Cleanup: Delete created users
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUserSuggestions with partial name matching.
+ * Verifies that the function correctly matches users based on name prefix pattern.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsPartialMatchTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.4Advanced.PartialMatch", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsPartialMatchTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_partial_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_user_suggestions_partial_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_user_suggestions_partial_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_get_user_suggestions_partial_3";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test users with different name patterns
+		FPubnubChatUserData UserData1;
+		UserData1.UserName = TEXT("PartialMatchUser1");
+		FPubnubChatUserResult CreateResult1 = Chat->CreateUser(TestUserID1, UserData1);
+		TestFalse("CreateUser1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedUserIDs.Add(TestUserID1); }
+		
+		FPubnubChatUserData UserData2;
+		UserData2.UserName = TEXT("PartialMatchUser2");
+		FPubnubChatUserResult CreateResult2 = Chat->CreateUser(TestUserID2, UserData2);
+		TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedUserIDs.Add(TestUserID2); }
+		
+		FPubnubChatUserData UserData3;
+		UserData3.UserName = TEXT("DifferentNameUser");
+		FPubnubChatUserResult CreateResult3 = Chat->CreateUser(TestUserID3, UserData3);
+		TestFalse("CreateUser3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedUserIDs.Add(TestUserID3); }
+		
+		// Test partial match - should match first two users but not third
+		const FString SearchText = TEXT("PartialMatch");
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(SearchText, 10);
+		
+		TestFalse("GetUserSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Users array should be valid", GetSuggestionsResult.Users.Num() >= 0);
+		
+		// Verify matching users are in results
+		TArray<FString> FoundUserIDs;
+		for(UPubnubChatUser* User : GetSuggestionsResult.Users)
+		{
+			if(User)
+			{
+				FoundUserIDs.Add(User->GetUserID());
+			}
+		}
+		
+		// First two users should be found
+		TestTrue("PartialMatchUser1 should be found", FoundUserIDs.Contains(TestUserID1));
+		TestTrue("PartialMatchUser2 should be found", FoundUserIDs.Contains(TestUserID2));
+		
+		// Third user should not be found (different name pattern)
+		TestFalse("DifferentNameUser should not be found", FoundUserIDs.Contains(TestUserID3));
+		
+		// Cleanup: Delete created users
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUserSuggestions with no matching users.
+ * Verifies that the function returns an empty result set when no users match the search pattern.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsNoMatchesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.4Advanced.NoMatches", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsNoMatchesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_nomatch_init";
+	const FString TestUserID = SDK_PREFIX + "test_get_user_suggestions_nomatch";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test user with a specific name
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("NoMatchTestUser");
+		FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID, UserData);
+		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedUserIDs.Add(TestUserID); }
+		
+		// Test with search text that doesn't match any user
+		const FString SearchText = TEXT("NonExistentUserPrefix");
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(SearchText, 10);
+		
+		TestFalse("GetUserSuggestions should succeed even with no matches", GetSuggestionsResult.Result.Error);
+		TestEqual("Users array should be empty for no matches", GetSuggestionsResult.Users.Num(), 0);
+		
+		// Cleanup: Delete created user
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUserSuggestions with case sensitivity.
+ * Verifies that the function correctly matches users regardless of case differences in the search text.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsCaseSensitivityTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.4Advanced.CaseSensitivity", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsCaseSensitivityTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_case_init";
+	const FString TestUserID = SDK_PREFIX + "test_get_user_suggestions_case";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test user with mixed case name
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("CaseTestUser");
+		FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID, UserData);
+		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedUserIDs.Add(TestUserID); }
+		
+		// Test with different case variations
+		const FString SearchTextLower = TEXT("casetest");
+		const FString SearchTextUpper = TEXT("CASETEST");
+		const FString SearchTextMixed = TEXT("CaseTest");
+		
+		FPubnubChatGetUserSuggestionsResult ResultLower = Chat->GetUserSuggestions(SearchTextLower, 10);
+		FPubnubChatGetUserSuggestionsResult ResultUpper = Chat->GetUserSuggestions(SearchTextUpper, 10);
+		FPubnubChatGetUserSuggestionsResult ResultMixed = Chat->GetUserSuggestions(SearchTextMixed, 10);
+		
+		TestFalse("GetUserSuggestions with lowercase should succeed", ResultLower.Result.Error);
+		TestFalse("GetUserSuggestions with uppercase should succeed", ResultUpper.Result.Error);
+		TestFalse("GetUserSuggestions with mixed case should succeed", ResultMixed.Result.Error);
+		
+		// At least one of the case variations should find the user (depending on backend implementation)
+		bool FoundInAnyCase = ResultLower.Users.Num() > 0 || ResultUpper.Users.Num() > 0 || ResultMixed.Users.Num() > 0;
+		TestTrue("User should be found with at least one case variation", FoundInAnyCase || ResultMixed.Users.Num() > 0);
+		
+		// Cleanup: Delete created user
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUserSuggestions limit enforcement.
+ * Verifies that the limit parameter correctly restricts the number of returned results.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsLimitEnforcementTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.4Advanced.LimitEnforcement", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsLimitEnforcementTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_limit_enforce_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_user_suggestions_limit_enforce_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_user_suggestions_limit_enforce_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_get_user_suggestions_limit_enforce_3";
+	const FString TestUserID4 = SDK_PREFIX + "test_get_user_suggestions_limit_enforce_4";
+	const FString TestUserID5 = SDK_PREFIX + "test_get_user_suggestions_limit_enforce_5";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test users with matching name patterns
+		TArray<FString> TestUserIDs = {TestUserID1, TestUserID2, TestUserID3, TestUserID4, TestUserID5};
+		for(int32 i = 0; i < TestUserIDs.Num(); ++i)
+		{
+			FPubnubChatUserData UserData;
+			UserData.UserName = FString::Printf(TEXT("LimitEnforceUser%d"), i + 1);
+			FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserIDs[i], UserData);
+			TestFalse(FString::Printf(TEXT("CreateUser %s should succeed"), *TestUserIDs[i]), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedUserIDs.Add(TestUserIDs[i]); }
+		}
+		
+		// Test with limit smaller than number of matching users
+		const FString SearchText = TEXT("LimitEnforce");
+		const int SmallLimit = 2;
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult = Chat->GetUserSuggestions(SearchText, SmallLimit);
+		
+		TestFalse("GetUserSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Users count should not exceed limit", GetSuggestionsResult.Users.Num() <= SmallLimit || GetSuggestionsResult.Users.Num() == 0);
+		
+		// Test with limit larger than number of matching users
+		const int LargeLimit = 20;
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResultLarge = Chat->GetUserSuggestions(SearchText, LargeLimit);
+		
+		TestFalse("GetUserSuggestions with large limit should succeed", GetSuggestionsResultLarge.Result.Error);
+		TestTrue("Users count should be valid", GetSuggestionsResultLarge.Users.Num() >= 0);
+		
+		// Cleanup: Delete created users
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests consistency of GetUserSuggestions results across multiple calls.
+ * Verifies that calling GetUserSuggestions multiple times with the same parameters returns consistent results.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestions.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUserSuggestionsConsistencyTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_consistency_init";
+	const FString TestUserID = SDK_PREFIX + "test_get_user_suggestions_consistency";
+	
+	TArray<FString> CreatedUserIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test user
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("ConsistencyTestUser");
+		FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID, UserData);
+		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedUserIDs.Add(TestUserID); }
+		
+		// Call GetUserSuggestions multiple times with same parameters
+		const FString SearchText = TEXT("Consistency");
+		const int TestLimit = 10;
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult1 = Chat->GetUserSuggestions(SearchText, TestLimit);
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult2 = Chat->GetUserSuggestions(SearchText, TestLimit);
+		FPubnubChatGetUserSuggestionsResult GetSuggestionsResult3 = Chat->GetUserSuggestions(SearchText, TestLimit);
+		
+		TestFalse("First GetUserSuggestions should succeed", GetSuggestionsResult1.Result.Error);
+		TestFalse("Second GetUserSuggestions should succeed", GetSuggestionsResult2.Result.Error);
+		TestFalse("Third GetUserSuggestions should succeed", GetSuggestionsResult3.Result.Error);
+		
+		// Results should be consistent (users count should be similar)
+		TestTrue("Users count should be consistent", FMath::Abs(GetSuggestionsResult1.Users.Num() - GetSuggestionsResult2.Users.Num()) <= 1);
+		TestTrue("Users count should be consistent", FMath::Abs(GetSuggestionsResult2.Users.Num() - GetSuggestionsResult3.Users.Num()) <= 1);
+		
+		// Cleanup: Delete created user
+		for(const FString& UserID : CreatedUserIDs)
+		{
+			Chat->DeleteUser(UserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

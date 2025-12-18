@@ -165,8 +165,11 @@ FPubnubChatGetUserSuggestionsResult UPubnubChat::GetUserSuggestions(const FStrin
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, Text);
 
-	//TODO:: Clarify usage and finish
-	
+	FString Filter = FString::Printf(TEXT(R"(name LIKE "%s*")"), *Text);
+	FPubnubChatGetUsersResult GetUsersResult = GetUsers(Limit, Filter);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetUsersResult.Result);
+
+	FinalResult.Users = GetUsersResult.Users;
 	return FinalResult;
 }
 
@@ -344,6 +347,20 @@ FPubnubChatChannelResult UPubnubChat::DeleteChannel(const FString ChannelID, boo
 	
 	//Create channel object and return final result
 	FinalResult.Channel = CreateChannelObject(ChannelID, GetChannelResult.ChannelData);
+	return FinalResult;
+}
+
+FPubnubChatGetChannelSuggestionsResult UPubnubChat::GetChannelSuggestions(const FString Text, int Limit)
+{
+	FPubnubChatGetChannelSuggestionsResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, Text);
+
+	FString Filter = FString::Printf(TEXT(R"(name LIKE "%s*")"), *Text);
+	FPubnubChatGetChannelsResult GetChannelsResult = GetChannels(Limit, Filter);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelsResult.Result);
+
+	FinalResult.Channels = GetChannelsResult.Channels;
 	return FinalResult;
 }
 

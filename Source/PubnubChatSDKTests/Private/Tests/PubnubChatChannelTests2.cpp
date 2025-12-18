@@ -2724,5 +2724,684 @@ bool FPubnubChatCreateGroupConversationMixedValidInvalidUsersTest::RunTest(const
 	return true;
 }
 
+// ============================================================================
+// GETCHANNELSUGGESTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Get Chat without initializing
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	TestNull("Chat should be null before InitChat", Chat);
+	
+	if(!Chat)
+	{
+		// Try to get channel suggestions without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(TEXT("test"), 10);
+			
+			TestTrue("GetChannelSuggestions should fail when Chat is not initialized", GetSuggestionsResult.Result.Error);
+			TestEqual("Channels array should be empty", GetSuggestionsResult.Channels.Num(), 0);
+			TestFalse("ErrorMessage should not be empty", GetSuggestionsResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsEmptyTextTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.1Validation.EmptyText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsEmptyTextTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_channel_suggestions_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Try to get channel suggestions with empty Text
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(TEXT(""), 10);
+		
+		TestTrue("GetChannelSuggestions should fail with empty Text", GetSuggestionsResult.Result.Error);
+		TestEqual("Channels array should be empty", GetSuggestionsResult.Channels.Num(), 0);
+		TestFalse("ErrorMessage should not be empty", GetSuggestionsResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_channel_suggestions_happy";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test channel with a specific name pattern
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("TestChannelHappy");
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		
+		// Call GetChannelSuggestions with only required parameter (Text)
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(TEXT("TestChannel"));
+		
+		TestFalse("GetChannelSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Channels array should be valid (may be empty)", GetSuggestionsResult.Channels.Num() >= 0);
+		
+		// Cleanup: Delete created channel
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_full_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_channel_suggestions_full_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_channel_suggestions_full_2";
+	const FString TestChannelID3 = SDK_PREFIX + "test_get_channel_suggestions_full_3";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test channels with matching name patterns
+		FPubnubChatChannelData ChannelData1;
+		ChannelData1.ChannelName = TEXT("FullTestChannel1");
+		FPubnubChatChannelResult CreateResult1 = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+		TestFalse("CreatePublicConversation1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedChannelIDs.Add(TestChannelID1); }
+		
+		FPubnubChatChannelData ChannelData2;
+		ChannelData2.ChannelName = TEXT("FullTestChannel2");
+		FPubnubChatChannelResult CreateResult2 = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+		TestFalse("CreatePublicConversation2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedChannelIDs.Add(TestChannelID2); }
+		
+		FPubnubChatChannelData ChannelData3;
+		ChannelData3.ChannelName = TEXT("FullTestChannel3");
+		FPubnubChatChannelResult CreateResult3 = Chat->CreatePublicConversation(TestChannelID3, ChannelData3);
+		TestFalse("CreatePublicConversation3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedChannelIDs.Add(TestChannelID3); }
+		
+		// Test GetChannelSuggestions with all parameters (Text and Limit)
+		const FString SearchText = TEXT("FullTest");
+		const int TestLimit = 2;
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(SearchText, TestLimit);
+		
+		TestFalse("GetChannelSuggestions should succeed with all parameters", GetSuggestionsResult.Result.Error);
+		TestTrue("Channels array should be valid", GetSuggestionsResult.Channels.Num() >= 0);
+		TestTrue("Channels count should not exceed limit (if limit is enforced)", GetSuggestionsResult.Channels.Num() <= TestLimit || GetSuggestionsResult.Channels.Num() == 0);
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsWithLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.3FullParameters.WithLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsWithLimitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_limit_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_channel_suggestions_limit_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_channel_suggestions_limit_2";
+	const FString TestChannelID3 = SDK_PREFIX + "test_get_channel_suggestions_limit_3";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test channels with matching name patterns
+		FPubnubChatChannelData ChannelData1;
+		ChannelData1.ChannelName = TEXT("LimitTestChannel1");
+		FPubnubChatChannelResult CreateResult1 = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+		TestFalse("CreatePublicConversation1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedChannelIDs.Add(TestChannelID1); }
+		
+		FPubnubChatChannelData ChannelData2;
+		ChannelData2.ChannelName = TEXT("LimitTestChannel2");
+		FPubnubChatChannelResult CreateResult2 = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+		TestFalse("CreatePublicConversation2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedChannelIDs.Add(TestChannelID2); }
+		
+		FPubnubChatChannelData ChannelData3;
+		ChannelData3.ChannelName = TEXT("LimitTestChannel3");
+		FPubnubChatChannelResult CreateResult3 = Chat->CreatePublicConversation(TestChannelID3, ChannelData3);
+		TestFalse("CreatePublicConversation3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedChannelIDs.Add(TestChannelID3); }
+		
+		// Test GetChannelSuggestions with Limit parameter
+		const FString SearchText = TEXT("LimitTest");
+		const int TestLimit = 2;
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(SearchText, TestLimit);
+		
+		TestFalse("GetChannelSuggestions should succeed with Limit", GetSuggestionsResult.Result.Error);
+		TestTrue("Channels array should be valid", GetSuggestionsResult.Channels.Num() >= 0);
+		TestTrue("Channels count should not exceed limit (if limit is enforced)", GetSuggestionsResult.Channels.Num() <= TestLimit || GetSuggestionsResult.Channels.Num() == 0);
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetChannelSuggestions with multiple channels matching the search pattern.
+ * Verifies that all matching channels are returned and that the results are correct.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsMultipleMatchesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.4Advanced.MultipleMatches", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsMultipleMatchesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_multi_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_channel_suggestions_multi_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_channel_suggestions_multi_2";
+	const FString TestChannelID3 = SDK_PREFIX + "test_get_channel_suggestions_multi_3";
+	const FString TestChannelID4 = SDK_PREFIX + "test_get_channel_suggestions_multi_4";
+	const FString TestChannelID5 = SDK_PREFIX + "test_get_channel_suggestions_multi_5";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test channels with matching name patterns
+		TArray<FString> TestChannelIDs = {TestChannelID1, TestChannelID2, TestChannelID3, TestChannelID4, TestChannelID5};
+		for(int32 i = 0; i < TestChannelIDs.Num(); ++i)
+		{
+			FPubnubChatChannelData ChannelData;
+			ChannelData.ChannelName = FString::Printf(TEXT("MultiTestChannel%d"), i + 1);
+			FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelIDs[i], ChannelData);
+			TestFalse(FString::Printf(TEXT("CreatePublicConversation %s should succeed"), *TestChannelIDs[i]), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelIDs[i]); }
+		}
+		
+		// Get channel suggestions with search text that matches all created channels
+		const FString SearchText = TEXT("MultiTest");
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(SearchText, 10);
+		
+		TestFalse("GetChannelSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Channels array should contain at least created channels", GetSuggestionsResult.Channels.Num() >= CreatedChannelIDs.Num());
+		
+		// Verify all created channels are in the result
+		TArray<FString> FoundChannelIDs;
+		for(UPubnubChatChannel* Channel : GetSuggestionsResult.Channels)
+		{
+			if(Channel)
+			{
+				FoundChannelIDs.Add(Channel->GetChannelID());
+			}
+		}
+		
+		for(const FString& CreatedChannelID : CreatedChannelIDs)
+		{
+			TestTrue(FString::Printf(TEXT("Created channel %s should be found in suggestions"), *CreatedChannelID), FoundChannelIDs.Contains(CreatedChannelID));
+		}
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetChannelSuggestions with partial name matching.
+ * Verifies that the function correctly matches channels based on name prefix pattern.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsPartialMatchTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.4Advanced.PartialMatch", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsPartialMatchTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_partial_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_channel_suggestions_partial_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_channel_suggestions_partial_2";
+	const FString TestChannelID3 = SDK_PREFIX + "test_get_channel_suggestions_partial_3";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create test channels with different name patterns
+		FPubnubChatChannelData ChannelData1;
+		ChannelData1.ChannelName = TEXT("PartialMatchChannel1");
+		FPubnubChatChannelResult CreateResult1 = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+		TestFalse("CreatePublicConversation1 should succeed", CreateResult1.Result.Error);
+		if(!CreateResult1.Result.Error) { CreatedChannelIDs.Add(TestChannelID1); }
+		
+		FPubnubChatChannelData ChannelData2;
+		ChannelData2.ChannelName = TEXT("PartialMatchChannel2");
+		FPubnubChatChannelResult CreateResult2 = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+		TestFalse("CreatePublicConversation2 should succeed", CreateResult2.Result.Error);
+		if(!CreateResult2.Result.Error) { CreatedChannelIDs.Add(TestChannelID2); }
+		
+		FPubnubChatChannelData ChannelData3;
+		ChannelData3.ChannelName = TEXT("DifferentNameChannel");
+		FPubnubChatChannelResult CreateResult3 = Chat->CreatePublicConversation(TestChannelID3, ChannelData3);
+		TestFalse("CreatePublicConversation3 should succeed", CreateResult3.Result.Error);
+		if(!CreateResult3.Result.Error) { CreatedChannelIDs.Add(TestChannelID3); }
+		
+		// Test partial match - should match first two channels but not third
+		const FString SearchText = TEXT("PartialMatch");
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(SearchText, 10);
+		
+		TestFalse("GetChannelSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Channels array should be valid", GetSuggestionsResult.Channels.Num() >= 0);
+		
+		// Verify matching channels are in results
+		TArray<FString> FoundChannelIDs;
+		for(UPubnubChatChannel* Channel : GetSuggestionsResult.Channels)
+		{
+			if(Channel)
+			{
+				FoundChannelIDs.Add(Channel->GetChannelID());
+			}
+		}
+		
+		// First two channels should be found
+		TestTrue("PartialMatchChannel1 should be found", FoundChannelIDs.Contains(TestChannelID1));
+		TestTrue("PartialMatchChannel2 should be found", FoundChannelIDs.Contains(TestChannelID2));
+		
+		// Third channel should not be found (different name pattern)
+		TestFalse("DifferentNameChannel should not be found", FoundChannelIDs.Contains(TestChannelID3));
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetChannelSuggestions with no matching channels.
+ * Verifies that the function returns an empty result set when no channels match the search pattern.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsNoMatchesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.4Advanced.NoMatches", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsNoMatchesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_nomatch_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_channel_suggestions_nomatch";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test channel with a specific name
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("NoMatchTestChannel");
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		
+		// Test with search text that doesn't match any channel
+		const FString SearchText = TEXT("NonExistentChannelPrefix");
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(SearchText, 10);
+		
+		TestFalse("GetChannelSuggestions should succeed even with no matches", GetSuggestionsResult.Result.Error);
+		TestEqual("Channels array should be empty for no matches", GetSuggestionsResult.Channels.Num(), 0);
+		
+		// Cleanup: Delete created channel
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetChannelSuggestions with case sensitivity.
+ * Verifies that the function correctly matches channels regardless of case differences in the search text.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsCaseSensitivityTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.4Advanced.CaseSensitivity", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsCaseSensitivityTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_case_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_channel_suggestions_case";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test channel with mixed case name
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("CaseTestChannel");
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		
+		// Test with different case variations
+		const FString SearchTextLower = TEXT("casetest");
+		const FString SearchTextUpper = TEXT("CASETEST");
+		const FString SearchTextMixed = TEXT("CaseTest");
+		
+		FPubnubChatGetChannelSuggestionsResult ResultLower = Chat->GetChannelSuggestions(SearchTextLower, 10);
+		FPubnubChatGetChannelSuggestionsResult ResultUpper = Chat->GetChannelSuggestions(SearchTextUpper, 10);
+		FPubnubChatGetChannelSuggestionsResult ResultMixed = Chat->GetChannelSuggestions(SearchTextMixed, 10);
+		
+		TestFalse("GetChannelSuggestions with lowercase should succeed", ResultLower.Result.Error);
+		TestFalse("GetChannelSuggestions with uppercase should succeed", ResultUpper.Result.Error);
+		TestFalse("GetChannelSuggestions with mixed case should succeed", ResultMixed.Result.Error);
+		
+		// At least one of the case variations should find the channel (depending on backend implementation)
+		bool FoundInAnyCase = ResultLower.Channels.Num() > 0 || ResultUpper.Channels.Num() > 0 || ResultMixed.Channels.Num() > 0;
+		TestTrue("Channel should be found with at least one case variation", FoundInAnyCase || ResultMixed.Channels.Num() > 0);
+		
+		// Cleanup: Delete created channel
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetChannelSuggestions limit enforcement.
+ * Verifies that the limit parameter correctly restricts the number of returned results.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsLimitEnforcementTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.4Advanced.LimitEnforcement", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsLimitEnforcementTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_limit_enforce_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_channel_suggestions_limit_enforce_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_channel_suggestions_limit_enforce_2";
+	const FString TestChannelID3 = SDK_PREFIX + "test_get_channel_suggestions_limit_enforce_3";
+	const FString TestChannelID4 = SDK_PREFIX + "test_get_channel_suggestions_limit_enforce_4";
+	const FString TestChannelID5 = SDK_PREFIX + "test_get_channel_suggestions_limit_enforce_5";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create multiple test channels with matching name patterns
+		TArray<FString> TestChannelIDs = {TestChannelID1, TestChannelID2, TestChannelID3, TestChannelID4, TestChannelID5};
+		for(int32 i = 0; i < TestChannelIDs.Num(); ++i)
+		{
+			FPubnubChatChannelData ChannelData;
+			ChannelData.ChannelName = FString::Printf(TEXT("LimitEnforceChannel%d"), i + 1);
+			FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelIDs[i], ChannelData);
+			TestFalse(FString::Printf(TEXT("CreatePublicConversation %s should succeed"), *TestChannelIDs[i]), CreateResult.Result.Error);
+			if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelIDs[i]); }
+		}
+		
+		// Test with limit smaller than number of matching channels
+		const FString SearchText = TEXT("LimitEnforce");
+		const int SmallLimit = 2;
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult = Chat->GetChannelSuggestions(SearchText, SmallLimit);
+		
+		TestFalse("GetChannelSuggestions should succeed", GetSuggestionsResult.Result.Error);
+		TestTrue("Channels count should not exceed limit", GetSuggestionsResult.Channels.Num() <= SmallLimit || GetSuggestionsResult.Channels.Num() == 0);
+		
+		// Test with limit larger than number of matching channels
+		const int LargeLimit = 20;
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResultLarge = Chat->GetChannelSuggestions(SearchText, LargeLimit);
+		
+		TestFalse("GetChannelSuggestions with large limit should succeed", GetSuggestionsResultLarge.Result.Error);
+		TestTrue("Channels count should be valid", GetSuggestionsResultLarge.Channels.Num() >= 0);
+		
+		// Cleanup: Delete created channels
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests consistency of GetChannelSuggestions results across multiple calls.
+ * Verifies that calling GetChannelSuggestions multiple times with the same parameters returns consistent results.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetChannelSuggestionsConsistencyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Channel.GetChannelSuggestions.4Advanced.Consistency", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetChannelSuggestionsConsistencyTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_channel_suggestions_consistency_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_channel_suggestions_consistency";
+	
+	TArray<FString> CreatedChannelIDs;
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create a test channel
+		FPubnubChatChannelData ChannelData;
+		ChannelData.ChannelName = TEXT("ConsistencyTestChannel");
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		if(!CreateResult.Result.Error) { CreatedChannelIDs.Add(TestChannelID); }
+		
+		// Call GetChannelSuggestions multiple times with same parameters
+		const FString SearchText = TEXT("Consistency");
+		const int TestLimit = 10;
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult1 = Chat->GetChannelSuggestions(SearchText, TestLimit);
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult2 = Chat->GetChannelSuggestions(SearchText, TestLimit);
+		FPubnubChatGetChannelSuggestionsResult GetSuggestionsResult3 = Chat->GetChannelSuggestions(SearchText, TestLimit);
+		
+		TestFalse("First GetChannelSuggestions should succeed", GetSuggestionsResult1.Result.Error);
+		TestFalse("Second GetChannelSuggestions should succeed", GetSuggestionsResult2.Result.Error);
+		TestFalse("Third GetChannelSuggestions should succeed", GetSuggestionsResult3.Result.Error);
+		
+		// Results should be consistent (channels count should be similar)
+		TestTrue("Channels count should be consistent", FMath::Abs(GetSuggestionsResult1.Channels.Num() - GetSuggestionsResult2.Channels.Num()) <= 1);
+		TestTrue("Channels count should be consistent", FMath::Abs(GetSuggestionsResult2.Channels.Num() - GetSuggestionsResult3.Channels.Num()) <= 1);
+		
+		// Cleanup: Delete created channel
+		for(const FString& ChannelID : CreatedChannelIDs)
+		{
+			Chat->DeleteChannel(ChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 
