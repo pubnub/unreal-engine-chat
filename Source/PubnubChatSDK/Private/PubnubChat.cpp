@@ -350,6 +350,22 @@ FPubnubChatChannelResult UPubnubChat::DeleteChannel(const FString ChannelID, boo
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChat::PinMessageToChannel(UPubnubChatMessage* Message, UPubnubChatChannel* Channel)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Message);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Channel);
+	
+	return Channel->PinMessage(Message);
+}
+
+FPubnubChatOperationResult UPubnubChat::UnpinMessageFromChannel(UPubnubChatChannel* Channel)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Channel);
+	return Channel->UnpinMessage();
+}
+
 FPubnubChatGetChannelSuggestionsResult UPubnubChat::GetChannelSuggestions(const FString Text, int Limit)
 {
 	FPubnubChatGetChannelSuggestionsResult FinalResult;

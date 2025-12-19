@@ -1844,6 +1844,9 @@ bool FPubnubChatGetUsersMultipleUsersTest::RunTest(const FString& Parameters)
 			if(!CreateResult.Result.Error) { CreatedUserIDs.Add(UserID); }
 		}
 		
+		// Wait a bit for server to process all user creations
+		FPlatformProcess::Sleep(1.0f);
+		
 		// Get all users
 		FPubnubChatGetUsersResult GetUsersResult = Chat->GetUsers();
 		

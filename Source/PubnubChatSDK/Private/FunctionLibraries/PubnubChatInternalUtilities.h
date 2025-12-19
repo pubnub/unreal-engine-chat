@@ -6,6 +6,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "PubnubChatEnumLibrary.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "PubnubChatInternalUtilities.generated.h"
 
 class FJsonObject;
@@ -56,15 +57,27 @@ public:
 
 	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
 	
+	
 	/* MEMBERSHIP */
 	
-	UFUNCTION()
 	static FString GetLastReadMessageTimetokenPropertyKey();
 
 	static void AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken);
 
 	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
 
+	
+	/* CHANNEL */
+	
+	static FString GetPinnedMessageTimetokenPropertyKey();
+	
+	static FString GetPinnedMessageChannelIDPropertyKey();
+	
+	//Message should be validated before using this function
+	static void AddPinnedMessageToChannelData(FPubnubChatChannelData& ChannelData, UPubnubChatMessage* Message);
+	
+	static bool RemovePinnedMessageFromChannelData(FPubnubChatChannelData& ChannelData);
+	
 	/* ACCESS MANAGER */
 
 	/**

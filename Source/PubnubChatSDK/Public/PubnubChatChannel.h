@@ -36,6 +36,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
 	FString GetChannelID() const { return ChannelID; }
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult Update(FPubnubChatChannelData ChannelData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceived MessageCallback);
@@ -59,6 +62,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
     FPubnubChatInviteMultipleResult InviteMultiple(TArray<UPubnubChatUser*> Users);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult PinMessage(UPubnubChatMessage* Message);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult UnpinMessage();
 
 	
 private:

@@ -122,6 +122,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult DeleteChannel(const FString ChannelID, bool Soft = false);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult PinMessageToChannel(UPubnubChatMessage* Message, UPubnubChatChannel* Channel);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult UnpinMessageFromChannel(UPubnubChatChannel* Channel);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Chanenl")
 	FPubnubChatGetChannelSuggestionsResult GetChannelSuggestions(const FString Text, int Limit = 10);

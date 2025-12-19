@@ -7,6 +7,7 @@
 #include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
 
 
 FString UPubnubChatInternalUtilities::GetSoftDeletedObjectPropertyKey()
@@ -159,6 +160,47 @@ FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<U
 		FinalFilter.Append(FString::Printf(TEXT(R"(uuid.id == "%s")"), *User->GetUserID()));
 	}
 	return FinalFilter;
+}
+
+FString UPubnubChatInternalUtilities::GetPinnedMessageTimetokenPropertyKey()
+{
+	return Pubnub_Chat_PinnedMessageTimetoken_Property_Name;
+}
+
+FString UPubnubChatInternalUtilities::GetPinnedMessageChannelIDPropertyKey()
+{
+	return Pubnub_Chat_PinnedMessageChannelID_Property_Name;
+}
+
+void UPubnubChatInternalUtilities::AddPinnedMessageToChannelData(FPubnubChatChannelData& ChannelData, UPubnubChatMessage* Message)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(ChannelData.Custom, JsonObject);
+	JsonObject->SetStringField(GetPinnedMessageTimetokenPropertyKey(), Message->GetMessageTimetoken());
+	JsonObject->SetStringField(GetPinnedMessageChannelIDPropertyKey(), Message->GetMessageData().ChannelID);
+	ChannelData.Custom = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
+bool UPubnubChatInternalUtilities::RemovePinnedMessageFromChannelData(FPubnubChatChannelData& ChannelData)
+{
+	bool RemovedPinnedMessage = false;
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(ChannelData.Custom, JsonObject);
+	if(JsonObject->HasField(GetPinnedMessageTimetokenPropertyKey()))
+	{
+		RemovedPinnedMessage = true;
+		JsonObject->RemoveField(GetPinnedMessageTimetokenPropertyKey());
+	}
+	if(JsonObject->HasField(GetPinnedMessageChannelIDPropertyKey()))
+	{
+		RemovedPinnedMessage = true;
+		JsonObject->RemoveField(GetPinnedMessageChannelIDPropertyKey());
+	}
+	if(RemovedPinnedMessage)
+	{
+		ChannelData.Custom = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+	}
+	return RemovedPinnedMessage;
 }
 
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)

@@ -13,6 +13,7 @@
 #include "Entities/PubnubChannelEntity.h"
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h" 
 
 
@@ -51,6 +52,21 @@ FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
 
 	UE_LOG(PubnubChatLog, Error, TEXT("Channel data not found in repository for ChannelID: %s"), *ChannelID);
 	return FPubnubChatChannelData();
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::Update(FPubnubChatChannelData ChannelData)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	//SetChannelMetadata by PubnubClient
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelData());
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
+	
+	//Update repository with updated channel data
+	Chat->ObjectsRepository->UpdateChannelData(ChannelID, ChannelData);
+
+	return FinalResult;
 }
 
 FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessageReceived MessageCallback)
@@ -282,6 +298,41 @@ FPubnubChatInviteMultipleResult UPubnubChatChannel::InviteMultiple(TArray<UPubnu
 		//Set Last Read Timetoken on created Membership
 		FPubnubChatOperationResult SetLRMTResult = Membership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
 		FinalResult.Result.Merge(SetLRMTResult);
+	}
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::PinMessage(UPubnubChatMessage* Message)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Message);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((Message->GetMessageData().ChannelID == ChannelID), TEXT("Can't pin Message from another Channel"));
+	
+	//Add pinned message to ChannelData
+	FPubnubChatChannelData ChannelData = GetChannelData();
+	UPubnubChatInternalUtilities::AddPinnedMessageToChannelData(ChannelData, Message);
+	
+	//Update Channel data
+	FPubnubChatOperationResult UpdateResult = Update(ChannelData);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::UnpinMessage()
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	//Remove pinned message from ChannelData
+	FPubnubChatChannelData ChannelData = GetChannelData();
+	if (UPubnubChatInternalUtilities::RemovePinnedMessageFromChannelData(ChannelData))
+	{
+		//Update Channel data - only if there was pinned message removed
+		FPubnubChatOperationResult UpdateResult = Update(ChannelData);
+		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 	}
 	
 	return FinalResult;
