@@ -6,6 +6,7 @@
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
+#include "FunctionLibraries/PubnubChatLogUtilities.h"
 
 
 void UPubnubChatUser::BeginDestroy()
@@ -37,10 +38,17 @@ FPubnubChatUserData UPubnubChatUser::GetUserData() const
 
 FPubnubChatOperationResult UPubnubChatUser::Update(FPubnubChatUserData UserData)
 {
+	FPubnubChatOperationResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
-
-	FPubnubChatUserResult UpdateUserResult = Chat->UpdateUser(UserID, UserData);
-	return UpdateUserResult.Result;
+	
+	//SetChannelMetadata by PubnubClient
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserData());
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
+	
+	//Update repository with updated channel data
+	Chat->ObjectsRepository->UpdateUserData(UserID, UserData);
+	
+	return FinalResult;
 }
 
 FPubnubChatOperationResult UPubnubChatUser::Delete(bool Soft)
@@ -49,6 +57,22 @@ FPubnubChatOperationResult UPubnubChatUser::Delete(bool Soft)
 
 	FPubnubChatUserResult DeleteUserResult = Chat->DeleteUser(UserID, Soft);
 	return DeleteUserResult.Result;
+}
+
+FPubnubChatWherePresentResult UPubnubChatUser::WherePresent()
+{
+	FPubnubChatWherePresentResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return Chat->WherePresent(UserID);
+}
+
+FPubnubChatIsPresentResult UPubnubChatUser::IsPresentOn(const FString ChannelID)
+{
+	FPubnubChatIsPresentResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return Chat->IsPresent(UserID, ChannelID);
 }
 
 void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)

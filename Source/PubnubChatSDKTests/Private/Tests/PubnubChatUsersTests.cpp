@@ -3,8 +3,10 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubChat.h"
 #include "PubnubChatUser.h"
+#include "PubnubChatChannel.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -2904,6 +2906,187 @@ bool FPubnubChatGetUserSuggestionsConsistencyTest::RunTest(const FString& Parame
 	}
 
 	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// PRESENCE TESTS
+// ============================================================================
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+/**
+ * Tests User->WherePresent happy path.
+ * Verifies that WherePresent returns channels where user is present.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserWherePresentHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Presence.WherePresent.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatUserWherePresentHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_where_present_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_where_present_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Get current user
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	TestNotNull("CurrentUser should be created", CurrentUser);
+	
+	if(!CurrentUser)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to make user present
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CurrentUser, TestChannelID]()
+	{
+		// Call User->WherePresent
+		FPubnubChatWherePresentResult WherePresentResult = CurrentUser->WherePresent();
+		
+		TestFalse("WherePresent should succeed", WherePresentResult.Result.Error);
+		TestTrue("Channels array should contain the joined channel", WherePresentResult.Channels.Contains(TestChannelID));
+		TestEqual("Channels array should have at least 1 channel", WherePresentResult.Channels.Num(), 1);
+	}, 1.0f));
+	
+	// Cleanup: Leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests User->IsPresentOn happy path.
+ * Verifies that IsPresentOn returns true when user is present on channel.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsPresentOnHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Presence.IsPresentOn.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatUserIsPresentOnHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_is_present_on_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_is_present_on_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Get current user
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	TestNotNull("CurrentUser should be created", CurrentUser);
+	
+	if(!CurrentUser)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to make user present
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CurrentUser, TestChannelID]()
+	{
+		// Call User->IsPresentOn
+		FPubnubChatIsPresentResult IsPresentResult = CurrentUser->IsPresentOn(TestChannelID);
+		
+		TestFalse("IsPresentOn should succeed", IsPresentResult.Result.Error);
+		TestTrue("IsPresentOn should return true when user is present", IsPresentResult.IsPresent);
+	}, 1.0f));
+	
+	// Cleanup: Leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUp();
+	}, 0.1f));
+	
 	return true;
 }
 

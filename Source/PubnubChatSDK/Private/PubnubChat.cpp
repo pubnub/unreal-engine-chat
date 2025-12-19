@@ -380,6 +380,53 @@ FPubnubChatGetChannelSuggestionsResult UPubnubChat::GetChannelSuggestions(const 
 	return FinalResult;
 }
 
+FPubnubChatWherePresentResult UPubnubChat::WherePresent(const FString UserID)
+{
+	FPubnubChatWherePresentResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+	
+	//Use PubnubClient ListUserSubscribedChannels (WhereNow) to get all subscribed channels
+	FPubnubListUsersSubscribedChannelsResult WhereNowResult = PubnubClient->ListUserSubscribedChannels(UserID);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, WhereNowResult.Result, "ListUserSubscribedChannels");
+	
+	FinalResult.Channels = WhereNowResult.Channels;
+	return FinalResult;
+}
+
+FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID, int Limit, int Offset)
+{
+	FPubnubChatWhoIsPresentResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+	
+	//Use PubnubClient ListUserSubscribedChannels (WhereNow) to get all subscribed channels
+	FPubnubListUsersFromChannelSettings HereNowSettings = FPubnubListUsersFromChannelSettings{.DisableUserID = false, .Limit = Limit, .Offset = Offset};
+	FPubnubListUsersFromChannelResult HereNowResult = PubnubClient->ListUsersFromChannel(ChannelID, HereNowSettings);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUserSubscribedChannels");
+	
+	//Add all Users into the FinalResult
+	HereNowResult.Data.UsersState.GetKeys(FinalResult.Users);
+	
+	return FinalResult;
+}
+
+FPubnubChatIsPresentResult UPubnubChat::IsPresent(const FString UserID, const FString ChannelID)
+{
+	FPubnubChatIsPresentResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+	
+	//Use WherePresent for given UserID
+	FPubnubChatWherePresentResult WherePresentResult = WherePresent(UserID);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, WherePresentResult.Result);
+	
+	//And just check if provided channel is in the list
+	FinalResult.IsPresent = WherePresentResult.Channels.Contains(ChannelID);
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod)
 {
 	FPubnubChatOperationResult FinalResult;

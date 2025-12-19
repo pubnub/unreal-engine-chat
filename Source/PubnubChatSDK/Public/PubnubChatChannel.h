@@ -48,6 +48,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatJoinResult Join(FOnPubnubChatChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
 
+	FPubnubChatJoinResult Join(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
+
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Disconnect();
 
@@ -68,6 +70,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult UnpinMessage();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	FPubnubChatWhoIsPresentResult WhoIsPresent(int Limit = 1000, int Offset = 0);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	FPubnubChatIsPresentResult IsPresent(const FString UserID);
+	
 
 	
 private:

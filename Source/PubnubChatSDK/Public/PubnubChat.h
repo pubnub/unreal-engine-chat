@@ -133,6 +133,16 @@ public:
 	FPubnubChatGetChannelSuggestionsResult GetChannelSuggestions(const FString Text, int Limit = 10);
 
 	
+	/* PRESENCE */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	FPubnubChatWherePresentResult WherePresent(const FString UserID);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	FPubnubChatWhoIsPresentResult WhoIsPresent(const FString ChannelID, int Limit = 1000, int Offset = 0);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	FPubnubChatIsPresentResult IsPresent(const FString UserID, const FString ChannelID);
+	
 
 
 	/* MODERATION */

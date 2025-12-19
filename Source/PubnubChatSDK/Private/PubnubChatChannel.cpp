@@ -139,6 +139,16 @@ FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessage
 
 FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData)
 {
+	FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative;
+	MessageCallbackNative.BindLambda([MessageCallback](UPubnubChatMessage* Message)
+	{
+		MessageCallback.ExecuteIfBound(Message);
+	});
+	return Join(MessageCallbackNative, MembershipData);
+}
+
+FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative, FPubnubChatMembershipData MembershipData)
+{
 	FPubnubChatJoinResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	
@@ -150,7 +160,7 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceiv
 	UPubnubChatMembership* CreatedMembership = Chat->CreateMembershipObject(Chat->CurrentUser, this, MembershipData);
 
 	//Connect
-	FPubnubChatConnectResult ConnectResult = Connect(MessageCallback);
+	FPubnubChatConnectResult ConnectResult = Connect(MessageCallbackNative);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, ConnectResult.Result);
 
 	//SetLastReadMessageTimetoken for created membership
@@ -336,6 +346,22 @@ FPubnubChatOperationResult UPubnubChatChannel::UnpinMessage()
 	}
 	
 	return FinalResult;
+}
+
+FPubnubChatWhoIsPresentResult UPubnubChatChannel::WhoIsPresent(int Limit, int Offset)
+{
+	FPubnubChatWhoIsPresentResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return Chat->WhoIsPresent(ChannelID, Limit, Offset);
+}
+
+FPubnubChatIsPresentResult UPubnubChatChannel::IsPresent(const FString UserID)
+{
+	FPubnubChatIsPresentResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return Chat->IsPresent(UserID, ChannelID);
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
