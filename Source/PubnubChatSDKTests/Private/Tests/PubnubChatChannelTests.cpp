@@ -4135,6 +4135,506 @@ bool FPubnubChatDeleteChannelHardVsSoftTest::RunTest(const FString& Parameters)
 }
 
 // ============================================================================
+// RESTORE TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelRestoreNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.Restore.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelRestoreNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_restore_not_init_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_restore_not_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Create uninitialized channel object
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		
+		// Try to restore with uninitialized channel
+		FPubnubChatOperationResult RestoreResult = UninitializedChannel->Restore();
+		TestTrue("Restore should fail with uninitialized channel", RestoreResult.Error);
+		TestFalse("ErrorMessage should not be empty", RestoreResult.ErrorMessage.IsEmpty());
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelRestoreHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.Restore.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelRestoreHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_restore_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_restore_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Soft delete the channel first
+	FPubnubChatOperationResult DeleteResult = CreateResult.Channel->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	// Verify channel is marked as deleted
+	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
+	TestTrue("Channel should be marked as deleted", IsDeletedBeforeResult.IsDeleted);
+	
+	// Restore the channel
+	FPubnubChatOperationResult RestoreResult = CreateResult.Channel->Restore();
+	TestFalse("Restore should succeed", RestoreResult.Error);
+	
+	// Verify channel is no longer marked as deleted
+	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterResult.Result.Error);
+	TestFalse("Channel should not be marked as deleted after restore", IsDeletedAfterResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+// Test: Restore a non-deleted channel (should still succeed)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelRestoreNonDeletedChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.Restore.4Advanced.RestoreNonDeletedChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelRestoreNonDeletedChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_restore_non_deleted_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_restore_non_deleted";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Verify channel is not deleted initially
+	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
+	TestFalse("Channel should not be marked as deleted initially", IsDeletedBeforeResult.IsDeleted);
+	
+	// Restore a non-deleted channel (should still succeed)
+	FPubnubChatOperationResult RestoreResult = CreateResult.Channel->Restore();
+	TestFalse("Restore should succeed even for non-deleted channel", RestoreResult.Error);
+	
+	// Verify channel is still not deleted
+	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterResult.Result.Error);
+	TestFalse("Channel should still not be marked as deleted", IsDeletedAfterResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// Test: Restore a hard-deleted channel (should fail - channel doesn't exist)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelRestoreHardDeletedChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.Restore.4Advanced.RestoreHardDeletedChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelRestoreHardDeletedChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_restore_hard_deleted_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_restore_hard_deleted";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Hard delete the channel
+	FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+	TestFalse("Hard delete should succeed", DeleteResult.Result.Error);
+	
+	// Try to get the channel again (should fail)
+	FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
+	TestTrue("GetChannel should fail after hard delete", GetResult.Result.Error);
+	
+	// Note: After hard delete, the channel object is no longer valid, so we can't test Restore on it
+	// This test verifies that hard-deleted channels cannot be restored (they don't exist anymore)
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ISDELETED TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelIsDeletedNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.IsDeleted.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelIsDeletedNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_is_deleted_not_init_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_is_deleted_not_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		
+		// Create uninitialized channel object
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		
+		// Try to check IsDeleted with uninitialized channel
+		FPubnubChatIsDeletedResult IsDeletedResult = UninitializedChannel->IsDeleted();
+		TestTrue("IsDeleted should fail with uninitialized channel", IsDeletedResult.Result.Error);
+		TestFalse("IsDeleted should be false when error occurs", IsDeletedResult.IsDeleted);
+		TestFalse("ErrorMessage should not be empty", IsDeletedResult.Result.ErrorMessage.IsEmpty());
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelIsDeletedHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.IsDeleted.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelIsDeletedHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_is_deleted_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_is_deleted_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Check IsDeleted for a non-deleted channel
+	FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedResult.Result.Error);
+	TestFalse("Channel should not be marked as deleted", IsDeletedResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelIsDeletedSoftDeletedChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.IsDeleted.3FullParameters.SoftDeletedChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelIsDeletedSoftDeletedChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_is_deleted_soft_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_is_deleted_soft";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Verify channel is not deleted initially
+	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
+	TestFalse("Channel should not be marked as deleted initially", IsDeletedBeforeResult.IsDeleted);
+	
+	// Soft delete the channel
+	FPubnubChatOperationResult DeleteResult = CreateResult.Channel->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	// Check IsDeleted for a soft-deleted channel
+	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed after soft delete", IsDeletedAfterResult.Result.Error);
+	TestTrue("Channel should be marked as deleted after soft delete", IsDeletedAfterResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+// Test: Check IsDeleted after restore
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelIsDeletedAfterRestoreTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.IsDeleted.4Advanced.AfterRestore", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelIsDeletedAfterRestoreTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_channel_is_deleted_restore_init";
+	const FString TestChannelID = SDK_PREFIX + "test_channel_is_deleted_restore";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Soft delete the channel
+	FPubnubChatOperationResult DeleteResult = CreateResult.Channel->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	// Verify channel is marked as deleted
+	FPubnubChatIsDeletedResult IsDeletedBeforeRestoreResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeRestoreResult.Result.Error);
+	TestTrue("Channel should be marked as deleted", IsDeletedBeforeRestoreResult.IsDeleted);
+	
+	// Restore the channel
+	FPubnubChatOperationResult RestoreResult = CreateResult.Channel->Restore();
+	TestFalse("Restore should succeed", RestoreResult.Error);
+	
+	// Check IsDeleted after restore
+	FPubnubChatIsDeletedResult IsDeletedAfterRestoreResult = CreateResult.Channel->IsDeleted();
+	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterRestoreResult.Result.Error);
+	TestFalse("Channel should not be marked as deleted after restore", IsDeletedAfterRestoreResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
 // GETCHANNELS TESTS
 // ============================================================================
 

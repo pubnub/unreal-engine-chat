@@ -150,7 +150,7 @@ FPubnubChatUserResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
 	//Add Deleted property to Custom field
 	GetUserResult.UserData.Custom = UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(GetUserResult.UserData.Custom);
 
-	//SetUserMetadata updated metadata
+	//SetUserMetadata with updated metadata
 	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, GetUserResult.UserData);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
 	

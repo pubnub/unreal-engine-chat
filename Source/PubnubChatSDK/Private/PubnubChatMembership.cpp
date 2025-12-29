@@ -11,6 +11,7 @@
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubChatLogUtilities.h"
 
 
 FString UPubnubChatMembership::GetInternalMembershipID() const
@@ -39,8 +40,7 @@ FPubnubChatMembershipData UPubnubChatMembership::GetMembershipData() const
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatMembershipData());
 
 	// Get membership data from repository
-	FPubnubChatInternalMembership* InternalMembership = Chat->ObjectsRepository->GetMembershipData(GetInternalMembershipID());
-	if (InternalMembership)
+	if (FPubnubChatInternalMembership* InternalMembership = Chat->ObjectsRepository->GetMembershipData(GetInternalMembershipID()))
 	{
 		return InternalMembership->MembershipData;
 	}

@@ -233,3 +233,15 @@ struct FPubnubChatIsPresentResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	bool IsPresent = false;
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubChatIsDeletedResult
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool IsDeleted = false;
+};

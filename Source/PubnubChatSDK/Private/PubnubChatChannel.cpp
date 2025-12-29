@@ -44,8 +44,7 @@ FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatChannelData());
 
 	//Get channel data from repository
-	FPubnubChatInternalChannel* InternalChannel = Chat->ObjectsRepository->GetChannelData(ChannelID);
-	if (InternalChannel)
+	if (FPubnubChatInternalChannel* InternalChannel = Chat->ObjectsRepository->GetChannelData(ChannelID))
 	{
 		return InternalChannel->ChannelData;
 	}
@@ -362,6 +361,48 @@ FPubnubChatIsPresentResult UPubnubChatChannel::IsPresent(const FString UserID)
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	
 	return Chat->IsPresent(ChannelID, UserID);
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::Delete(bool Soft)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+
+	FPubnubChatChannelResult DeleteChannelResult = Chat->DeleteChannel(ChannelID, Soft);
+	return DeleteChannelResult.Result;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::Restore()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	FPubnubChatOperationResult FinalResult;
+	
+	//GetChannelMetadata from PubnubClient to have up to date data
+	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ChannelID, FPubnubGetMetadataInclude::FromValue(true));
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
+
+	//Remove Deleted property from Custom field
+	GetChannelResult.ChannelData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(GetChannelResult.ChannelData.Custom);
+
+	//SetChannelMetadata with updated metadata
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, GetChannelResult.ChannelData);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
+	
+	return FinalResult;
+}
+
+FPubnubChatIsDeletedResult UPubnubChatChannel::IsDeleted()
+{
+	FPubnubChatIsDeletedResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	//GetChannelMetadata from PubnubClient to have up to date data
+	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ChannelID, FPubnubGetMetadataInclude::FromValue(true));
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
+	
+	FinalResult.IsDeleted = UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(GetChannelResult.ChannelData.Custom);
+	
+	return FinalResult;
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)

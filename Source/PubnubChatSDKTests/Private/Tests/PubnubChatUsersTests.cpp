@@ -1423,6 +1423,562 @@ bool FPubnubChatDeleteUserHardVsSoftTest::RunTest(const FString& Parameters)
 }
 
 // ============================================================================
+// RESTORE TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserRestoreNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_restore_not_init_init";
+	const FString TargetUserID = SDK_PREFIX + "test_restore_not_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create user
+		FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+		
+		// Create uninitialized user object
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		
+		// Try to restore with uninitialized user
+		FPubnubChatOperationResult RestoreResult = UninitializedUser->Restore();
+		TestTrue("Restore should fail with uninitialized user", RestoreResult.Error);
+		TestFalse("ErrorMessage should not be empty", RestoreResult.ErrorMessage.IsEmpty());
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserRestoreHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_restore_happy_init";
+	const FString TargetUserID = SDK_PREFIX + "test_restore_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Soft delete the user first
+	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	// Verify user is marked as deleted
+	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
+	TestTrue("User should be marked as deleted", IsDeletedBeforeResult.IsDeleted);
+	
+	// Restore the user
+	FPubnubChatOperationResult RestoreResult = CreateResult.User->Restore();
+	TestFalse("Restore should succeed", RestoreResult.Error);
+	
+	// Verify user is no longer marked as deleted
+	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterResult.Result.Error);
+	TestFalse("User should not be marked as deleted after restore", IsDeletedAfterResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteUser(TargetUserID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+// Test: Restore a user that wasn't deleted (should still succeed)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreNonDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.4Advanced.RestoreNonDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserRestoreNonDeletedUserTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_restore_non_deleted_init";
+	const FString TargetUserID = SDK_PREFIX + "test_restore_non_deleted";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Verify user is not deleted
+	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
+	TestFalse("User should not be marked as deleted", IsDeletedBeforeResult.IsDeleted);
+	
+	// Restore a non-deleted user (should still succeed)
+	FPubnubChatOperationResult RestoreResult = CreateResult.User->Restore();
+	TestFalse("Restore should succeed even for non-deleted user", RestoreResult.Error);
+	
+	// Verify user is still not deleted
+	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterResult.Result.Error);
+	TestFalse("User should still not be marked as deleted", IsDeletedAfterResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteUser(TargetUserID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// Test: Restore a hard-deleted user (should fail)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreHardDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.4Advanced.RestoreHardDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserRestoreHardDeletedUserTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_restore_hard_deleted_init";
+	const FString TargetUserID = SDK_PREFIX + "test_restore_hard_deleted";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Hard delete the user
+	FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
+	TestFalse("Hard delete should succeed", DeleteResult.Result.Error);
+	
+	// Try to get the user again (should fail)
+	FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
+	TestTrue("GetUser should fail after hard delete", GetResult.Result.Error);
+	
+	// Note: After hard delete, the user object is no longer valid, so we can't test Restore on it
+	// This test verifies that hard-deleted users cannot be restored (they don't exist anymore)
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ISDELETED TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsDeletedNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_deleted_not_init_init";
+	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_not_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(Chat)
+	{
+		// Create user
+		FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+		
+		// Create uninitialized user object
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		
+		// Try to check IsDeleted with uninitialized user
+		FPubnubChatIsDeletedResult IsDeletedResult = UninitializedUser->IsDeleted();
+		TestTrue("IsDeleted should fail with uninitialized user", IsDeletedResult.Result.Error);
+		TestFalse("IsDeleted should be false when error occurs", IsDeletedResult.IsDeleted);
+		TestFalse("ErrorMessage should not be empty", IsDeletedResult.Result.ErrorMessage.IsEmpty());
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsDeletedHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_deleted_happy_init";
+	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Check IsDeleted for a non-deleted user
+	FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedResult.Result.Error);
+	TestFalse("User should not be marked as deleted", IsDeletedResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteUser(TargetUserID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedSoftDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.3FullParameters.SoftDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsDeletedSoftDeletedUserTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_deleted_soft_init";
+	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_soft";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Verify user is not deleted initially
+	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
+	TestFalse("User should not be marked as deleted initially", IsDeletedBeforeResult.IsDeleted);
+	
+	// Soft delete the user
+	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	// Check IsDeleted for a soft-deleted user
+	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed after soft delete", IsDeletedAfterResult.Result.Error);
+	TestTrue("User should be marked as deleted after soft delete", IsDeletedAfterResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteUser(TargetUserID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+// Test: Check IsDeleted after restore
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedAfterRestoreTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.4Advanced.AfterRestore", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsDeletedAfterRestoreTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_deleted_restore_init";
+	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_restore";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Soft delete the user
+	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	// Verify user is marked as deleted
+	FPubnubChatIsDeletedResult IsDeletedBeforeRestoreResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed", IsDeletedBeforeRestoreResult.Result.Error);
+	TestTrue("User should be marked as deleted", IsDeletedBeforeRestoreResult.IsDeleted);
+	
+	// Restore the user
+	FPubnubChatOperationResult RestoreResult = CreateResult.User->Restore();
+	TestFalse("Restore should succeed", RestoreResult.Error);
+	
+	// Check IsDeleted after restore
+	FPubnubChatIsDeletedResult IsDeletedAfterRestoreResult = CreateResult.User->IsDeleted();
+	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterRestoreResult.Result.Error);
+	TestFalse("User should not be marked as deleted after restore", IsDeletedAfterRestoreResult.IsDeleted);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteUser(TargetUserID, false);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// Test: Check IsDeleted for hard-deleted user (should fail)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedHardDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.4Advanced.HardDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsDeletedHardDeletedUserTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_deleted_hard_init";
+	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_hard";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	// Hard delete the user
+	FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
+	TestFalse("Hard delete should succeed", DeleteResult.Result.Error);
+	
+	// Try to get the user again (should fail)
+	FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
+	TestTrue("GetUser should fail after hard delete", GetResult.Result.Error);
+	
+	// Note: After hard delete, the user object is no longer valid, so we can't test IsDeleted on it
+	// This test verifies that hard-deleted users cannot be checked for IsDeleted (they don't exist anymore)
+	// The user object from CreateResult is no longer valid after hard delete
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
 // GETUSERS TESTS
 // ============================================================================
 

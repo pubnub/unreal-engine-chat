@@ -15,7 +15,7 @@ FString UPubnubChatInternalUtilities::GetSoftDeletedObjectPropertyKey()
 	return Pubnub_Chat_Soft_Deleted_Property_Name;
 }
 
-FString UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(FString CurrentCustom)
+FString UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(const FString CurrentCustom)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 	UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
@@ -23,12 +23,19 @@ FString UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(FString Current
 	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
-FString UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(FString CurrentCustom)
+FString UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(const FString CurrentCustom)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 	UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
 	JsonObject->RemoveField(GetSoftDeletedObjectPropertyKey());
 	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
+bool UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(const FString CurrentCustom)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
+	return JsonObject->HasField(GetSoftDeletedObjectPropertyKey());
 }
 
 FString UPubnubChatInternalUtilities::ChatMessageToPublishString(const FString ChatMessage)

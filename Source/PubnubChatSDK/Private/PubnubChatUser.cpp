@@ -6,6 +6,7 @@
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
+#include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 
 
@@ -26,8 +27,7 @@ FPubnubChatUserData UPubnubChatUser::GetUserData() const
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatUserData());
 
 	// Get user data from repository
-	FPubnubChatInternalUser* InternalUser = Chat->ObjectsRepository->GetUserData(UserID);
-	if (InternalUser)
+	if (FPubnubChatInternalUser* InternalUser = Chat->ObjectsRepository->GetUserData(UserID))
 	{
 		return InternalUser->UserData;
 	}
@@ -57,6 +57,40 @@ FPubnubChatOperationResult UPubnubChatUser::Delete(bool Soft)
 
 	FPubnubChatUserResult DeleteUserResult = Chat->DeleteUser(UserID, Soft);
 	return DeleteUserResult.Result;
+}
+
+FPubnubChatOperationResult UPubnubChatUser::Restore()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	FPubnubChatOperationResult FinalResult;
+	
+	//GetUserMetadata from PubnubClient to have up to date data
+	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetUserResult.Result, "GetUserMetadata");
+
+	//Add Deleted property to Custom field
+	GetUserResult.UserData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(GetUserResult.UserData.Custom);
+
+	//SetUserMetadata with updated metadata
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, GetUserResult.UserData);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
+	
+	return FinalResult;
+}
+
+FPubnubChatIsDeletedResult UPubnubChatUser::IsDeleted()
+{
+	FPubnubChatIsDeletedResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	//GetUserMetadata from PubnubClient to have up to date data
+	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetUserResult.Result, "GetUserMetadata");
+	
+	FinalResult.IsDeleted = UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(GetUserResult.UserData.Custom);
+	
+	return FinalResult;
 }
 
 FPubnubChatWherePresentResult UPubnubChatUser::WherePresent()

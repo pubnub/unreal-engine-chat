@@ -36,6 +36,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Delete(bool Soft = false);
 	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FPubnubChatOperationResult Restore();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FPubnubChatIsDeletedResult IsDeleted();
+	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatWherePresentResult WherePresent();
 	

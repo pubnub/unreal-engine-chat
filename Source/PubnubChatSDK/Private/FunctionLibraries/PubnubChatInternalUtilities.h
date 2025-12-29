@@ -28,10 +28,13 @@ public:
 	static FString GetSoftDeletedObjectPropertyKey();
 
 	UFUNCTION()
-	static FString AddDeletedPropertyToCustom(FString CurrentCustom);
-
+	static FString AddDeletedPropertyToCustom(const FString CurrentCustom);
+	
 	UFUNCTION()
-	static FString RemoveDeletedPropertyFromCustom(FString CurrentCustom);
+	static FString RemoveDeletedPropertyFromCustom(const FString CurrentCustom);
+	
+	UFUNCTION()
+	static bool HasDeletedPropertyInCustom(const FString CurrentCustom);
 
 	/* PUBLISH MESSAGE */
 

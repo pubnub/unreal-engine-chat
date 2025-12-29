@@ -76,8 +76,17 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatIsPresentResult IsPresent(const FString UserID);
-	
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult Delete(bool Soft = false);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	FPubnubChatOperationResult Restore();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	FPubnubChatIsDeletedResult IsDeleted();
+
+	
 	
 private:
 	UPROPERTY()
