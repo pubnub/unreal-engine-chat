@@ -50,7 +50,7 @@ bool FPubnubChatCleanUpUsersTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat is null - cannot proceed with cleanup");
@@ -197,7 +197,7 @@ bool FPubnubChatCleanUpChannelsTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat is null - cannot proceed with cleanup");

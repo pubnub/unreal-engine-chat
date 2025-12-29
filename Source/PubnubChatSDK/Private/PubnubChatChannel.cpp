@@ -4,6 +4,7 @@
 #include "PubnubClient.h"
 #include "PubnubChat.h"
 #include "PubnubChatCallbackStop.h"
+#include "PubnubChatConst.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatMembership.h"
 #include "PubnubChatSubsystem.h"
@@ -252,7 +253,7 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 	}
 
 	//Create Membership with "pending" status
-	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = "pending"};
+	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = Pubnub_Chat_Invited_User_Membership_status};
 	
 	//SetMemberships by PubnubClient
 	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
@@ -283,7 +284,7 @@ FPubnubChatInviteMultipleResult UPubnubChatChannel::InviteMultiple(TArray<UPubnu
 	FString Filter = UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(ValidUsers);
 	TArray<FPubnubChannelMemberInputData> MembersInput;
 	//Create Membership with "pending" status
-	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = "pending"};
+	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = Pubnub_Chat_Invited_User_Membership_status};
 
 	for(auto& User : ValidUsers)
 	{
@@ -360,7 +361,7 @@ FPubnubChatIsPresentResult UPubnubChatChannel::IsPresent(const FString UserID)
 	FPubnubChatIsPresentResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	
-	return Chat->IsPresent(ChannelID, UserID);
+	return Chat->IsPresent(UserID, ChannelID);
 }
 
 FPubnubChatOperationResult UPubnubChatChannel::Delete(bool Soft)
@@ -403,6 +404,44 @@ FPubnubChatIsDeletedResult UPubnubChatChannel::IsDeleted()
 	FinalResult.IsDeleted = UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(GetChannelResult.ChannelData.Custom);
 	
 	return FinalResult;
+}
+
+FPubnubChatMembershipsResult UPubnubChatChannel::GetMembers(const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	FPubnubChatMembershipsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	//GetChannelMembers using PubnubClient
+	FPubnubChannelMembersResult GetMembersResult = PubnubClient->GetChannelMembers(ChannelID, FPubnubMemberInclude::FromValue(true), Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembersResult.Result, "GetChannelMembers");
+	
+	//Create corresponding Chat objects for all returned memberships
+	for (auto& MembershipData : GetMembersResult.MembersData)
+	{
+		UPubnubChatUser* User =  Chat->CreateUserObject(MembershipData.User.UserID, MembershipData.User);
+		UPubnubChatMembership* Membership = Chat->CreateMembershipObject(User, this, MembershipData);
+		FinalResult.Memberships.Add(Membership);
+	}
+	
+	FinalResult.Page = GetMembersResult.Page;
+	FinalResult.Total = GetMembersResult.TotalCount;
+	return FinalResult;
+}
+
+FPubnubChatMembershipsResult UPubnubChatChannel::GetInvitees(const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	FPubnubChatMembershipsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	//Create final Filter so status == "pending" and eventually additional Filter provided by user
+	FString FinalFilter = FString::Printf(TEXT(R"(status == "%s")"), *Pubnub_Chat_Invited_User_Membership_status);
+	if (!Filter.IsEmpty())
+	{
+		FinalFilter += " && ";
+		FinalFilter += Filter;
+	}
+	
+	return GetMembers(Limit, FinalFilter, Sort, Page);
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)

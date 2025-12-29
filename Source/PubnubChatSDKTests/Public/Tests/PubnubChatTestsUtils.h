@@ -75,6 +75,9 @@ public:
 	bool InitTest();
 	//Cleans up test systems. Call this at the end of every test
 	void CleanUp();
+	
+	//Deletes user which was created during initializing chat
+	void CleanUpCurrentChatUser(UPubnubChat* Chat);
 
 	UPubnubChatSubsystem* ChatSubsystem = nullptr;
 	UGameInstance* GameInstance = nullptr;

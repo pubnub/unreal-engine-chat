@@ -26,17 +26,20 @@ public:
 	FPubnubChatInitChatResult InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config = FPubnubChatConfig());
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PubnubChat")
-	UPubnubChat* GetChat();
+	UPubnubChat* GetChat(FString UserID);
 
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
-	void DestroyChat();
+	void DestroyChat(FString UserID);
+	
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
+	void DestroyAllChats();
 
 private:
 	UPROPERTY()
-	UPubnubChat* Chat = nullptr;
+	TMap<FString, UPubnubChat*> Chats;
 	
 	UFUNCTION()
-	void OnChatDestroyed();
+	void OnChatDestroyed(FString UserID);
 
 	UPubnubClient* CreatePubnubClient(FString PublishKey, FString SubscribeKey, FString UserID);
 

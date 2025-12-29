@@ -42,11 +42,14 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FPubnubChatIsDeletedResult IsDeleted();
 	
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatWherePresentResult WherePresent();
 	
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatIsPresentResult IsPresentOn(const FString ChannelID);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatMembershipsResult GetMemberships(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 
 private:
 	UPROPERTY()

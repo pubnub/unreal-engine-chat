@@ -442,9 +442,8 @@ bool FPubnubChatAccessManagerCanINotInitializedTest::RunTest(const FString& Para
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 
 	if(Chat)
 	{
@@ -459,7 +458,8 @@ bool FPubnubChatAccessManagerCanINotInitializedTest::RunTest(const FString& Para
 			TestFalse("CanI should return false when not initialized", Result);
 		}
 	}
-
+	
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -484,7 +484,7 @@ bool FPubnubChatAccessManagerCanIEmptyResourceNameTest::RunTest(const FString& P
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
@@ -501,6 +501,7 @@ bool FPubnubChatAccessManagerCanIEmptyResourceNameTest::RunTest(const FString& P
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -530,7 +531,7 @@ bool FPubnubChatAccessManagerCanIEmptyTokenTest::RunTest(const FString& Paramete
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
@@ -547,6 +548,7 @@ bool FPubnubChatAccessManagerCanIEmptyTokenTest::RunTest(const FString& Paramete
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -565,25 +567,22 @@ bool FPubnubChatAccessManagerCanIWithResourcesTest::RunTest(const FString& Param
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_resources";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+		
+	if(InitResult.Result.Error)
 	{
-		FPubnubChatConfig ChatConfig;
-		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
-		
-		if(InitResult.Result.Error)
-		{
-			AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
-			CleanUp();
-			return false;
-		}
-		
-		Chat = ChatSubsystem->GetChat();
+		AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
+		CleanUp();
+		return false;
 	}
+		
+	UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -592,6 +591,7 @@ bool FPubnubChatAccessManagerCanIWithResourcesTest::RunTest(const FString& Param
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -611,6 +611,7 @@ bool FPubnubChatAccessManagerCanIWithResourcesTest::RunTest(const FString& Param
 	{
 		// If token granting fails (e.g., no SecretKey), skip this test
 		AddInfo("Token granting failed or not configured - skipping test");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return true;
 	}
@@ -652,6 +653,7 @@ bool FPubnubChatAccessManagerCanIWithResourcesTest::RunTest(const FString& Param
 		TestFalse("Should not have permission for non-existent resource", HasPermission);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -670,26 +672,23 @@ bool FPubnubChatAccessManagerCanIWithPatternsTest::RunTest(const FString& Parame
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_patterns";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+		
+	if(InitResult.Result.Error)
 	{
-		FPubnubChatConfig ChatConfig;
-		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
-		
-		if(InitResult.Result.Error)
-		{
-			AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
-			CleanUp();
-			return false;
-		}
-		
-		Chat = ChatSubsystem->GetChat();
+		AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
+		CleanUp();
+		return false;
 	}
+		
+	UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		return false;
 	}
 	
@@ -697,7 +696,8 @@ bool FPubnubChatAccessManagerCanIWithPatternsTest::RunTest(const FString& Parame
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		return false;
 	}
 	
@@ -716,7 +716,8 @@ bool FPubnubChatAccessManagerCanIWithPatternsTest::RunTest(const FString& Parame
 	{
 		// If token granting fails (e.g., no SecretKey), skip this test
 		AddInfo("Token granting failed or not configured - skipping test");
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		return true;
 	}
 	
@@ -757,6 +758,7 @@ bool FPubnubChatAccessManagerCanIWithPatternsTest::RunTest(const FString& Parame
 		TestFalse("Should not have permission for non-matching pattern", HasPermission);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -779,25 +781,22 @@ bool FPubnubChatAccessManagerCanIAllPermissionsTest::RunTest(const FString& Para
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_all_permissions";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	if(InitResult.Result.Error)
 	{
-		FPubnubChatConfig ChatConfig;
-		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
-		
-		if(InitResult.Result.Error)
-		{
-			AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
-			CleanUp();
-			return false;
-		}
-		
-		Chat = ChatSubsystem->GetChat();
+		AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
+		CleanUp();
+		return false;
 	}
+	
+	UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -806,6 +805,7 @@ bool FPubnubChatAccessManagerCanIAllPermissionsTest::RunTest(const FString& Para
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -828,7 +828,8 @@ bool FPubnubChatAccessManagerCanIAllPermissionsTest::RunTest(const FString& Para
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		return true;
 	}
 	
@@ -849,6 +850,7 @@ bool FPubnubChatAccessManagerCanIAllPermissionsTest::RunTest(const FString& Para
 		TestTrue("Should have Join permission", AccessManager->CanI(EPubnubChatAccessManagerPermission::PCAMP_Join, EPubnubChatAccessManagerResourceType::PCAMRT_Channels, TEXT("test_channel")));
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -867,25 +869,22 @@ bool FPubnubChatAccessManagerCanIAllResourceTypesTest::RunTest(const FString& Pa
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_all_resource_types";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
-	{
 		FPubnubChatConfig ChatConfig;
 		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 		
 		if(InitResult.Result.Error)
 		{
 			AddError(FString::Printf(TEXT("InitChat failed: %s"), *InitResult.Result.ErrorMessage));
-			CleanUp();
+		CleanUp();
 			return false;
 		}
 		
-		Chat = ChatSubsystem->GetChat();
-	}
+		UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -894,6 +893,7 @@ bool FPubnubChatAccessManagerCanIAllResourceTypesTest::RunTest(const FString& Pa
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -917,7 +917,8 @@ bool FPubnubChatAccessManagerCanIAllResourceTypesTest::RunTest(const FString& Pa
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		return true;
 	}
 	
@@ -936,6 +937,7 @@ bool FPubnubChatAccessManagerCanIAllResourceTypesTest::RunTest(const FString& Pa
 		TestTrue("Should have Update permission for Uuids", AccessManager->CanI(EPubnubChatAccessManagerPermission::PCAMP_Update, EPubnubChatAccessManagerResourceType::PCAMRT_Users, TEXT("test_user")));
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -959,9 +961,6 @@ bool FPubnubChatAccessManagerCanIResourcesBeforePatternsTest::RunTest(const FStr
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_resources_before_patterns";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
-	{
 		FPubnubChatConfig ChatConfig;
 		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 		
@@ -972,12 +971,12 @@ bool FPubnubChatAccessManagerCanIResourcesBeforePatternsTest::RunTest(const FStr
 			return false;
 		}
 		
-		Chat = ChatSubsystem->GetChat();
-	}
+		UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -986,6 +985,7 @@ bool FPubnubChatAccessManagerCanIResourcesBeforePatternsTest::RunTest(const FStr
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1010,6 +1010,7 @@ bool FPubnubChatAccessManagerCanIResourcesBeforePatternsTest::RunTest(const FStr
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return true;
 	}
@@ -1036,6 +1037,7 @@ bool FPubnubChatAccessManagerCanIResourcesBeforePatternsTest::RunTest(const FStr
 		TestTrue("Read should be granted from Resources", HasRead);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1055,9 +1057,6 @@ bool FPubnubChatAccessManagerCanIResourcesThenPatternsTest::RunTest(const FStrin
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_resources_then_patterns";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
-	{
 		FPubnubChatConfig ChatConfig;
 		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 		
@@ -1068,12 +1067,12 @@ bool FPubnubChatAccessManagerCanIResourcesThenPatternsTest::RunTest(const FStrin
 			return false;
 		}
 		
-		Chat = ChatSubsystem->GetChat();
-	}
+		UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1082,6 +1081,7 @@ bool FPubnubChatAccessManagerCanIResourcesThenPatternsTest::RunTest(const FStrin
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1104,6 +1104,7 @@ bool FPubnubChatAccessManagerCanIResourcesThenPatternsTest::RunTest(const FStrin
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return true;
 	}
@@ -1130,6 +1131,7 @@ bool FPubnubChatAccessManagerCanIResourcesThenPatternsTest::RunTest(const FStrin
 		TestTrue("Pattern channel should be granted from Patterns", HasReadPattern);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1149,9 +1151,6 @@ bool FPubnubChatAccessManagerCanIBothMissingTest::RunTest(const FString& Paramet
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_cani_both_missing";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
-	{
 		FPubnubChatConfig ChatConfig;
 		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 		
@@ -1162,12 +1161,12 @@ bool FPubnubChatAccessManagerCanIBothMissingTest::RunTest(const FString& Paramet
 			return false;
 		}
 		
-		Chat = ChatSubsystem->GetChat();
-	}
+		UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1176,6 +1175,7 @@ bool FPubnubChatAccessManagerCanIBothMissingTest::RunTest(const FString& Paramet
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1189,6 +1189,7 @@ bool FPubnubChatAccessManagerCanIBothMissingTest::RunTest(const FString& Paramet
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return true;
 	}
@@ -1208,6 +1209,7 @@ bool FPubnubChatAccessManagerCanIBothMissingTest::RunTest(const FString& Paramet
 		TestFalse("Should return false when both Resources and Patterns are missing", HasPermission);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1230,9 +1232,8 @@ bool FPubnubChatAccessManagerParseTokenNotInitializedTest::RunTest(const FString
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 
 	if(Chat)
 	{
@@ -1245,6 +1246,7 @@ bool FPubnubChatAccessManagerParseTokenNotInitializedTest::RunTest(const FString
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1267,9 +1269,6 @@ bool FPubnubChatAccessManagerParseTokenHappyPathTest::RunTest(const FString& Par
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_parse_token";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
-	{
 		FPubnubChatConfig ChatConfig;
 		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 		
@@ -1280,12 +1279,12 @@ bool FPubnubChatAccessManagerParseTokenHappyPathTest::RunTest(const FString& Par
 			return false;
 		}
 		
-		Chat = ChatSubsystem->GetChat();
-	}
+		UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1294,6 +1293,7 @@ bool FPubnubChatAccessManagerParseTokenHappyPathTest::RunTest(const FString& Par
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1310,6 +1310,7 @@ bool FPubnubChatAccessManagerParseTokenHappyPathTest::RunTest(const FString& Par
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return true;
 	}
@@ -1327,6 +1328,7 @@ bool FPubnubChatAccessManagerParseTokenHappyPathTest::RunTest(const FString& Par
 		TestTrue("Parsed token should contain Resources or Patterns", ParsedToken.Contains(TEXT("Resources")) || ParsedToken.Contains(TEXT("Patterns")));
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1349,9 +1351,8 @@ bool FPubnubChatAccessManagerSetAuthTokenNotInitializedTest::RunTest(const FStri
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 
 	if(Chat)
 	{
@@ -1364,6 +1365,7 @@ bool FPubnubChatAccessManagerSetAuthTokenNotInitializedTest::RunTest(const FStri
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1386,9 +1388,6 @@ bool FPubnubChatAccessManagerSetAuthTokenHappyPathTest::RunTest(const FString& P
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_set_auth_token";
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	if(!Chat)
-	{
 		FPubnubChatConfig ChatConfig;
 		FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
 		
@@ -1399,12 +1398,12 @@ bool FPubnubChatAccessManagerSetAuthTokenHappyPathTest::RunTest(const FString& P
 			return false;
 		}
 		
-		Chat = ChatSubsystem->GetChat();
-	}
+		UPubnubChat* Chat = InitResult.Chat;
 	
 	if(!Chat)
 	{
 		AddError("Chat should exist after InitChat");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1413,6 +1412,7 @@ bool FPubnubChatAccessManagerSetAuthTokenHappyPathTest::RunTest(const FString& P
 	if(!PubnubClient)
 	{
 		AddError("PubnubClient should exist");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1429,6 +1429,7 @@ bool FPubnubChatAccessManagerSetAuthTokenHappyPathTest::RunTest(const FString& P
 	if(GrantResult.Result.Error || GrantResult.Token.IsEmpty())
 	{
 		AddInfo("Token granting failed or not configured - skipping test");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return true;
 	}
@@ -1449,6 +1450,7 @@ bool FPubnubChatAccessManagerSetAuthTokenHappyPathTest::RunTest(const FString& P
 		TestTrue("Token should be set and CanI should work", HasRead);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1471,9 +1473,8 @@ bool FPubnubChatAccessManagerSetPubnubOriginNotInitializedTest::RunTest(const FS
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 
 	if(Chat)
 	{
@@ -1486,6 +1487,7 @@ bool FPubnubChatAccessManagerSetPubnubOriginNotInitializedTest::RunTest(const FS
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1514,7 +1516,7 @@ bool FPubnubChatAccessManagerSetPubnubOriginHappyPathTest::RunTest(const FString
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
@@ -1528,6 +1530,7 @@ bool FPubnubChatAccessManagerSetPubnubOriginHappyPathTest::RunTest(const FString
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1550,9 +1553,8 @@ bool FPubnubChatAccessManagerGetPubnubOriginNotInitializedTest::RunTest(const FS
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 
 	if(Chat)
 	{
@@ -1565,6 +1567,7 @@ bool FPubnubChatAccessManagerGetPubnubOriginNotInitializedTest::RunTest(const FS
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1593,7 +1596,7 @@ bool FPubnubChatAccessManagerGetPubnubOriginHappyPathTest::RunTest(const FString
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
@@ -1614,6 +1617,7 @@ bool FPubnubChatAccessManagerGetPubnubOriginHappyPathTest::RunTest(const FString
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }

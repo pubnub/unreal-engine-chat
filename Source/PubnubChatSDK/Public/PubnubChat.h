@@ -23,8 +23,8 @@ enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPubnubChatDestroyed);
-DECLARE_MULTICAST_DELEGATE(FOnPubnubChatDestroyedNative);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatDestroyed, FString, UserID);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatDestroyedNative, FString UserID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChanged, EPubnubChatConnectionStatus, Status, const FPubnubChatConnectionStatusData&, StatusData);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChangedNative, EPubnubChatConnectionStatus Status, const FPubnubChatConnectionStatusData& StatusData);
 
@@ -55,8 +55,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatDestroyed OnChatDestroyed;
 
-	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatDestroyed OnChatDestroyedNative;
+	/**Listener to react for chat destroyed, equivalent that accepts lambdas*/
+	FOnPubnubChatDestroyedNative OnChatDestroyedNative;
 
 	//TODO:: decide if delegate names should have "PubnubChat" or "Chat" or without
 	/**Listener to react for connection status changed */

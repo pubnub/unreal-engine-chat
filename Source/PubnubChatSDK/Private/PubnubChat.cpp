@@ -39,8 +39,8 @@ void UPubnubChat::DestroyChat()
 
 	IsInitialized = false;
 	
-	OnChatDestroyed.Broadcast();
-	OnChatDestroyedNative.Broadcast();
+	OnChatDestroyed.Broadcast(CurrentUserID);
+	OnChatDestroyedNative.Broadcast(CurrentUserID);
 }
 
 FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserData UserData)

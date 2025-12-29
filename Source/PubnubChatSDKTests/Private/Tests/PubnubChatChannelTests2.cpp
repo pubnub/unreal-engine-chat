@@ -7,6 +7,7 @@
 #include "PubnubChatMembership.h"
 #include "PubnubChatUser.h"
 #include "PubnubChatCallbackStop.h"
+#include "PubnubClient.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "Kismet/GameplayStatics.h"
@@ -48,7 +49,7 @@ bool FPubnubChatChannelInviteNotInitializedTest::RunTest(const FString& Paramete
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -87,6 +88,7 @@ bool FPubnubChatChannelInviteNotInitializedTest::RunTest(const FString& Paramete
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -111,7 +113,7 @@ bool FPubnubChatChannelInviteNullUserTest::RunTest(const FString& Parameters)
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel and join
@@ -142,6 +144,7 @@ bool FPubnubChatChannelInviteNullUserTest::RunTest(const FString& Parameters)
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -171,10 +174,11 @@ bool FPubnubChatChannelInviteHappyPathTest::RunTest(const FString& Parameters)
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -187,6 +191,7 @@ bool FPubnubChatChannelInviteHappyPathTest::RunTest(const FString& Parameters)
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -202,6 +207,7 @@ bool FPubnubChatChannelInviteHappyPathTest::RunTest(const FString& Parameters)
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -246,6 +252,7 @@ bool FPubnubChatChannelInviteHappyPathTest::RunTest(const FString& Parameters)
 		Chat->DeleteUser(TargetUserID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -276,10 +283,11 @@ bool FPubnubChatChannelInviteFullParametersTest::RunTest(const FString& Paramete
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -293,6 +301,7 @@ bool FPubnubChatChannelInviteFullParametersTest::RunTest(const FString& Paramete
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -312,6 +321,7 @@ bool FPubnubChatChannelInviteFullParametersTest::RunTest(const FString& Paramete
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -356,6 +366,7 @@ bool FPubnubChatChannelInviteFullParametersTest::RunTest(const FString& Paramete
 		Chat->DeleteUser(TargetUserID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -389,10 +400,11 @@ bool FPubnubChatChannelInviteAlreadyMemberTest::RunTest(const FString& Parameter
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -405,6 +417,7 @@ bool FPubnubChatChannelInviteAlreadyMemberTest::RunTest(const FString& Parameter
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -420,6 +433,7 @@ bool FPubnubChatChannelInviteAlreadyMemberTest::RunTest(const FString& Parameter
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -431,6 +445,7 @@ bool FPubnubChatChannelInviteAlreadyMemberTest::RunTest(const FString& Parameter
 	
 	if(!FirstInviteResult.Membership)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -478,6 +493,7 @@ bool FPubnubChatChannelInviteAlreadyMemberTest::RunTest(const FString& Parameter
 		Chat->DeleteUser(TargetUserID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -507,10 +523,11 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -522,6 +539,7 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -535,6 +553,7 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -551,6 +570,7 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 	
 	if(!CreateSecondUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -633,6 +653,7 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 			Chat->DeleteUser(TargetUserID, false);
 			Chat->DeleteUser(SecondUserID, false);
 		}
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));
 	
@@ -664,10 +685,11 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -680,6 +702,7 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -700,6 +723,7 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -789,6 +813,7 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 			Chat->DeleteChannel(TestChannelID, false);
 			Chat->DeleteUser(TargetUserID, false);
 		}
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));
 	
@@ -823,7 +848,7 @@ bool FPubnubChatChannelInviteMultipleNotInitializedTest::RunTest(const FString& 
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -864,6 +889,7 @@ bool FPubnubChatChannelInviteMultipleNotInitializedTest::RunTest(const FString& 
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -888,7 +914,7 @@ bool FPubnubChatChannelInviteMultipleEmptyArrayTest::RunTest(const FString& Para
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel and join
@@ -920,6 +946,7 @@ bool FPubnubChatChannelInviteMultipleEmptyArrayTest::RunTest(const FString& Para
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -944,7 +971,7 @@ bool FPubnubChatChannelInviteMultipleAllInvalidUsersTest::RunTest(const FString&
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel and join
@@ -976,6 +1003,7 @@ bool FPubnubChatChannelInviteMultipleAllInvalidUsersTest::RunTest(const FString&
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1006,10 +1034,11 @@ bool FPubnubChatChannelInviteMultipleHappyPathTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1022,6 +1051,7 @@ bool FPubnubChatChannelInviteMultipleHappyPathTest::RunTest(const FString& Param
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1039,8 +1069,9 @@ bool FPubnubChatChannelInviteMultipleHappyPathTest::RunTest(const FString& Param
 	TestFalse("CreateUser2 should succeed", CreateUser2Result.Result.Error);
 	TestNotNull("User2 should be created", CreateUser2Result.User);
 	
-	if(!CreateUser1Result.User || !CreateUser2Result.User)
+	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1093,6 +1124,7 @@ bool FPubnubChatChannelInviteMultipleHappyPathTest::RunTest(const FString& Param
 		Chat->DeleteUser(TargetUserID2, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1125,10 +1157,11 @@ bool FPubnubChatChannelInviteMultipleFullParametersTest::RunTest(const FString& 
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1142,6 +1175,7 @@ bool FPubnubChatChannelInviteMultipleFullParametersTest::RunTest(const FString& 
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1173,6 +1207,7 @@ bool FPubnubChatChannelInviteMultipleFullParametersTest::RunTest(const FString& 
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User || !CreateUser3Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1226,6 +1261,7 @@ bool FPubnubChatChannelInviteMultipleFullParametersTest::RunTest(const FString& 
 		Chat->DeleteUser(TargetUserID3, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1260,11 +1296,12 @@ bool FPubnubChatChannelInviteMultiplePartialInvalidUsersTest::RunTest(const FStr
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+			CleanUp();
 		return false;
 	}
 	
@@ -1276,6 +1313,7 @@ bool FPubnubChatChannelInviteMultiplePartialInvalidUsersTest::RunTest(const FStr
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1295,6 +1333,7 @@ bool FPubnubChatChannelInviteMultiplePartialInvalidUsersTest::RunTest(const FStr
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1349,6 +1388,7 @@ bool FPubnubChatChannelInviteMultiplePartialInvalidUsersTest::RunTest(const FStr
 		Chat->DeleteUser(TargetUserID2, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1379,10 +1419,11 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1398,7 +1439,8 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User)
 	{
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+			CleanUp();
 		return false;
 	}
 	
@@ -1412,6 +1454,7 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1520,7 +1563,8 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 			Chat->DeleteUser(TargetUserID1, false);
 			Chat->DeleteUser(TargetUserID2, false);
 		}
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}, 0.1f));
 	
 	return true;
@@ -1552,10 +1596,11 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1568,6 +1613,7 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1592,6 +1638,7 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1701,7 +1748,8 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 			Chat->DeleteUser(TargetUserID1, false);
 			Chat->DeleteUser(TargetUserID2, false);
 		}
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}, 0.1f));
 	
 	return true;
@@ -1725,9 +1773,8 @@ bool FPubnubChatCreateDirectConversationNotInitializedTest::RunTest(const FStrin
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -1748,6 +1795,7 @@ bool FPubnubChatCreateDirectConversationNotInitializedTest::RunTest(const FStrin
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1771,7 +1819,7 @@ bool FPubnubChatCreateDirectConversationNullUserTest::RunTest(const FString& Par
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Try to create direct conversation with null user
@@ -1783,6 +1831,7 @@ bool FPubnubChatCreateDirectConversationNullUserTest::RunTest(const FString& Par
 		TestFalse("ErrorMessage should not be empty", CreateResult.Result.ErrorMessage.IsEmpty());
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1812,10 +1861,11 @@ bool FPubnubChatCreateDirectConversationHappyPathTest::RunTest(const FString& Pa
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1827,6 +1877,7 @@ bool FPubnubChatCreateDirectConversationHappyPathTest::RunTest(const FString& Pa
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1895,6 +1946,7 @@ bool FPubnubChatCreateDirectConversationHappyPathTest::RunTest(const FString& Pa
 		Chat->DeleteUser(TargetUserID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -1924,10 +1976,11 @@ bool FPubnubChatCreateDirectConversationFullParametersTest::RunTest(const FStrin
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1941,6 +1994,7 @@ bool FPubnubChatCreateDirectConversationFullParametersTest::RunTest(const FStrin
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2017,6 +2071,7 @@ bool FPubnubChatCreateDirectConversationFullParametersTest::RunTest(const FStrin
 		Chat->DeleteUser(TargetUserID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2050,10 +2105,11 @@ bool FPubnubChatCreateDirectConversationAutoGeneratedChannelIDTest::RunTest(cons
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2065,6 +2121,7 @@ bool FPubnubChatCreateDirectConversationAutoGeneratedChannelIDTest::RunTest(cons
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2151,6 +2208,7 @@ bool FPubnubChatCreateDirectConversationAutoGeneratedChannelIDTest::RunTest(cons
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2173,9 +2231,8 @@ bool FPubnubChatCreateGroupConversationNotInitializedTest::RunTest(const FString
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -2197,6 +2254,7 @@ bool FPubnubChatCreateGroupConversationNotInitializedTest::RunTest(const FString
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2220,7 +2278,7 @@ bool FPubnubChatCreateGroupConversationEmptyUsersArrayTest::RunTest(const FStrin
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Try to create group conversation with empty users array
@@ -2233,6 +2291,7 @@ bool FPubnubChatCreateGroupConversationEmptyUsersArrayTest::RunTest(const FStrin
 		TestFalse("ErrorMessage should not be empty", CreateResult.Result.ErrorMessage.IsEmpty());
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2256,7 +2315,7 @@ bool FPubnubChatCreateGroupConversationAllInvalidUsersTest::RunTest(const FStrin
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Try to create group conversation with all invalid users (null pointers)
@@ -2271,6 +2330,7 @@ bool FPubnubChatCreateGroupConversationAllInvalidUsersTest::RunTest(const FStrin
 		TestFalse("ErrorMessage should not be empty", CreateResult.Result.ErrorMessage.IsEmpty());
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2300,10 +2360,11 @@ bool FPubnubChatCreateGroupConversationHappyPathTest::RunTest(const FString& Par
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2315,6 +2376,7 @@ bool FPubnubChatCreateGroupConversationHappyPathTest::RunTest(const FString& Par
 	
 	if(!CreateUser1Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2392,6 +2454,7 @@ bool FPubnubChatCreateGroupConversationHappyPathTest::RunTest(const FString& Par
 		Chat->DeleteUser(TargetUserID1, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2422,10 +2485,11 @@ bool FPubnubChatCreateGroupConversationFullParametersTest::RunTest(const FString
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2445,6 +2509,7 @@ bool FPubnubChatCreateGroupConversationFullParametersTest::RunTest(const FString
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2542,6 +2607,7 @@ bool FPubnubChatCreateGroupConversationFullParametersTest::RunTest(const FString
 		Chat->DeleteUser(TargetUserID2, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2574,10 +2640,11 @@ bool FPubnubChatCreateGroupConversationAutoGeneratedChannelIDTest::RunTest(const
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2589,6 +2656,7 @@ bool FPubnubChatCreateGroupConversationAutoGeneratedChannelIDTest::RunTest(const
 	
 	if(!CreateUser1Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2642,6 +2710,7 @@ bool FPubnubChatCreateGroupConversationAutoGeneratedChannelIDTest::RunTest(const
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2672,10 +2741,11 @@ bool FPubnubChatCreateGroupConversationMixedValidInvalidUsersTest::RunTest(const
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2691,6 +2761,7 @@ bool FPubnubChatCreateGroupConversationMixedValidInvalidUsersTest::RunTest(const
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -2757,6 +2828,7 @@ bool FPubnubChatCreateGroupConversationMixedValidInvalidUsersTest::RunTest(const
 		Chat->DeleteUser(TargetUserID2, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2779,9 +2851,8 @@ bool FPubnubChatGetChannelSuggestionsNotInitializedTest::RunTest(const FString& 
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -2797,6 +2868,7 @@ bool FPubnubChatGetChannelSuggestionsNotInitializedTest::RunTest(const FString& 
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2820,7 +2892,7 @@ bool FPubnubChatGetChannelSuggestionsEmptyTextTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Try to get channel suggestions with empty Text
@@ -2831,6 +2903,7 @@ bool FPubnubChatGetChannelSuggestionsEmptyTextTest::RunTest(const FString& Param
 		TestFalse("ErrorMessage should not be empty", GetSuggestionsResult.Result.ErrorMessage.IsEmpty());
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2861,7 +2934,7 @@ bool FPubnubChatGetChannelSuggestionsHappyPathTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create a test channel with a specific name pattern
@@ -2884,6 +2957,7 @@ bool FPubnubChatGetChannelSuggestionsHappyPathTest::RunTest(const FString& Param
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2916,7 +2990,7 @@ bool FPubnubChatGetChannelSuggestionsFullParametersTest::RunTest(const FString& 
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create test channels with matching name patterns
@@ -2954,6 +3028,7 @@ bool FPubnubChatGetChannelSuggestionsFullParametersTest::RunTest(const FString& 
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -2982,7 +3057,7 @@ bool FPubnubChatGetChannelSuggestionsWithLimitTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create test channels with matching name patterns
@@ -3020,6 +3095,7 @@ bool FPubnubChatGetChannelSuggestionsWithLimitTest::RunTest(const FString& Param
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3058,7 +3134,7 @@ bool FPubnubChatGetChannelSuggestionsMultipleMatchesTest::RunTest(const FString&
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create multiple test channels with matching name patterns
@@ -3101,6 +3177,7 @@ bool FPubnubChatGetChannelSuggestionsMultipleMatchesTest::RunTest(const FString&
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3133,7 +3210,7 @@ bool FPubnubChatGetChannelSuggestionsPartialMatchTest::RunTest(const FString& Pa
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create test channels with different name patterns
@@ -3186,6 +3263,7 @@ bool FPubnubChatGetChannelSuggestionsPartialMatchTest::RunTest(const FString& Pa
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3216,7 +3294,7 @@ bool FPubnubChatGetChannelSuggestionsNoMatchesTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create a test channel with a specific name
@@ -3240,6 +3318,7 @@ bool FPubnubChatGetChannelSuggestionsNoMatchesTest::RunTest(const FString& Param
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3270,7 +3349,7 @@ bool FPubnubChatGetChannelSuggestionsCaseSensitivityTest::RunTest(const FString&
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create a test channel with mixed case name
@@ -3304,6 +3383,7 @@ bool FPubnubChatGetChannelSuggestionsCaseSensitivityTest::RunTest(const FString&
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3338,7 +3418,7 @@ bool FPubnubChatGetChannelSuggestionsLimitEnforcementTest::RunTest(const FString
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create multiple test channels with matching name patterns
@@ -3374,6 +3454,7 @@ bool FPubnubChatGetChannelSuggestionsLimitEnforcementTest::RunTest(const FString
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3404,7 +3485,7 @@ bool FPubnubChatGetChannelSuggestionsConsistencyTest::RunTest(const FString& Par
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create a test channel
@@ -3436,6 +3517,7 @@ bool FPubnubChatGetChannelSuggestionsConsistencyTest::RunTest(const FString& Par
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3468,7 +3550,7 @@ bool FPubnubChatChannelUpdateNotInitializedTest::RunTest(const FString& Paramete
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -3494,6 +3576,7 @@ bool FPubnubChatChannelUpdateNotInitializedTest::RunTest(const FString& Paramete
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3522,10 +3605,11 @@ bool FPubnubChatChannelUpdateHappyPathTest::RunTest(const FString& Parameters)
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -3538,6 +3622,7 @@ bool FPubnubChatChannelUpdateHappyPathTest::RunTest(const FString& Parameters)
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -3557,6 +3642,7 @@ bool FPubnubChatChannelUpdateHappyPathTest::RunTest(const FString& Parameters)
 		Chat->DeleteChannel(TestChannelID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3585,10 +3671,11 @@ bool FPubnubChatChannelUpdateFullParametersTest::RunTest(const FString& Paramete
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -3601,6 +3688,7 @@ bool FPubnubChatChannelUpdateFullParametersTest::RunTest(const FString& Paramete
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -3630,6 +3718,7 @@ bool FPubnubChatChannelUpdateFullParametersTest::RunTest(const FString& Paramete
 		Chat->DeleteChannel(TestChannelID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3662,10 +3751,11 @@ bool FPubnubChatChannelUpdateMultipleTimesTest::RunTest(const FString& Parameter
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -3678,6 +3768,7 @@ bool FPubnubChatChannelUpdateMultipleTimesTest::RunTest(const FString& Parameter
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -3713,6 +3804,7 @@ bool FPubnubChatChannelUpdateMultipleTimesTest::RunTest(const FString& Parameter
 		Chat->DeleteChannel(TestChannelID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3745,7 +3837,7 @@ bool FPubnubChatChannelPinMessageNotInitializedTest::RunTest(const FString& Para
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -3816,17 +3908,20 @@ bool FPubnubChatChannelPinMessageNotInitializedTest::RunTest(const FString& Para
 				{
 					Chat->DeleteChannel(TestChannelID, false);
 				}
-				CleanUp();
+				CleanUpCurrentChatUser(Chat);
+	CleanUp();
 			}, 0.1f));
 		}
 		else
 		{
-			CleanUp();
+			CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		}
 	}
 	else
 	{
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}
 
 	return true;
@@ -3852,7 +3947,7 @@ bool FPubnubChatChannelPinMessageNullMessageTest::RunTest(const FString& Paramet
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -3875,6 +3970,7 @@ bool FPubnubChatChannelPinMessageNullMessageTest::RunTest(const FString& Paramet
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -3900,7 +3996,7 @@ bool FPubnubChatChannelPinMessageDifferentChannelTest::RunTest(const FString& Pa
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create first channel
@@ -3975,17 +4071,20 @@ bool FPubnubChatChannelPinMessageDifferentChannelTest::RunTest(const FString& Pa
 					Chat->DeleteChannel(TestChannelID1, false);
 					Chat->DeleteChannel(TestChannelID2, false);
 				}
-				CleanUp();
+				CleanUpCurrentChatUser(Chat);
+	CleanUp();
 			}, 0.1f));
 		}
 		else
 		{
-			CleanUp();
+			CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		}
 	}
 	else
 	{
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}
 
 	return true;
@@ -4015,10 +4114,11 @@ bool FPubnubChatChannelPinMessageHappyPathTest::RunTest(const FString& Parameter
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4031,6 +4131,7 @@ bool FPubnubChatChannelPinMessageHappyPathTest::RunTest(const FString& Parameter
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4096,7 +4197,8 @@ bool FPubnubChatChannelPinMessageHappyPathTest::RunTest(const FString& Parameter
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 		}
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}, 0.1f));
 
 	return true;
@@ -4130,10 +4232,11 @@ bool FPubnubChatChannelPinMessageTwiceTest::RunTest(const FString& Parameters)
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4146,6 +4249,7 @@ bool FPubnubChatChannelPinMessageTwiceTest::RunTest(const FString& Parameters)
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4233,7 +4337,8 @@ bool FPubnubChatChannelPinMessageTwiceTest::RunTest(const FString& Parameters)
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 		}
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}, 0.1f));
 
 	return true;
@@ -4267,7 +4372,7 @@ bool FPubnubChatChannelUnpinMessageNotInitializedTest::RunTest(const FString& Pa
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -4293,6 +4398,7 @@ bool FPubnubChatChannelUnpinMessageNotInitializedTest::RunTest(const FString& Pa
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -4321,10 +4427,11 @@ bool FPubnubChatChannelUnpinMessageHappyPathTest::RunTest(const FString& Paramet
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4337,6 +4444,7 @@ bool FPubnubChatChannelUnpinMessageHappyPathTest::RunTest(const FString& Paramet
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4411,7 +4519,8 @@ bool FPubnubChatChannelUnpinMessageHappyPathTest::RunTest(const FString& Paramet
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 		}
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}, 0.1f));
 
 	return true;
@@ -4445,10 +4554,11 @@ bool FPubnubChatChannelUnpinMessageNoPinnedMessageTest::RunTest(const FString& P
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4461,6 +4571,7 @@ bool FPubnubChatChannelUnpinMessageNoPinnedMessageTest::RunTest(const FString& P
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4476,6 +4587,7 @@ bool FPubnubChatChannelUnpinMessageNoPinnedMessageTest::RunTest(const FString& P
 		Chat->DeleteChannel(TestChannelID, false);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -4498,9 +4610,8 @@ bool FPubnubChatPinMessageToChannelNotInitializedTest::RunTest(const FString& Pa
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -4516,6 +4627,7 @@ bool FPubnubChatPinMessageToChannelNotInitializedTest::RunTest(const FString& Pa
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -4540,7 +4652,7 @@ bool FPubnubChatPinMessageToChannelNullMessageTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel
@@ -4563,6 +4675,7 @@ bool FPubnubChatPinMessageToChannelNullMessageTest::RunTest(const FString& Param
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -4587,7 +4700,7 @@ bool FPubnubChatPinMessageToChannelNullChannelTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel and send message
@@ -4654,17 +4767,20 @@ bool FPubnubChatPinMessageToChannelNullChannelTest::RunTest(const FString& Param
 				{
 					Chat->DeleteChannel(TestChannelID, false);
 				}
-				CleanUp();
+				CleanUpCurrentChatUser(Chat);
+	CleanUp();
 			}, 0.1f));
 		}
 		else
 		{
-			CleanUp();
+			CleanUpCurrentChatUser(Chat);
+	CleanUp();
 		}
 	}
 	else
 	{
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}
 
 	return true;
@@ -4694,10 +4810,11 @@ bool FPubnubChatPinMessageToChannelHappyPathTest::RunTest(const FString& Paramet
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4710,6 +4827,7 @@ bool FPubnubChatPinMessageToChannelHappyPathTest::RunTest(const FString& Paramet
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4775,7 +4893,8 @@ bool FPubnubChatPinMessageToChannelHappyPathTest::RunTest(const FString& Paramet
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 		}
-		CleanUp();
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	}, 0.1f));
 
 	return true;
@@ -4799,9 +4918,8 @@ bool FPubnubChatUnpinMessageFromChannelNotInitializedTest::RunTest(const FString
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -4816,6 +4934,7 @@ bool FPubnubChatUnpinMessageFromChannelNotInitializedTest::RunTest(const FString
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -4839,7 +4958,7 @@ bool FPubnubChatUnpinMessageFromChannelNullChannelTest::RunTest(const FString& P
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Try to unpin message with null channel
@@ -4847,6 +4966,7 @@ bool FPubnubChatUnpinMessageFromChannelNullChannelTest::RunTest(const FString& P
 		TestTrue("UnpinMessageFromChannel should fail with null channel", UnpinResult.Error);
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -4875,10 +4995,11 @@ bool FPubnubChatUnpinMessageFromChannelHappyPathTest::RunTest(const FString& Par
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4891,6 +5012,7 @@ bool FPubnubChatUnpinMessageFromChannelHappyPathTest::RunTest(const FString& Par
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -4964,6 +5086,7 @@ bool FPubnubChatUnpinMessageFromChannelHappyPathTest::RunTest(const FString& Par
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 		}
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));
 

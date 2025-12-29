@@ -38,9 +38,8 @@ bool FPubnubChatMembershipUpdateNotInitializedTest::RunTest(const FString& Param
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -60,6 +59,7 @@ bool FPubnubChatMembershipUpdateNotInitializedTest::RunTest(const FString& Param
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -88,7 +88,7 @@ bool FPubnubChatMembershipUpdateHappyPathTest::RunTest(const FString& Parameters
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -144,7 +144,8 @@ bool FPubnubChatMembershipUpdateHappyPathTest::RunTest(const FString& Parameters
 			}
 		}
 	}
-
+	
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -173,7 +174,7 @@ bool FPubnubChatMembershipUpdateFullParametersTest::RunTest(const FString& Param
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -234,6 +235,7 @@ bool FPubnubChatMembershipUpdateFullParametersTest::RunTest(const FString& Param
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -266,7 +268,7 @@ bool FPubnubChatMembershipUpdateMultipleTimesTest::RunTest(const FString& Parame
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -323,6 +325,7 @@ bool FPubnubChatMembershipUpdateMultipleTimesTest::RunTest(const FString& Parame
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -345,9 +348,8 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNotInitializedTest::RunTest
 		return false;
 	}
 
-	// Get Chat without initializing
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
-	TestNull("Chat should be null before InitChat", Chat);
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
 	
 	if(!Chat)
 	{
@@ -367,6 +369,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNotInitializedTest::RunTest
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -391,7 +394,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenEmptyTimetokenTest::RunTest
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -430,6 +433,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenEmptyTimetokenTest::RunTest
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -458,7 +462,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenHappyPathTest::RunTest(cons
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -514,6 +518,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenHappyPathTest::RunTest(cons
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -542,7 +547,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenFullParametersTest::RunTest
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -603,6 +608,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenFullParametersTest::RunTest
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -635,7 +641,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenMultipleTimesTest::RunTest(
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -686,6 +692,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenMultipleTimesTest::RunTest(
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -714,7 +721,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenRepositoryUpdateTest::RunTe
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(Chat)
 	{
 		// Create channel first
@@ -763,6 +770,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenRepositoryUpdateTest::RunTe
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -791,10 +799,11 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -807,6 +816,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 	
 	if(!CreateResult.Channel)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -824,6 +834,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 	
 	if(!JoinResult.Membership)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -895,6 +906,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 		}
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));
 	
@@ -926,10 +938,11 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat)
 	{
 		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -942,6 +955,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 	
 	if(!CreateUserResult.User)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -956,6 +970,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 	
 	if(!CreateResult.Channel || !CreateResult.HostMembership)
 	{
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
@@ -1025,6 +1040,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 			Chat->DeleteUser(InitUserID, false);
 			Chat->DeleteUser(SecondUserID, false);
 		}
+		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));
 	

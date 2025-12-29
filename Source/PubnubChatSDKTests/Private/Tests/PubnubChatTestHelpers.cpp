@@ -9,28 +9,35 @@
 
 namespace PubnubChatTestHelpers
 {
-	UPubnubChat* GetChatFromSubsystem(UPubnubChatSubsystem* Subsystem)
+	UPubnubChat* GetChatFromSubsystem(UPubnubChatSubsystem* Subsystem, const FString& UserID)
 	{
-		if (!Subsystem)
+		if (!Subsystem || UserID.IsEmpty())
 		{
 			return nullptr;
 		}
 		
-		// Use reflection to access the private "Chat" UPROPERTY
-		FProperty* ChatProperty = Subsystem->GetClass()->FindPropertyByName(TEXT("Chat"));
-		if (!ChatProperty)
+		// Use reflection to access the private "Chats" TMap UPROPERTY
+		FProperty* ChatsProperty = Subsystem->GetClass()->FindPropertyByName(TEXT("Chats"));
+		if (!ChatsProperty)
 		{
 			return nullptr;
 		}
 		
-		// Get the value of the property
-		UPubnubChat** ChatPtr = ChatProperty->ContainerPtrToValuePtr<UPubnubChat*>(Subsystem);
-		if (!ChatPtr)
+		// Get the TMap value
+		TMap<FString, UPubnubChat*>* ChatsMap = ChatsProperty->ContainerPtrToValuePtr<TMap<FString, UPubnubChat*>>(Subsystem);
+		if (!ChatsMap)
 		{
 			return nullptr;
 		}
 		
-		return *ChatPtr;
+		// Find the chat for the given UserID
+		UPubnubChat** FoundChat = ChatsMap->Find(UserID);
+		if (!FoundChat)
+		{
+			return nullptr;
+		}
+		
+		return *FoundChat;
 	}
 	
 	UPubnubClient* GetPubnubClientFromChat(UPubnubChat* Chat)

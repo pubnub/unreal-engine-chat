@@ -109,6 +109,28 @@ FPubnubChatIsPresentResult UPubnubChatUser::IsPresentOn(const FString ChannelID)
 	return Chat->IsPresent(UserID, ChannelID);
 }
 
+FPubnubChatMembershipsResult UPubnubChatUser::GetMemberships(const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FPubnubChatMembershipsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	//GetMemberships using PubnubClient
+	FPubnubMembershipsResult GetMembershipsResult = PubnubClient->GetMemberships(UserID, FPubnubMembershipInclude::FromValue(true), Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result, "GetMemberships");
+	
+	//Create corresponding Chat objects for all returned memberships
+	for (auto& MembershipData : GetMembershipsResult.MembershipsData)
+	{
+		UPubnubChatChannel* Channel =  Chat->CreateChannelObject(MembershipData.Channel.ChannelID, MembershipData.Channel);
+		UPubnubChatMembership* Membership = Chat->CreateMembershipObject(this, Channel, MembershipData);
+		FinalResult.Memberships.Add(Membership);
+	}
+	
+	FinalResult.Page = GetMembershipsResult.Page;
+	FinalResult.Total = GetMembershipsResult.TotalCount;
+	return FinalResult;
+}
+
 void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init User, PubnubClient is invalid"));

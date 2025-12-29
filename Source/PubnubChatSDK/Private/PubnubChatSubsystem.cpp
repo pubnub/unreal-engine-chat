@@ -5,6 +5,7 @@
 #include "PubnubChat.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubSubsystem.h"
+#include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -15,14 +16,8 @@ void UPubnubChatSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPubnubChatSubsystem::Deinitialize()
 {
-	// Ensure Chat is destroyed before subsystem deinitialization
-	// This prevents crashes when the engine shuts down subsystems
-	if(Chat)
-	{
-		Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
-		Chat->DestroyChat();
-		Chat = nullptr;
-	}
+	// Ensure all Chats are destroyed before subsystem deinitialization
+	DestroyAllChats();
 	
 	Super::Deinitialize();
 }
@@ -34,54 +29,92 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FSt
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, SubscribeKey);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
 	
-	if(Chat)
+	// Check if chat with this UserID already exists
+	if(UPubnubChat** ExistingChat = Chats.Find(UserID))
 	{
-		UE_LOG(PubnubChatLog, Warning, TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
-		FinalResult.Result = FPubnubChatOperationResult::CreateError(TEXT("Chat already exists. (Only one chat object can be created). Returning existing Chat"));
-		FinalResult.Chat = Chat;
-		return FinalResult;
+		if(*ExistingChat)
+		{
+			UE_LOG(PubnubChatLog, Warning, TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID);
+			FinalResult.Result = FPubnubChatOperationResult::CreateError(FString::Printf(TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID));
+			FinalResult.Chat = *ExistingChat;
+			return FinalResult;
+		}
 	}
 
-	Chat = NewObject<UPubnubChat>(this);
-	Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
-	FPubnubChatInitChatResult InitChatResult = Chat->InitChat(UserID, Config, CreatePubnubClient(PublishKey, SubscribeKey, UserID));
+	UPubnubChat* NewChat = NewObject<UPubnubChat>(this);
+	NewChat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+	FPubnubChatInitChatResult InitChatResult = NewChat->InitChat(UserID, Config, CreatePubnubClient(PublishKey, SubscribeKey, UserID));
 
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(FinalResult, InitChatResult);
 
 	FinalResult.Result.Merge(InitChatResult.Result);
 	FinalResult.Result.MarkSuccess();
-	FinalResult.Chat = Chat;
+	FinalResult.Chat = NewChat;
+
+	// Store the chat in the map
+	Chats.Add(UserID, NewChat);
 
 	return FinalResult;
 }
 
-UPubnubChat* UPubnubChatSubsystem::GetChat()
+UPubnubChat* UPubnubChatSubsystem::GetChat(FString UserID)
 {
-	if(!Chat)
+	if(UserID.IsEmpty())
 	{
-		UE_LOG(PubnubChatLog, Warning, TEXT("Chat doesn't exist. Call 'Create Chat' instead"));
+		UE_LOG(PubnubChatLog, Warning, TEXT("GetChat Error - UserID is empty"));
 		return nullptr;
 	}
 
-	return Chat;
+	UPubnubChat** FoundChat = Chats.Find(UserID);
+	if(!FoundChat || !*FoundChat)
+	{
+		UE_LOG(PubnubChatLog, Warning, TEXT("Chat with UserID '%s' doesn't exist. Call 'Init Chat' instead"), *UserID);
+		return nullptr;
+	}
+
+	return *FoundChat;
 }
 
-void UPubnubChatSubsystem::DestroyChat()
+void UPubnubChatSubsystem::DestroyChat(FString UserID)
 {
-	if(!Chat)
+	if(UserID.IsEmpty())
 	{
-		UE_LOG(PubnubChatLog, Warning, TEXT("Can't destroy chat as it doesn't exist"));
+		UE_LOG(PubnubChatLog, Warning, TEXT("DestroyChat Error - UserID is empty"));
+		return;
+	}
+
+	UPubnubChat** FoundChat = Chats.Find(UserID);
+	if(!FoundChat || !*FoundChat)
+	{
+		UE_LOG(PubnubChatLog, Warning, TEXT("Can't destroy chat with UserID '%s' as it doesn't exist"), *UserID);
 		return;
 	}
 	
-	Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
-	Chat->DestroyChat();
-	Chat = nullptr;
+	UPubnubChat* ChatToDestroy = *FoundChat;
+	ChatToDestroy->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+	ChatToDestroy->DestroyChat();
+	
+	// Remove from map (OnChatDestroyed will also clean up, but we do it here to be safe)
+	Chats.Remove(UserID);
 }
 
-void UPubnubChatSubsystem::OnChatDestroyed()
+void UPubnubChatSubsystem::DestroyAllChats()
 {
-	Chat = nullptr;
+	for(auto& ChatPair : Chats)
+	{
+		if(ChatPair.Value)
+		{
+			ChatPair.Value->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+			ChatPair.Value->DestroyChat();
+		}
+	}
+	Chats.Empty();
+}
+
+void UPubnubChatSubsystem::OnChatDestroyed(FString UserID)
+{
+	// Remove the destroyed chat from the map using the provided UserID
+	Chats.Remove(UserID);
 }
 
 UPubnubClient* UPubnubChatSubsystem::CreatePubnubClient(FString PublishKey, FString SubscribeKey, FString UserID)

@@ -71,10 +71,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult UnpinMessage();
 	
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatWhoIsPresentResult WhoIsPresent(int Limit = 1000, int Offset = 0);
 	
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatIsPresentResult IsPresent(const FString UserID);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
@@ -85,6 +85,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
 	FPubnubChatIsDeletedResult IsDeleted();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatMembershipsResult GetMembers(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatMembershipsResult GetInvitees(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+
 
 	
 	

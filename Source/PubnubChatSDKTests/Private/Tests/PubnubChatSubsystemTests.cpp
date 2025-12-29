@@ -39,6 +39,7 @@ bool FPubnubChatInitChatEmptyPublishKeyTest::RunTest(const FString& Parameters)
 	TestNull("Chat object should not be created", InitResult.Chat);
 	TestFalse("ErrorMessage should not be empty", InitResult.Result.ErrorMessage.IsEmpty());
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -63,6 +64,7 @@ bool FPubnubChatInitChatEmptySubscribeKeyTest::RunTest(const FString& Parameters
 	TestNull("Chat object should not be created", InitResult.Chat);
 	TestFalse("ErrorMessage should not be empty", InitResult.Result.ErrorMessage.IsEmpty());
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -87,6 +89,7 @@ bool FPubnubChatInitChatEmptyUserIDTest::RunTest(const FString& Parameters)
 	TestNull("Chat object should not be created", InitResult.Chat);
 	TestFalse("ErrorMessage should not be empty", InitResult.Result.ErrorMessage.IsEmpty());
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -108,6 +111,7 @@ bool FPubnubChatInitChatAllEmptyFieldsTest::RunTest(const FString& Parameters)
 	TestNull("Chat object should not be created", InitResult.Chat);
 	TestFalse("ErrorMessage should not be empty", InitResult.Result.ErrorMessage.IsEmpty());
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -136,10 +140,10 @@ bool FPubnubChatInitChatHappyPathTest::RunTest(const FString& Parameters)
 	
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	TestNotNull("Chat object should be created", InitResult.Chat);
-	TestEqual("Chat object should match GetChat", ChatSubsystem->GetChat(), InitResult.Chat);
+	TestEqual("Chat object should match GetChat", ChatSubsystem->GetChat(TestUserID), InitResult.Chat);
 	
 	// Verify Chat is properly initialized using reflection
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = ChatSubsystem->GetChat(TestUserID);
 	TestNotNull("Chat should exist", Chat);
 	
 	if(Chat)
@@ -165,10 +169,11 @@ bool FPubnubChatInitChatHappyPathTest::RunTest(const FString& Parameters)
 		TestNotNull("Repository should be created during InitChat", Repository);
 		
 		// Verify subsystem's internal Chat pointer matches
-		UPubnubChat* SubsystemChat = GetChatFromSubsystem(ChatSubsystem);
+		UPubnubChat* SubsystemChat = GetChatFromSubsystem(ChatSubsystem, TestUserID);
 		TestEqual("Subsystem's internal Chat should match returned Chat", SubsystemChat, Chat);
 	}
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -205,7 +210,7 @@ bool FPubnubChatInitChatFullConfigTest::RunTest(const FString& Parameters)
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
 	// Verify Chat is properly initialized
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = ChatSubsystem->GetChat(TestUserID);
 	if(Chat)
 	{
 		UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
@@ -224,6 +229,7 @@ bool FPubnubChatInitChatFullConfigTest::RunTest(const FString& Parameters)
 		TestNotNull("PubnubClient should be created", PubnubClient);
 	}
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -265,13 +271,15 @@ bool FPubnubChatInitChatDuplicateCallTest::RunTest(const FString& Parameters)
 	// Should return existing chat (currently sets Error=true but returns Chat)
 	TestNotNull("Second InitChat should return existing Chat", SecondResult.Chat);
 	TestEqual("Second result should return same Chat object", SecondResult.Chat, FirstChat);
-	TestEqual("GetChat should return same object", ChatSubsystem->GetChat(), FirstChat);
+	TestEqual("GetChat should return same object", ChatSubsystem->GetChat(TestUserID), FirstChat);
 	
 	// Verify the result indicates it's an existing chat
 	// Note: Current implementation sets Error=true when chat exists, but returns the chat
 	TestTrue("Result should indicate existing chat", SecondResult.Result.Error);
 	TestFalse("ErrorMessage should indicate existing chat", SecondResult.Result.ErrorMessage.IsEmpty());
 
+	CleanUpCurrentChatUser(FirstResult.Chat);
+	CleanUpCurrentChatUser(SecondResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -323,6 +331,7 @@ bool FPubnubChatInitChatStepResultsTest::RunTest(const FString& Parameters)
 	// At least one of these should be present (depending on whether user exists)
 	TestTrue("Should have either GetUserMetadata or SetUserMetadata step", bFoundGetUserMetadata || bFoundSetUserMetadata);
 
+	CleanUpCurrentChatUser(InitResult.Chat);
 	CleanUp();
 	return true;
 }
@@ -352,7 +361,7 @@ bool FPubnubChatInitChatDifferentUserIDsTest::RunTest(const FString& Parameters)
 	TestFalse("First InitChat should succeed", Result1.Result.Error);
 	TestNotNull("First Chat should be created", Result1.Chat);
 	
-	UPubnubChat* Chat1 = ChatSubsystem->GetChat();
+	UPubnubChat* Chat1 = ChatSubsystem->GetChat(TestUserID1);
 	if(Chat1)
 	{
 		UPubnubChatUser* User1 = Chat1->GetCurrentUser();
@@ -360,7 +369,7 @@ bool FPubnubChatInitChatDifferentUserIDsTest::RunTest(const FString& Parameters)
 	}
 	
 	// Destroy first chat
-	ChatSubsystem->DestroyChat();
+	ChatSubsystem->DestroyChat(TestUserID1);
 	
 	// Second InitChat with UserID2
 	const FString TestUserID2 = SDK_PREFIX + "test_user_2";
@@ -368,7 +377,7 @@ bool FPubnubChatInitChatDifferentUserIDsTest::RunTest(const FString& Parameters)
 	TestFalse("Second InitChat should succeed", Result2.Result.Error);
 	TestNotNull("Second Chat should be created", Result2.Chat);
 	
-	UPubnubChat* Chat2 = ChatSubsystem->GetChat();
+	UPubnubChat* Chat2 = ChatSubsystem->GetChat(TestUserID2);
 	if(Chat2)
 	{
 		UPubnubChatUser* User2 = Chat2->GetCurrentUser();
@@ -378,6 +387,8 @@ bool FPubnubChatInitChatDifferentUserIDsTest::RunTest(const FString& Parameters)
 	// Verify they are different objects
 	TestNotEqual("Chat objects should be different", Chat1, Chat2);
 
+	CleanUpCurrentChatUser(Chat1);
+	CleanUpCurrentChatUser(Chat2);
 	CleanUp();
 	return true;
 }
@@ -414,7 +425,7 @@ bool FPubnubChatInitChatConfigPreservationTest::RunTest(const FString& Parameter
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
 	// Verify config was preserved using reflection
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = ChatSubsystem->GetChat(TestUserID);
 	TestNotNull("Chat should exist", Chat);
 	
 	if(Chat)
@@ -431,7 +442,7 @@ bool FPubnubChatInitChatConfigPreservationTest::RunTest(const FString& Parameter
 		TestNotNull("Current user should exist", CurrentUser);
 	}
 
-	CleanUp();
+	CleanUpCurrentChatUser(Chat);
 	return true;
 }
 
@@ -457,11 +468,11 @@ bool FPubnubChatInitChatSubsystemStateTest::RunTest(const FString& Parameters)
 	FPubnubChatConfig ChatConfig;
 	
 	// Test that GetChat returns null before InitChat
-	UPubnubChat* ChatBeforeInit = ChatSubsystem->GetChat();
+	UPubnubChat* ChatBeforeInit = ChatSubsystem->GetChat(TestUserID);
 	TestNull("GetChat should return null before InitChat", ChatBeforeInit);
 	
 	// Verify subsystem's internal Chat is null using reflection
-	UPubnubChat* SubsystemChatBefore = GetChatFromSubsystem(ChatSubsystem);
+	UPubnubChat* SubsystemChatBefore = GetChatFromSubsystem(ChatSubsystem, TestUserID);
 	TestNull("Subsystem's internal Chat should be null before InitChat", SubsystemChatBefore);
 	
 	// InitChat
@@ -470,27 +481,28 @@ bool FPubnubChatInitChatSubsystemStateTest::RunTest(const FString& Parameters)
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
 	// Test that GetChat returns the Chat after InitChat
-	UPubnubChat* ChatAfterInit = ChatSubsystem->GetChat();
+	UPubnubChat* ChatAfterInit = ChatSubsystem->GetChat(TestUserID);
 	TestNotNull("GetChat should return Chat after InitChat", ChatAfterInit);
 	TestEqual("GetChat should return same Chat as InitChat result", ChatAfterInit, InitResult.Chat);
 	
 	// Verify subsystem's internal Chat matches using reflection
-	UPubnubChat* SubsystemChatAfter = GetChatFromSubsystem(ChatSubsystem);
+	UPubnubChat* SubsystemChatAfter = GetChatFromSubsystem(ChatSubsystem, TestUserID);
 	TestNotNull("Subsystem's internal Chat should exist after InitChat", SubsystemChatAfter);
 	TestEqual("Subsystem's internal Chat should match GetChat", SubsystemChatAfter, ChatAfterInit);
 	TestEqual("Subsystem's internal Chat should match InitChat result", SubsystemChatAfter, InitResult.Chat);
 	
 	// Destroy Chat
-	ChatSubsystem->DestroyChat();
+	ChatSubsystem->DestroyChat(TestUserID);
 	
 	// Test that GetChat returns null after DestroyChat
-	UPubnubChat* ChatAfterDestroy = ChatSubsystem->GetChat();
+	UPubnubChat* ChatAfterDestroy = ChatSubsystem->GetChat(TestUserID);
 	TestNull("GetChat should return null after DestroyChat", ChatAfterDestroy);
 	
 	// Verify subsystem's internal Chat is null using reflection
-	UPubnubChat* SubsystemChatAfterDestroy = GetChatFromSubsystem(ChatSubsystem);
+	UPubnubChat* SubsystemChatAfterDestroy = GetChatFromSubsystem(ChatSubsystem, TestUserID);
 	TestNull("Subsystem's internal Chat should be null after DestroyChat", SubsystemChatAfterDestroy);
 
+	CleanUpCurrentChatUser(ChatAfterInit);
 	CleanUp();
 	return true;
 }
@@ -519,7 +531,7 @@ bool FPubnubChatInitChatCurrentUserVerificationTest::RunTest(const FString& Para
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	TestNotNull("Chat object should be created", InitResult.Chat);
 	
-	UPubnubChat* Chat = ChatSubsystem->GetChat();
+	UPubnubChat* Chat = ChatSubsystem->GetChat(TestUserID);
 	if(Chat)
 	{
 		// Verify CurrentUser exists via public API
@@ -540,6 +552,7 @@ bool FPubnubChatInitChatCurrentUserVerificationTest::RunTest(const FString& Para
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;
 }
@@ -558,14 +571,14 @@ bool FPubnubChatSubsystemGetChatTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	// GetChat should return nullptr before InitChat
-	UPubnubChat* ChatBeforeInit = ChatSubsystem->GetChat();
-	TestNull("Chat is null before InitChat", ChatBeforeInit);
-	
 	// Initialize Chat - get keys from environment variables
 	const FString TestPublishKey = GetTestPublishKey();
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString TestUserID = SDK_PREFIX + "test_user_get";
+	
+	// GetChat should return nullptr before InitChat
+	UPubnubChat* ChatBeforeInit = ChatSubsystem->GetChat(TestUserID);
+	TestNull("Chat is null before InitChat", ChatBeforeInit);
 	
 	FPubnubChatConfig ChatConfig;
 	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
@@ -577,10 +590,11 @@ bool FPubnubChatSubsystemGetChatTest::RunTest(const FString& Parameters)
 	}
 
 	// GetChat should return the chat object after InitChat
-	UPubnubChat* ChatAfterInit = ChatSubsystem->GetChat();
+	UPubnubChat* ChatAfterInit = ChatSubsystem->GetChat(TestUserID);
 	TestNotNull("Chat exists after InitChat", ChatAfterInit);
 	TestEqual("GetChat returns same object", ChatAfterInit, InitResult.Chat);
 
+	CleanUpCurrentChatUser(ChatAfterInit);
 	CleanUp();
 	return true;
 }
@@ -614,25 +628,437 @@ bool FPubnubChatSubsystemDestroyChatTest::RunTest(const FString& Parameters)
 	}
 
 	// Verify chat exists
-	UPubnubChat* ChatBeforeDestroy = ChatSubsystem->GetChat();
+	UPubnubChat* ChatBeforeDestroy = ChatSubsystem->GetChat(TestUserID);
 	TestNotNull("Chat exists before destroy", ChatBeforeDestroy);
 	
 	// Verify subsystem's internal Chat exists using reflection
-	UPubnubChat* SubsystemChatBefore = GetChatFromSubsystem(ChatSubsystem);
+	UPubnubChat* SubsystemChatBefore = GetChatFromSubsystem(ChatSubsystem, TestUserID);
 	TestNotNull("Subsystem's internal Chat should exist before destroy", SubsystemChatBefore);
 	TestEqual("Subsystem's internal Chat should match GetChat", SubsystemChatBefore, ChatBeforeDestroy);
-
+	
 	// Destroy chat
-	ChatSubsystem->DestroyChat();
+	ChatSubsystem->DestroyChat(TestUserID);
 
 	// Verify chat is destroyed
-	UPubnubChat* ChatAfterDestroy = ChatSubsystem->GetChat();
+	UPubnubChat* ChatAfterDestroy = ChatSubsystem->GetChat(TestUserID);
 	TestNull("Chat is null after destroy", ChatAfterDestroy);
 	
 	// Verify subsystem's internal Chat is null using reflection
-	UPubnubChat* SubsystemChatAfter = GetChatFromSubsystem(ChatSubsystem);
+	UPubnubChat* SubsystemChatAfter = GetChatFromSubsystem(ChatSubsystem, TestUserID);
 	TestNull("Subsystem's internal Chat should be null after destroy", SubsystemChatAfter);
 
+	CleanUpCurrentChatUser(InitResult.Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// MULTIPLE CHATS TESTS
+// ============================================================================
+
+/**
+ * Tests creating multiple chats with different UserIDs.
+ * Verifies that each chat can be retrieved independently and they are separate objects.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemMultipleChatsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.MultipleChats.CreateMultipleChats", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemMultipleChatsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	FPubnubChatConfig ChatConfig;
+	
+	// Create first chat
+	const FString TestUserID1 = SDK_PREFIX + "test_user_multiple_1";
+	FPubnubChatInitChatResult Result1 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID1, ChatConfig);
+	TestFalse("First InitChat should succeed", Result1.Result.Error);
+	TestNotNull("First Chat should be created", Result1.Chat);
+	
+	// Create second chat with different UserID
+	const FString TestUserID2 = SDK_PREFIX + "test_user_multiple_2";
+	FPubnubChatInitChatResult Result2 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID2, ChatConfig);
+	TestFalse("Second InitChat should succeed", Result2.Result.Error);
+	TestNotNull("Second Chat should be created", Result2.Chat);
+	
+	// Create third chat with different UserID
+	const FString TestUserID3 = SDK_PREFIX + "test_user_multiple_3";
+	FPubnubChatInitChatResult Result3 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID3, ChatConfig);
+	TestFalse("Third InitChat should succeed", Result3.Result.Error);
+	TestNotNull("Third Chat should be created", Result3.Chat);
+	
+	// Verify all chats are different objects
+	TestNotEqual("Chat1 and Chat2 should be different objects", Result1.Chat, Result2.Chat);
+	TestNotEqual("Chat1 and Chat3 should be different objects", Result1.Chat, Result3.Chat);
+	TestNotEqual("Chat2 and Chat3 should be different objects", Result2.Chat, Result3.Chat);
+	
+	// Verify GetChat returns correct chat for each UserID
+	UPubnubChat* RetrievedChat1 = ChatSubsystem->GetChat(TestUserID1);
+	TestNotNull("Retrieved Chat1 should exist", RetrievedChat1);
+	TestEqual("Retrieved Chat1 should match created Chat1", RetrievedChat1, Result1.Chat);
+	
+	UPubnubChat* RetrievedChat2 = ChatSubsystem->GetChat(TestUserID2);
+	TestNotNull("Retrieved Chat2 should exist", RetrievedChat2);
+	TestEqual("Retrieved Chat2 should match created Chat2", RetrievedChat2, Result2.Chat);
+	
+	UPubnubChat* RetrievedChat3 = ChatSubsystem->GetChat(TestUserID3);
+	TestNotNull("Retrieved Chat3 should exist", RetrievedChat3);
+	TestEqual("Retrieved Chat3 should match created Chat3", RetrievedChat3, Result3.Chat);
+	
+	// Verify each chat has correct current user
+	if(RetrievedChat1)
+	{
+		UPubnubChatUser* User1 = RetrievedChat1->GetCurrentUser();
+		TestNotNull("User1 should exist", User1);
+	}
+	
+	if(RetrievedChat2)
+	{
+		UPubnubChatUser* User2 = RetrievedChat2->GetCurrentUser();
+		TestNotNull("User2 should exist", User2);
+	}
+	
+	if(RetrievedChat3)
+	{
+		UPubnubChatUser* User3 = RetrievedChat3->GetCurrentUser();
+		TestNotNull("User3 should exist", User3);
+	}
+
+	CleanUpCurrentChatUser(RetrievedChat1);
+	CleanUpCurrentChatUser(RetrievedChat2);
+	CleanUpCurrentChatUser(RetrievedChat3);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests that creating a chat with an existing UserID returns the existing chat.
+ * Verifies that the same UserID cannot create multiple chats.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemDuplicateUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.MultipleChats.DuplicateUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemDuplicateUserIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_user_duplicate_multiple";
+	FPubnubChatConfig ChatConfig;
+	
+	// Create first chat
+	FPubnubChatInitChatResult Result1 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	TestFalse("First InitChat should succeed", Result1.Result.Error);
+	TestNotNull("First Chat should be created", Result1.Chat);
+	
+	UPubnubChat* FirstChat = Result1.Chat;
+	
+	// Try to create another chat with the same UserID
+	FPubnubChatInitChatResult Result2 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	// Should return existing chat with error flag set
+	TestNotNull("Second InitChat should return existing Chat", Result2.Chat);
+	TestEqual("Second result should return same Chat object", Result2.Chat, FirstChat);
+	TestTrue("Result should indicate existing chat", Result2.Result.Error);
+	TestFalse("ErrorMessage should indicate existing chat", Result2.Result.ErrorMessage.IsEmpty());
+	
+	// Verify GetChat still returns the same chat
+	UPubnubChat* RetrievedChat = ChatSubsystem->GetChat(TestUserID);
+	TestNotNull("Retrieved Chat should exist", RetrievedChat);
+	TestEqual("Retrieved Chat should match first Chat", RetrievedChat, FirstChat);
+
+	CleanUpCurrentChatUser(FirstChat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests destroying individual chats while keeping others alive.
+ * Verifies that destroying one chat doesn't affect others.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemDestroyIndividualChatTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.MultipleChats.DestroyIndividualChat", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemDestroyIndividualChatTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	FPubnubChatConfig ChatConfig;
+	
+	// Create multiple chats
+	const FString TestUserID1 = SDK_PREFIX + "test_user_destroy_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_user_destroy_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_user_destroy_3";
+	
+	FPubnubChatInitChatResult Result1 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID1, ChatConfig);
+	FPubnubChatInitChatResult Result2 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID2, ChatConfig);
+	FPubnubChatInitChatResult Result3 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID3, ChatConfig);
+	
+	TestFalse("First InitChat should succeed", Result1.Result.Error);
+	TestFalse("Second InitChat should succeed", Result2.Result.Error);
+	TestFalse("Third InitChat should succeed", Result3.Result.Error);
+	
+	// Verify all chats exist
+	TestNotNull("Chat1 should exist", ChatSubsystem->GetChat(TestUserID1));
+	TestNotNull("Chat2 should exist", ChatSubsystem->GetChat(TestUserID2));
+	TestNotNull("Chat3 should exist", ChatSubsystem->GetChat(TestUserID3));
+	
+	// Destroy only Chat2
+	ChatSubsystem->DestroyChat(TestUserID2);
+	
+	// Verify Chat2 is destroyed
+	TestNull("Chat2 should be null after destroy", ChatSubsystem->GetChat(TestUserID2));
+	
+	// Verify Chat1 and Chat3 still exist
+	TestNotNull("Chat1 should still exist", ChatSubsystem->GetChat(TestUserID1));
+	TestNotNull("Chat3 should still exist", ChatSubsystem->GetChat(TestUserID3));
+	
+	// Verify they are still the same objects
+	TestEqual("Chat1 should still match original", ChatSubsystem->GetChat(TestUserID1), Result1.Chat);
+	TestEqual("Chat3 should still match original", ChatSubsystem->GetChat(TestUserID3), Result3.Chat);
+	
+	// Destroy Chat1
+	ChatSubsystem->DestroyChat(TestUserID1);
+	
+	// Verify Chat1 is destroyed but Chat3 still exists
+	TestNull("Chat1 should be null after destroy", ChatSubsystem->GetChat(TestUserID1));
+	TestNotNull("Chat3 should still exist", ChatSubsystem->GetChat(TestUserID3));
+
+	CleanUpCurrentChatUser(Result1.Chat);
+	CleanUpCurrentChatUser(Result2.Chat);
+	CleanUpCurrentChatUser(Result3.Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetChat with invalid UserID.
+ * Verifies that GetChat returns null for non-existent UserID.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemGetChatInvalidUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.MultipleChats.GetChatInvalidUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemGetChatInvalidUserIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_user_valid";
+	const FString InvalidUserID = SDK_PREFIX + "test_user_invalid";
+	FPubnubChatConfig ChatConfig;
+	
+	// Create a chat with valid UserID
+	FPubnubChatInitChatResult Result = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	TestFalse("InitChat should succeed", Result.Result.Error);
+	
+	// Try to get chat with invalid UserID
+	UPubnubChat* InvalidChat = ChatSubsystem->GetChat(InvalidUserID);
+	TestNull("GetChat with invalid UserID should return null", InvalidChat);
+	
+	// Verify valid chat still exists
+	UPubnubChat* ValidChat = ChatSubsystem->GetChat(TestUserID);
+	TestNotNull("Valid Chat should still exist", ValidChat);
+	TestEqual("Valid Chat should match created Chat", ValidChat, Result.Chat);
+	
+	// Try to get chat with empty UserID
+	UPubnubChat* EmptyChat = ChatSubsystem->GetChat(TEXT(""));
+	TestNull("GetChat with empty UserID should return null", EmptyChat);
+
+	CleanUpCurrentChatUser(Result.Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests DestroyChat with invalid UserID.
+ * Verifies that DestroyChat handles invalid UserID gracefully.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemDestroyChatInvalidUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.MultipleChats.DestroyChatInvalidUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemDestroyChatInvalidUserIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_user_destroy_invalid";
+	const FString InvalidUserID = SDK_PREFIX + "test_user_not_exist";
+	FPubnubChatConfig ChatConfig;
+	
+	// Create a chat
+	FPubnubChatInitChatResult Result = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	TestFalse("InitChat should succeed", Result.Result.Error);
+	TestNotNull("Chat should exist", ChatSubsystem->GetChat(TestUserID));
+	
+	// Try to destroy chat with invalid UserID (should not crash)
+	ChatSubsystem->DestroyChat(InvalidUserID);
+	
+	// Verify original chat still exists
+	TestNotNull("Original Chat should still exist", ChatSubsystem->GetChat(TestUserID));
+	
+	// Try to destroy chat with empty UserID (should not crash)
+	ChatSubsystem->DestroyChat(TEXT(""));
+	
+	// Verify original chat still exists
+	TestNotNull("Original Chat should still exist after empty destroy", ChatSubsystem->GetChat(TestUserID));
+
+	CleanUpCurrentChatUser(Result.Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// DESTROY ALL CHATS TESTS
+// ============================================================================
+
+/**
+ * Tests DestroyAllChats function.
+ * Verifies that all chats are destroyed and removed from the subsystem.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemDestroyAllChatsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.DestroyAllChats.Basic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemDestroyAllChatsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	FPubnubChatConfig ChatConfig;
+	
+	// Create multiple chats
+	const FString TestUserID1 = SDK_PREFIX + "test_user_destroy_all_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_user_destroy_all_2";
+	const FString TestUserID3 = SDK_PREFIX + "test_user_destroy_all_3";
+	
+	FPubnubChatInitChatResult Result1 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID1, ChatConfig);
+	FPubnubChatInitChatResult Result2 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID2, ChatConfig);
+	FPubnubChatInitChatResult Result3 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID3, ChatConfig);
+	
+	TestFalse("First InitChat should succeed", Result1.Result.Error);
+	TestFalse("Second InitChat should succeed", Result2.Result.Error);
+	TestFalse("Third InitChat should succeed", Result3.Result.Error);
+	
+	// Verify all chats exist
+	TestNotNull("Chat1 should exist", ChatSubsystem->GetChat(TestUserID1));
+	TestNotNull("Chat2 should exist", ChatSubsystem->GetChat(TestUserID2));
+	TestNotNull("Chat3 should exist", ChatSubsystem->GetChat(TestUserID3));
+	
+	// Destroy all chats
+	ChatSubsystem->DestroyAllChats();
+	
+	// Verify all chats are destroyed
+	TestNull("Chat1 should be null after DestroyAllChats", ChatSubsystem->GetChat(TestUserID1));
+	TestNull("Chat2 should be null after DestroyAllChats", ChatSubsystem->GetChat(TestUserID2));
+	TestNull("Chat3 should be null after DestroyAllChats", ChatSubsystem->GetChat(TestUserID3));
+
+	CleanUpCurrentChatUser(Result1.Chat);
+	CleanUpCurrentChatUser(Result2.Chat);
+	CleanUpCurrentChatUser(Result3.Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests DestroyAllChats when no chats exist.
+ * Verifies that DestroyAllChats handles empty state gracefully.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemDestroyAllChatsEmptyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.DestroyAllChats.Empty", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemDestroyAllChatsEmptyTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// DestroyAllChats when no chats exist (should not crash)
+	ChatSubsystem->DestroyAllChats();
+	
+	// Verify no chats exist
+	const FString TestUserID = SDK_PREFIX + "test_user_not_exist";
+	TestNull("GetChat should return null when no chats exist", ChatSubsystem->GetChat(TestUserID));
+
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests DestroyAllChats and then creating new chats.
+ * Verifies that new chats can be created after DestroyAllChats.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSubsystemDestroyAllChatsThenCreateTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ChatSubsystem.DestroyAllChats.ThenCreate", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSubsystemDestroyAllChatsThenCreateTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	FPubnubChatConfig ChatConfig;
+	
+	// Create and destroy chats
+	const FString TestUserID1 = SDK_PREFIX + "test_user_destroy_then_create_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_user_destroy_then_create_2";
+	
+	FPubnubChatInitChatResult Result1 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID1, ChatConfig);
+	FPubnubChatInitChatResult Result2 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID2, ChatConfig);
+	
+	TestFalse("First InitChat should succeed", Result1.Result.Error);
+	TestFalse("Second InitChat should succeed", Result2.Result.Error);
+	
+	// Destroy all chats
+	ChatSubsystem->DestroyAllChats();
+	
+	// Verify all chats are destroyed
+	TestNull("Chat1 should be null after DestroyAllChats", ChatSubsystem->GetChat(TestUserID1));
+	TestNull("Chat2 should be null after DestroyAllChats", ChatSubsystem->GetChat(TestUserID2));
+	
+	// Create new chats with same UserIDs
+	FPubnubChatInitChatResult Result3 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID1, ChatConfig);
+	FPubnubChatInitChatResult Result4 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID2, ChatConfig);
+	
+	TestFalse("Third InitChat should succeed", Result3.Result.Error);
+	TestFalse("Fourth InitChat should succeed", Result4.Result.Error);
+	
+	// Verify new chats exist and are different objects
+	TestNotNull("New Chat1 should exist", ChatSubsystem->GetChat(TestUserID1));
+	TestNotNull("New Chat2 should exist", ChatSubsystem->GetChat(TestUserID2));
+	TestNotEqual("New Chat1 should be different object", Result3.Chat, Result1.Chat);
+	TestNotEqual("New Chat2 should be different object", Result4.Chat, Result2.Chat);
+
+	CleanUpCurrentChatUser(Result1.Chat);
+	CleanUpCurrentChatUser(Result2.Chat);
 	CleanUp();
 	return true;
 }

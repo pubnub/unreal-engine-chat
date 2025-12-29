@@ -5,6 +5,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChat.h"
+#include "PubnubChatUser.h"
 #include "Engine/GameInstance.h"
 
 
@@ -56,7 +57,7 @@ void FPubnubChatAutomationTestBase::CleanUp()
 	//Final clean up
 	if(ChatSubsystem)
 	{
-		ChatSubsystem->DestroyChat();
+		ChatSubsystem->DestroyAllChats();
 	}
 	
 	if(GameInstance)
@@ -66,6 +67,20 @@ void FPubnubChatAutomationTestBase::CleanUp()
 
 	ChatSubsystem = nullptr;
 	GameInstance = nullptr;
+}
+
+void FPubnubChatAutomationTestBase::CleanUpCurrentChatUser(UPubnubChat* Chat)
+{
+	if (!Chat)
+	{return;}
+	
+	if (!Chat->GetCurrentUser())
+	{return;}
+	
+	if (Chat->GetCurrentUser()->GetUserID().IsEmpty())
+	{return;}
+	
+	Chat->DeleteUser(Chat->GetCurrentUser()->GetUserID());
 }
 
 

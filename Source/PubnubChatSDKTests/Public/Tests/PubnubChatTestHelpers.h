@@ -23,9 +23,10 @@ namespace PubnubChatTestHelpers
 	/**
 	 * Gets the Chat object from UPubnubChatSubsystem using reflection.
 	 * @param Subsystem The subsystem to get the Chat from
+	 * @param UserID The UserID to look up the chat for
 	 * @return The Chat object, or nullptr if not found or not accessible
 	 */
-	UPubnubChat* GetChatFromSubsystem(UPubnubChatSubsystem* Subsystem);
+	UPubnubChat* GetChatFromSubsystem(UPubnubChatSubsystem* Subsystem, const FString& UserID);
 	
 	/**
 	 * Gets the PubnubClient from UPubnubChat using reflection.
