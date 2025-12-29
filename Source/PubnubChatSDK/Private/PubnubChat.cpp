@@ -232,8 +232,15 @@ FPubnubChatCreateDirectConversationResult UPubnubChat::CreateDirectConversation(
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
 	
-	//If channel ID was not provided, generate Guid
-	FString FinalChannelID = ChannelID.IsEmpty() ? FGuid::NewGuid().ToString(EGuidFormats::UniqueObjectGuid) : ChannelID;
+	//If channel ID was not provided generate ID by sorting users and hashing their IDs
+	FString FinalChannelID = ChannelID;
+	if (ChannelID.IsEmpty())
+	{
+		TArray<FString> SortedUsers = {CurrentUserID, User->GetUserID()};
+		SortedUsers.Sort();
+		uint64 ChannelHash = UPubnubChatInternalUtilities::HashString(FString::Printf(TEXT("%s&%s"), *SortedUsers[0], *SortedUsers[1]));
+		FinalChannelID = FString::Printf(TEXT("direct.%llu"), ChannelHash);
+	}
 
 	//Regardless of the provided Channel Type, this method creates public channel
 	ChannelData.Type = "direct";

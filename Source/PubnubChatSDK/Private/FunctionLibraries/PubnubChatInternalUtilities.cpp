@@ -294,3 +294,45 @@ bool UPubnubChatInternalUtilities::CheckPatternPermission(const TSharedPtr<FJson
 
 	return false;
 }
+
+uint64 UPubnubChatInternalUtilities::HashString(const FString& Str, int32 Seed)
+{
+	// Convert FString to UTF-8 bytes for cross-platform consistency
+	FTCHARToUTF8 UTF8Converter(*Str);
+	const char* UTF8Bytes = UTF8Converter.Get();
+	const int32 UTF8Length = UTF8Converter.Length();
+
+	// Initialize hash accumulators with constants XORed with seed
+	int32 h1 = 0xdeadbeef ^ Seed;
+	int32 h2 = 0x41c6ce57 ^ Seed;
+
+	// Process each UTF-8 byte
+	for (int32 i = 0; i < UTF8Length; ++i)
+	{
+		const uint8 ch = static_cast<uint8>(UTF8Bytes[i]);
+		h1 = (h1 ^ static_cast<int32>(ch)) * 0x85ebca77;
+		h2 = (h2 ^ static_cast<int32>(ch)) * 0xc2b2ae3d;
+	}
+
+	// Final mixing
+	h1 = h1 ^ ((h1 ^ (h2 >> 15)) * 0x735a2d97);
+	h2 = h2 ^ ((h2 ^ (h1 >> 15)) * 0xcaf649a9);
+	h1 = h1 ^ (h2 >> 16);
+	h2 = h2 ^ (h1 >> 16);
+
+	// Combine h1 and h2 into 64-bit result
+	// Note: We use unsigned arithmetic to avoid sign issues
+	const int64 Result = (2097152LL * static_cast<int64>(h2)) + (static_cast<int64>(h1) >> 11);
+
+	// Handle negative result by masking upper bits (53-bit result)
+	if (Result < 0)
+	{
+		// Mask to 53 bits: clear bits 53-63
+		const uint64 Mask53Bits = ~(0xFFFFFFFFFFFFFFFFULL << 53);
+		return static_cast<uint64>(Result) & Mask53Bits;
+	}
+	else
+	{
+		return static_cast<uint64>(Result);
+	}
+}

@@ -361,7 +361,7 @@ FPubnubChatIsPresentResult UPubnubChatChannel::IsPresent(const FString UserID)
 	FPubnubChatIsPresentResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	
-	return Chat->IsPresent(UserID, ChannelID);
+	return Chat->IsPresent(ChannelID, UserID);
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)

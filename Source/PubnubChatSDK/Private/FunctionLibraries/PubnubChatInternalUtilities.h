@@ -90,6 +90,16 @@ public:
 	 */
 	static bool CheckPatternPermission(const TSharedPtr<FJsonObject>& PatternsObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr);
 
+	/* HASHING */
+
+	/**
+	 * Hashes a string using the cyrb53a algorithm.
+	 * @param Str The string to hash
+	 * @param Seed Optional seed value (defaults to 0)
+	 * @return 64-bit unsigned hash value
+	 */
+	static uint64 HashString(const FString& Str, int32 Seed = 0);
+
 
 	/* TEMPLATES */
 	
