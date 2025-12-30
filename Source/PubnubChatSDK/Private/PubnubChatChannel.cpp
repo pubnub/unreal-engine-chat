@@ -60,7 +60,7 @@ FPubnubChatOperationResult UPubnubChatChannel::Update(FPubnubChatChannelData Cha
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	
 	//SetChannelMetadata by PubnubClient
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelData());
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelInputData());
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
 	
 	//Update repository with updated channel data
@@ -153,7 +153,10 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceiv
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	
 	//SetMemberships by PubnubClient
-	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
+	FPubnubMembershipInputData MembershipInputData = MembershipData.ToPubnubMembershipInputData(ChannelID);
+	//This forces to reset status if not provided by User. Otherwise, Status could stay as "pending" for previously invited user.
+	MembershipInputData.ForceAddStatus = true;
+	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipInputData}, FPubnubMembershipInclude::FromValue(false), 1);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
 
 	//Create membership objects
@@ -256,7 +259,7 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = Pubnub_Chat_Invited_User_Membership_status};
 	
 	//SetMemberships by PubnubClient
-	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
+	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(User->GetUserID(), {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
 
 	//Emit Invite event
@@ -383,10 +386,11 @@ FPubnubChatOperationResult UPubnubChatChannel::Restore()
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
 
 	//Remove Deleted property from Custom field
-	GetChannelResult.ChannelData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(GetChannelResult.ChannelData.Custom);
+	FPubnubChannelInputData NewChannelData = FPubnubChannelInputData::FromPubnubChannelData(GetChannelResult.ChannelData);
+	NewChannelData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(NewChannelData.Custom);
 
 	//SetChannelMetadata with updated metadata
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, GetChannelResult.ChannelData);
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, NewChannelData);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
 	
 	return FinalResult;

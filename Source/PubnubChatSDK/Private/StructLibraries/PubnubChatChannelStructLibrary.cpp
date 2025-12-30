@@ -3,9 +3,9 @@
 
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 
-FPubnubChannelData FPubnubChatChannelData::ToPubnubChannelData() const
+FPubnubChannelInputData FPubnubChatChannelData::ToPubnubChannelInputData() const
 {
-	FPubnubChannelData ChannelData;
+	FPubnubChannelInputData ChannelData;
 	ChannelData.ChannelName = ChannelName;
 	ChannelData.Description = Description;
 	ChannelData.Custom = Custom;

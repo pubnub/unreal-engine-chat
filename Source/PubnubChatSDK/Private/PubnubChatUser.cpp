@@ -42,7 +42,7 @@ FPubnubChatOperationResult UPubnubChatUser::Update(FPubnubChatUserData UserData)
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	
 	//SetChannelMetadata by PubnubClient
-	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserData());
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserInputData());
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
 	
 	//Update repository with updated channel data
@@ -70,10 +70,11 @@ FPubnubChatOperationResult UPubnubChatUser::Restore()
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetUserResult.Result, "GetUserMetadata");
 
 	//Add Deleted property to Custom field
-	GetUserResult.UserData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(GetUserResult.UserData.Custom);
+	FPubnubUserInputData NewUserData = FPubnubUserInputData::FromPubnubUserData(GetUserResult.UserData);
+	NewUserData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(NewUserData.Custom);
 
 	//SetUserMetadata with updated metadata
-	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, GetUserResult.UserData);
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, NewUserData);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
 	
 	return FinalResult;

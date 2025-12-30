@@ -41,6 +41,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Membership")
 	FString GetChannelID() const;
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
+	FPubnubChatOperationResult Delete();
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatOperationResult Update(const FPubnubChatMembershipData& MembershipData);
 

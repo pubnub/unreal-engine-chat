@@ -3,9 +3,9 @@
 
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 
-FPubnubUserData FPubnubChatUserData::ToPubnubUserData() const
+FPubnubUserInputData FPubnubChatUserData::ToPubnubUserInputData() const
 {
-	FPubnubUserData UserData;
+	FPubnubUserInputData UserData;
 	UserData.UserName = UserName;
 	UserData.ExternalID = ExternalID;
 	UserData.ProfileUrl = ProfileUrl;

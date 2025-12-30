@@ -61,6 +61,18 @@ FString UPubnubChatMembership::GetChannelID() const
 	return Channel ? Channel->GetChannelID() : TEXT("");
 }
 
+FPubnubChatOperationResult UPubnubChatMembership::Delete()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	//RemoveMemberships by PubnubClient
+	FPubnubMembershipsResult RemoveMembershipResult = PubnubClient->RemoveMemberships(GetUserID(), {GetChannelID()}, FPubnubMembershipInclude::FromValue(false), 1);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveMembershipResult.Result, "RemoveMemberships");
+
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChatMembership::Update(const FPubnubChatMembershipData& MembershipData)
 {
 	FPubnubChatOperationResult FinalResult;

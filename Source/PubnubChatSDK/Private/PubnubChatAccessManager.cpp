@@ -2,10 +2,12 @@
 
 #include "PubnubChatAccessManager.h"
 #include "PubnubChatInternalMacros.h"
+#include "PubnubChatSubsystem.h"
 #include "PubnubClient.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubChatLogUtilities.h"
 
 bool UPubnubChatAccessManager::CanI(EPubnubChatAccessManagerPermission Permission, EPubnubChatAccessManagerResourceType ResourceType, const FString ResourceName)
 {

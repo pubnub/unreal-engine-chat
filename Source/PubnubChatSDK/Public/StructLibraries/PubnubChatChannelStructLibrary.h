@@ -27,7 +27,7 @@ struct FPubnubChatChannelData
 	//User type. Max. 50 characters.
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString Type = "";
 
-	FPubnubChannelData ToPubnubChannelData() const;
+	FPubnubChannelInputData ToPubnubChannelInputData() const;
 	static FPubnubChatChannelData FromPubnubChannelData(const FPubnubChannelData &PubnubChannelData);
 };
 

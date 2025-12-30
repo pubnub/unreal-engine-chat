@@ -26,7 +26,7 @@ using namespace PubnubChatTestHelpers;
  * Cleanup test that removes all users.
  * Loops through GetUsers with pagination and deletes all users (no filter).
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCleanUpUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.CleanUp.Users", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCleanUpUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ZZCleanUp.Users", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCleanUpUsersTest::RunTest(const FString& Parameters)
 {
@@ -173,7 +173,7 @@ bool FPubnubChatCleanUpUsersTest::RunTest(const FString& Parameters)
  * Cleanup test that removes all channels.
  * Loops through GetChannels with pagination and deletes all channels (no filter).
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCleanUpChannelsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.CleanUp.Channels", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCleanUpChannelsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.ZZCleanUp.Channels", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatCleanUpChannelsTest::RunTest(const FString& Parameters)
 {
