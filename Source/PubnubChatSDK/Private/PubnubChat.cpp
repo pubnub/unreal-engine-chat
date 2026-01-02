@@ -595,6 +595,28 @@ FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString Chan
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChat::ReconnectSubscriptions(const FString Timetoken)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	FPubnubOperationResult ReconnectResult = PubnubClient->ReconnectSubscriptions(Timetoken);
+	FinalResult.AddStep("ReconnectSubscriptions", ReconnectResult);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChat::DisconnectSubscriptions()
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	FPubnubOperationResult DisconnectResult = PubnubClient->DisconnectSubscriptions();
+	FinalResult.AddStep("DisconnectSubscriptions", DisconnectResult);
+	
+	return FinalResult;
+}
+
 
 void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData)
 {

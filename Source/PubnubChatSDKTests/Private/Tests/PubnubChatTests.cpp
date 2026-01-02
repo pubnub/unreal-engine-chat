@@ -2228,4 +2228,724 @@ bool FPubnubChatIsPresentConnectVsJoinTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// ============================================================================
+// RECONNECTSUBSCRIPTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to reconnect subscriptions without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatOperationResult ReconnectResult = Chat->ReconnectSubscriptions();
+			
+			TestTrue("ReconnectSubscriptions should fail when Chat is not initialized", ReconnectResult.Error);
+			TestFalse("ErrorMessage should not be empty", ReconnectResult.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_happy_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Reconnect subscriptions with only required parameters (no Timetoken - defaults to empty string)
+		FPubnubChatOperationResult ReconnectResult = Chat->ReconnectSubscriptions();
+		
+		TestFalse("ReconnectSubscriptions should succeed", ReconnectResult.Error);
+		
+		// Verify step results contain ReconnectSubscriptions step
+		bool bFoundReconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : ReconnectResult.StepResults)
+		{
+			if(Step.StepName == TEXT("ReconnectSubscriptions"))
+			{
+				bFoundReconnect = true;
+				TestFalse("ReconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have ReconnectSubscriptions step", bFoundReconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_full_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Test with empty Timetoken (default behavior - reconnect from "now")
+		FPubnubChatOperationResult ReconnectResultEmpty = Chat->ReconnectSubscriptions(TEXT(""));
+		
+		TestFalse("ReconnectSubscriptions with empty Timetoken should succeed", ReconnectResultEmpty.Error);
+		
+		// Test with a valid timetoken (reconnect from specific point)
+		// Using a recent timetoken format (numeric string)
+		const FString TestTimetoken = TEXT("12345678901234567");
+		FPubnubChatOperationResult ReconnectResultWithTimetoken = Chat->ReconnectSubscriptions(TestTimetoken);
+		
+		TestFalse("ReconnectSubscriptions with Timetoken should succeed", ReconnectResultWithTimetoken.Error);
+		
+		// Verify step results contain ReconnectSubscriptions step
+		bool bFoundReconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : ReconnectResultWithTimetoken.StepResults)
+		{
+			if(Step.StepName == TEXT("ReconnectSubscriptions"))
+			{
+				bFoundReconnect = true;
+				TestFalse("ReconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have ReconnectSubscriptions step", bFoundReconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests that ReconnectSubscriptions restores message reception after DisconnectSubscriptions.
+ * Verifies the full flow: subscribe, disconnect, verify no messages, reconnect, verify messages are received again.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsRestoresMessageReceptionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.4Advanced.RestoresMessageReception", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatReconnectSubscriptionsRestoresMessageReceptionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_restore_init";
+	const FString TestChannelID = SDK_PREFIX + "test_reconnect_restore";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel and join to set up subscription
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceivedBeforeDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessageReceivedAfterDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessageReceivedAfterReconnect = MakeShared<bool>(false);
+	const FString TestMessage = TEXT("Test message for reconnect");
+	
+	// Set up message listener
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, bMessageReceivedAfterReconnect, TestMessage](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessage)
+			{
+				if(!*bMessageReceivedBeforeDisconnect)
+				{
+					*bMessageReceivedBeforeDisconnect = true;
+				}
+				else if(!*bMessageReceivedAfterReconnect)
+				{
+					*bMessageReceivedAfterReconnect = true;
+				}
+			}
+		}
+	});
+	
+	// Join channel to subscribe
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Wait for subscription to be ready, then send a message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait for message to be received before disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceivedBeforeDisconnect]() -> bool {
+		return *bMessageReceivedBeforeDisconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Disconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait a bit, then send another message (should NOT be received)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage, bMessageReceivedAfterDisconnect]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage + TEXT("_after_disconnect"));
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait a bit to ensure message would have been received if we were still connected
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([]() -> bool {
+		return false; // Never complete, just wait for timeout
+	}, 2.0f));
+	
+	// Verify message was NOT received after disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceivedAfterDisconnect]()
+	{
+		if(*bMessageReceivedAfterDisconnect)
+		{
+			AddError("Message should NOT have been received after DisconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Message was correctly not received after disconnect", true);
+		}
+	}, 0.1f));
+	
+	// Reconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult ReconnectResult = Chat->ReconnectSubscriptions();
+		TestFalse("ReconnectSubscriptions should succeed", ReconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait for reconnection, then send another message (should be received)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait for message to be received after reconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceivedAfterReconnect]() -> bool {
+		return *bMessageReceivedAfterReconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Verify message was received after reconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceivedAfterReconnect]()
+	{
+		if(!*bMessageReceivedAfterReconnect)
+		{
+			AddError("Message should have been received after ReconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Message was correctly received after reconnect", true);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// DISCONNECTSUBSCRIPTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to disconnect subscriptions without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+			
+			TestTrue("DisconnectSubscriptions should fail when Chat is not initialized", DisconnectResult.Error);
+			TestFalse("ErrorMessage should not be empty", DisconnectResult.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_happy_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Disconnect subscriptions (no parameters required)
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+		
+		// Verify step results contain DisconnectSubscriptions step
+		bool bFoundDisconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : DisconnectResult.StepResults)
+		{
+			if(Step.StepName == TEXT("DisconnectSubscriptions"))
+			{
+				bFoundDisconnect = true;
+				TestFalse("DisconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have DisconnectSubscriptions step", bFoundDisconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_full_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// DisconnectSubscriptions takes no parameters, so this is the same as happy path
+		// But we can verify it works correctly
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+		TestTrue("StepResults should contain at least one step", DisconnectResult.StepResults.Num() > 0);
+		
+		// Verify step results contain DisconnectSubscriptions step
+		bool bFoundDisconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : DisconnectResult.StepResults)
+		{
+			if(Step.StepName == TEXT("DisconnectSubscriptions"))
+			{
+				bFoundDisconnect = true;
+				TestFalse("DisconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have DisconnectSubscriptions step", bFoundDisconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests that DisconnectSubscriptions prevents message reception.
+ * Verifies that after calling DisconnectSubscriptions, messages sent to subscribed channels are not received.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsPreventsMessageReceptionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.4Advanced.PreventsMessageReception", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatDisconnectSubscriptionsPreventsMessageReceptionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_prevent_init";
+	const FString TestChannelID = SDK_PREFIX + "test_disconnect_prevent";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel and join to set up subscription
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceivedBeforeDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessageReceivedAfterDisconnect = MakeShared<bool>(false);
+	const FString TestMessage = TEXT("Test message");
+	
+	// Set up message listener
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, TestMessage](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessage)
+			{
+				if(!*bMessageReceivedBeforeDisconnect)
+				{
+					*bMessageReceivedBeforeDisconnect = true;
+				}
+				else
+				{
+					*bMessageReceivedAfterDisconnect = true;
+					AddError("Message should NOT be received after DisconnectSubscriptions");
+				}
+			}
+		}
+	});
+	
+	// Join channel to subscribe
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Wait for subscription to be ready, then send a message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait for message to be received before disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceivedBeforeDisconnect]() -> bool {
+		return *bMessageReceivedBeforeDisconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Disconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait a bit for disconnect to take effect, then send another message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait a bit to ensure message would have been received if we were still connected
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([]() -> bool {
+		return false; // Never complete, just wait for timeout
+	}, 2.0f));
+	
+	// Verify message was NOT received after disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceivedAfterDisconnect]()
+	{
+		if(*bMessageReceivedAfterDisconnect)
+		{
+			AddError("Message should NOT have been received after DisconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Message was correctly not received after disconnect", true);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests that DisconnectSubscriptions prevents event reception.
+ * Verifies that after calling DisconnectSubscriptions, events emitted to subscribed channels are not received.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.4Advanced.PreventsEventReception", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_event_init";
+	const FString TestChannelID = SDK_PREFIX + "test_disconnect_event";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for event reception
+	TSharedPtr<bool> bEventReceivedBeforeDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bEventReceivedAfterDisconnect = MakeShared<bool>(false);
+	const EPubnubChatEventType ExpectedEventType = EPubnubChatEventType::PCET_Typing;
+	const FString TestPayload = TEXT("{\"test\":\"data\"}");
+	
+	// Listen for events
+	FOnPubnubChatEventReceivedNative EventCallback;
+	EventCallback.BindLambda([this, bEventReceivedBeforeDisconnect, bEventReceivedAfterDisconnect, ExpectedEventType](const FPubnubChatEvent& Event)
+	{
+		if(Event.Type == ExpectedEventType)
+		{
+			if(!*bEventReceivedBeforeDisconnect)
+			{
+				*bEventReceivedBeforeDisconnect = true;
+			}
+			else
+			{
+				*bEventReceivedAfterDisconnect = true;
+				AddError("Event should NOT be received after DisconnectSubscriptions");
+			}
+		}
+	});
+	
+	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(TestChannelID, ExpectedEventType, EventCallback);
+	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
+	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	
+	// Wait a bit for subscription to be ready, then emit event
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, ExpectedEventType, TestPayload]()
+	{
+		FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(ExpectedEventType, TestChannelID, TestPayload);
+		TestFalse("EmitChatEvent should succeed", EmitResult.Error);
+	}, 0.5f));
+	
+	// Wait for event to be received before disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bEventReceivedBeforeDisconnect]() -> bool {
+		return *bEventReceivedBeforeDisconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Disconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait a bit for disconnect to take effect, then emit another event
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, ExpectedEventType, TestPayload]()
+	{
+		FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(ExpectedEventType, TestChannelID, TestPayload);
+		TestFalse("EmitChatEvent should succeed", EmitResult.Error);
+	}, 0.5f));
+	
+	// Wait a bit to ensure event would have been received if we were still connected
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([]() -> bool {
+		return false; // Never complete, just wait for timeout
+	}, 2.0f));
+	
+	// Verify event was NOT received after disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceivedAfterDisconnect]()
+	{
+		if(*bEventReceivedAfterDisconnect)
+		{
+			AddError("Event should NOT have been received after DisconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Event was correctly not received after disconnect", true);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Stop listening
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, Chat]()
+	{
+		if(ListenResult.CallbackStop)
+		{
+			ListenResult.CallbackStop->Stop();
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

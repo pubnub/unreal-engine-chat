@@ -164,6 +164,15 @@ public:
 	UPubnubChatAccessManager* GetAccessManager() const { return AccessManager; }
 	
 	
+	/* CONNECTION STATUS */
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status")
+	FPubnubChatOperationResult ReconnectSubscriptions(const FString Timetoken = "");
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status")
+	FPubnubChatOperationResult DisconnectSubscriptions();
+	
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
