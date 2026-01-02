@@ -213,6 +213,7 @@ private:
 
 	UPubnubChatMessage* CreateMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData);
 	UPubnubChatMessage* CreateMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData);
+	UPubnubChatMessage* CreateMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData);
 
 	UPubnubChatMembership* CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChatMembershipData& ChatMembershipData);
 	UPubnubChatMembership* CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubMembershipData& MembershipData);

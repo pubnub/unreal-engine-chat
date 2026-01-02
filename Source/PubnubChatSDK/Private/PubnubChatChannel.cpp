@@ -486,6 +486,53 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetUsersRestrictions(const 
 	return GetRestrictions(Limit, "", Sort, Page);
 }
 
+FPubnubChatGetHistoryResult UPubnubChatChannel::GetHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count)
+{
+	FPubnubChatGetHistoryResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, StartTimetoken);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, EndTimetoken);
+	
+	FPubnubFetchHistorySettings FetchHistorySettings;
+	FetchHistorySettings.MaxPerChannel = Count;
+	FetchHistorySettings.Start = StartTimetoken;
+	FetchHistorySettings.End = EndTimetoken;
+	FetchHistorySettings.IncludeUserID = true;
+	FetchHistorySettings.IncludeMessageActions = true;
+	FetchHistorySettings.IncludeMeta = true;
+	FPubnubFetchHistoryResult FetchHistoryResult = PubnubClient->FetchHistory(ChannelID, FetchHistorySettings);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, FetchHistoryResult.Result, "FetchHistory");
+	
+	for (auto& MessageData : FetchHistoryResult.Messages)
+	{
+		UPubnubChatMessage* Message = Chat->CreateMessageObject(MessageData.Timetoken, MessageData);
+		FinalResult.Messages.Add(Message);
+	}
+	
+	//If we got the exact amount of messages as specified count, probably there are more events in a given range
+	FinalResult.IsMore = FetchHistoryResult.Messages.Num() == Count;
+	
+	return FinalResult;
+}
+
+FPubnubChatMessageResult UPubnubChatChannel::GetMessage(const FString Timetoken)
+{
+	FPubnubChatMessageResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, Timetoken);
+	
+	FString StartTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(Timetoken, 1);
+	FPubnubChatGetHistoryResult GetHistoryResult = GetHistory(StartTimetoken, Timetoken, 1);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetHistoryResult.Result);
+	
+	if (!GetHistoryResult.Messages.IsEmpty())
+	{
+		FinalResult.Message = GetHistoryResult.Messages[0];
+	}
+	
+	return FinalResult;
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));

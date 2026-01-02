@@ -55,6 +55,7 @@ struct FPubnubChatMessageData
 	TArray<FPubnubChatMessageAction> MessageActions;
 	
 	static FPubnubChatMessageData FromPubnubMessageData(const FPubnubMessageData& PubnubMessageData);
+	static FPubnubChatMessageData FromPubnubHistoryMessageData(const FPubnubHistoryMessageData& FPubnubHistoryMessageData);
 };
 
 USTRUCT(BlueprintType)

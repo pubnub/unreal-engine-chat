@@ -18,6 +18,8 @@
 #include "Misc/AutomationTest.h"
 #include "PubnubStructLibrary.h"
 #include "Private/PubnubChatConst.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "Private/FunctionLibraries/PubnubChatInternalUtilities.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;
@@ -1208,6 +1210,1037 @@ bool FPubnubChatChannelGetInviteesMultipleInviteesTest::RunTest(const FString& P
 		Chat->DeleteChannel(TestChannelID, false);
 		Chat->DeleteUser(TargetUserID1, false);
 		Chat->DeleteUser(TargetUserID2, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// GETHISTORY TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_not_init_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create uninitialized channel object
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		
+		// Try to get history with uninitialized channel
+		const FString TestStartTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		const FString TestEndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(TestStartTimetoken, -10000000);
+		FPubnubChatGetHistoryResult GetHistoryResult = UninitializedChannel->GetHistory(TestStartTimetoken, TestEndTimetoken);
+		
+		TestTrue("GetHistory should fail with uninitialized channel", GetHistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", GetHistoryResult.Result.ErrorMessage.IsEmpty());
+		TestEqual("Messages array should be empty", GetHistoryResult.Messages.Num(), 0);
+		TestFalse("IsMore should be false on error", GetHistoryResult.IsMore);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryEmptyStartTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.1Validation.EmptyStartTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryEmptyStartTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_empty_start_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_empty_start";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Try to get history with empty StartTimetoken
+	const FString TestEndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	FPubnubChatGetHistoryResult GetHistoryResult = CreateResult.Channel->GetHistory(TEXT(""), TestEndTimetoken);
+	
+	TestTrue("GetHistory should fail with empty StartTimetoken", GetHistoryResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", GetHistoryResult.Result.ErrorMessage.IsEmpty());
+	TestEqual("Messages array should be empty", GetHistoryResult.Messages.Num(), 0);
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryEmptyEndTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.1Validation.EmptyEndTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryEmptyEndTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_empty_end_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_empty_end";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Try to get history with empty EndTimetoken
+	const FString TestStartTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	FPubnubChatGetHistoryResult GetHistoryResult = CreateResult.Channel->GetHistory(TestStartTimetoken, TEXT(""));
+	
+	TestTrue("GetHistory should fail with empty EndTimetoken", GetHistoryResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", GetHistoryResult.Result.ErrorMessage.IsEmpty());
+	TestEqual("Messages array should be empty", GetHistoryResult.Messages.Num(), 0);
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Send a message to create history
+	const FString TestMessage = TEXT("Test message for history");
+	FPubnubChatSendTextParams SendTextParams;
+	SendTextParams.StoreInHistory = true;
+	FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessage, SendTextParams);
+	TestFalse("SendText should succeed", SendResult.Error);
+	
+	// Get history with only required parameters (StartTimetoken, EndTimetoken) and default Count
+	const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	const FString StartTimetoken = CurrentTimetoken;
+	const FString EndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -100000000); // 10 seconds ago
+	
+	FPubnubChatGetHistoryResult GetHistoryResult = CreateResult.Channel->GetHistory(StartTimetoken, EndTimetoken);
+	
+	TestFalse("GetHistory should succeed", GetHistoryResult.Result.Error);
+	TestTrue("Messages array should be valid", GetHistoryResult.Messages.Num() >= 0);
+	
+	// Verify that we got at least the message we sent
+	if(GetHistoryResult.Messages.Num() > 0)
+	{
+		bool FoundTestMessage = false;
+		for(UPubnubChatMessage* Message : GetHistoryResult.Messages)
+		{
+			if(Message)
+			{
+				FPubnubChatMessageData MessageData = Message->GetMessageData();
+				if(MessageData.Text.Contains(TestMessage))
+				{
+					FoundTestMessage = true;
+					TestEqual("Message ChannelID should match", MessageData.ChannelID, TestChannelID);
+					TestFalse("Message Timetoken should not be empty", Message->GetMessageTimetoken().IsEmpty());
+					break;
+				}
+			}
+		}
+		TestTrue("Test message should be found in history", FoundTestMessage);
+	}
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Send multiple messages to create history
+	const int NumMessages = 5;
+	TArray<FString> SentMessages;
+	FPubnubChatSendTextParams SendTextParams;
+	SendTextParams.StoreInHistory = true;
+	
+	for(int i = 0; i < NumMessages; i++)
+	{
+		const FString TestMessage = FString::Printf(TEXT("Test message %d"), i);
+		SentMessages.Add(TestMessage);
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessage, SendTextParams);
+		TestFalse(FString::Printf(TEXT("SendText %d should succeed"), i), SendResult.Error);
+	}
+	
+	// Get history with all parameters (StartTimetoken, EndTimetoken, Count)
+	const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	const FString StartTimetoken = CurrentTimetoken;
+	const FString EndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -100000000); // 10 seconds ago
+	const int TestCount = 3; // Request only 3 messages
+	
+	FPubnubChatGetHistoryResult GetHistoryResult = CreateResult.Channel->GetHistory(StartTimetoken, EndTimetoken, TestCount);
+	
+	TestFalse("GetHistory should succeed with all parameters", GetHistoryResult.Result.Error);
+	TestTrue("Messages array should be valid", GetHistoryResult.Messages.Num() >= 0);
+	TestTrue("Should respect Count parameter", GetHistoryResult.Messages.Num() <= TestCount);
+	
+	// Verify IsMore flag is set correctly
+	if(GetHistoryResult.Messages.Num() == TestCount)
+	{
+		TestTrue("IsMore should be true when we got exactly Count messages", GetHistoryResult.IsMore);
+	}
+	else
+	{
+		TestFalse("IsMore should be false when we got fewer than Count messages", GetHistoryResult.IsMore);
+	}
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetHistory with empty channel (no messages).
+ * Verifies that GetHistory returns empty array when there are no messages in the time range.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryEmptyChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.4Advanced.EmptyChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryEmptyChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel without sending any messages
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Get history for a time range in the past (before channel creation)
+	// StartTimetoken should be newer (larger) than EndTimetoken
+	const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	const FString StartTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -500000000); // 50 seconds ago (newer)
+	const FString EndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -1000000000); // 100 seconds ago (older)
+	
+	FPubnubChatGetHistoryResult GetHistoryResult = CreateResult.Channel->GetHistory(StartTimetoken, EndTimetoken);
+	
+	TestFalse("GetHistory should succeed even with empty channel", GetHistoryResult.Result.Error);
+	TestEqual("Messages array should be empty for empty channel", GetHistoryResult.Messages.Num(), 0);
+	TestFalse("IsMore should be false when no messages found", GetHistoryResult.IsMore);
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetHistory IsMore flag behavior.
+ * Verifies that IsMore is set correctly when there are more messages than the requested count.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryIsMoreFlagTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.4Advanced.IsMoreFlag", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryIsMoreFlagTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_ismore_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_ismore";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Send more messages than we'll request
+	const int NumMessages = 10;
+	const int RequestCount = 5;
+	FPubnubChatSendTextParams SendTextParams;
+	SendTextParams.StoreInHistory = true;
+	
+	for(int i = 0; i < NumMessages; i++)
+	{
+		const FString TestMessage = FString::Printf(TEXT("Test message %d"), i);
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessage, SendTextParams);
+		TestFalse(FString::Printf(TEXT("SendText %d should succeed"), i), SendResult.Error);
+	}
+	
+	// Get history with Count less than number of messages sent
+	const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	const FString StartTimetoken = CurrentTimetoken;
+	const FString EndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -100000000); // 10 seconds ago
+	
+	FPubnubChatGetHistoryResult GetHistoryResult = CreateResult.Channel->GetHistory(StartTimetoken, EndTimetoken, RequestCount);
+	
+	TestFalse("GetHistory should succeed", GetHistoryResult.Result.Error);
+	TestTrue("Should get at least some messages", GetHistoryResult.Messages.Num() > 0);
+	
+	// If we got exactly RequestCount messages, IsMore should be true (indicating more messages exist)
+	if(GetHistoryResult.Messages.Num() == RequestCount)
+	{
+		TestTrue("IsMore should be true when we got exactly Count messages and more exist", GetHistoryResult.IsMore);
+	}
+	else if(GetHistoryResult.Messages.Num() < RequestCount)
+	{
+		TestFalse("IsMore should be false when we got fewer than Count messages", GetHistoryResult.IsMore);
+	}
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// GETMESSAGE TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessage.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_not_init_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create uninitialized channel object
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		
+		// Try to get message with uninitialized channel
+		const FString TestTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatMessageResult GetMessageResult = UninitializedChannel->GetMessage(TestTimetoken);
+		
+		TestTrue("GetMessage should fail with uninitialized channel", GetMessageResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", GetMessageResult.Result.ErrorMessage.IsEmpty());
+		TestNull("Message should be null on error", GetMessageResult.Message);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageEmptyTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessage.1Validation.EmptyTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageEmptyTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_empty_timetoken_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_empty_timetoken";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Try to get message with empty Timetoken
+	FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(TEXT(""));
+	
+	TestTrue("GetMessage should fail with empty Timetoken", GetMessageResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", GetMessageResult.Result.ErrorMessage.IsEmpty());
+	TestNull("Message should be null on error", GetMessageResult.Message);
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessage.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Send a message and get its timetoken using PubnubClient
+	UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+	if(!PubnubClient)
+	{
+		AddError("Failed to get PubnubClient from Chat");
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	const FString TestMessageContent = TEXT("Test message for GetMessage");
+	FPubnubPublishSettings PublishSettings;
+	PublishSettings.StoreInHistory = true;
+	const FString FormattedMessage = UPubnubChatInternalUtilities::ChatMessageToPublishString(TestMessageContent);
+	FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(TestChannelID, FormattedMessage, PublishSettings);
+	TestFalse("PublishMessage should succeed", PublishResult.Result.Error);
+	TestFalse("Published message timetoken should not be empty", PublishResult.PublishedMessage.Timetoken.IsEmpty());
+	
+	if(PublishResult.Result.Error || PublishResult.PublishedMessage.Timetoken.IsEmpty())
+	{
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	const FString MessageTimetoken = PublishResult.PublishedMessage.Timetoken;
+	
+	// Get message with only required parameter (Timetoken)
+	FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+	
+	TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+	TestNotNull("Message should be retrieved", GetMessageResult.Message);
+	
+	if(GetMessageResult.Message)
+	{
+		TestEqual("Retrieved message timetoken should match", GetMessageResult.Message->GetMessageTimetoken(), MessageTimetoken);
+		FPubnubChatMessageData MessageData = GetMessageResult.Message->GetMessageData();
+		TestEqual("Message ChannelID should match", MessageData.ChannelID, TestChannelID);
+		TestTrue("Message should contain the sent text", MessageData.Text.Contains(TestMessageContent));
+	}
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessage.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Send a message with metadata and get its timetoken using PubnubClient
+	UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+	if(!PubnubClient)
+	{
+		AddError("Failed to get PubnubClient from Chat");
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	const FString TestMessageContent = TEXT("Test message with metadata");
+	const FString TestMeta = TEXT("{\"key\":\"value\"}");
+	FPubnubPublishSettings PublishSettings;
+	PublishSettings.StoreInHistory = true;
+	PublishSettings.MetaData = TestMeta;
+	const FString FormattedMessage = UPubnubChatInternalUtilities::ChatMessageToPublishString(TestMessageContent);
+	FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(TestChannelID, FormattedMessage, PublishSettings);
+	TestFalse("PublishMessage should succeed", PublishResult.Result.Error);
+	TestFalse("Published message timetoken should not be empty", PublishResult.PublishedMessage.Timetoken.IsEmpty());
+	
+	if(PublishResult.Result.Error || PublishResult.PublishedMessage.Timetoken.IsEmpty())
+	{
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	const FString MessageTimetoken = PublishResult.PublishedMessage.Timetoken;
+	
+	// GetMessage only has one parameter (Timetoken), so this test verifies it works with a real message
+	FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+	
+	TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+	TestNotNull("Message should be retrieved", GetMessageResult.Message);
+	
+	if(GetMessageResult.Message)
+	{
+		TestEqual("Retrieved message timetoken should match", GetMessageResult.Message->GetMessageTimetoken(), MessageTimetoken);
+		FPubnubChatMessageData MessageData = GetMessageResult.Message->GetMessageData();
+		TestEqual("Message ChannelID should match", MessageData.ChannelID, TestChannelID);
+		TestTrue("Message should contain the sent text", MessageData.Text.Contains(TestMessageContent));
+		TestEqual("Message Meta should match", MessageData.Meta, TestMeta);
+	}
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetMessage with non-existent message timetoken.
+ * Verifies that GetMessage handles gracefully when message doesn't exist.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageNonExistentTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessage.4Advanced.NonExistent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageNonExistentTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_nonexistent_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_nonexistent";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Use a timetoken that doesn't exist (far in the past)
+	const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	const FString NonExistentTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -1000000000); // 100 seconds ago
+	
+	FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(NonExistentTimetoken);
+	
+	// GetMessage should succeed but return null message if message doesn't exist
+	// The operation itself succeeds, but no message is found
+	TestFalse("GetMessage operation should succeed even if message doesn't exist", GetMessageResult.Result.Error);
+	TestNull("Message should be null when message doesn't exist", GetMessageResult.Message);
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetMessage retrieves correct message from multiple messages.
+ * Verifies that GetMessage retrieves the specific message by timetoken when multiple messages exist.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageMultipleMessagesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessage.4Advanced.MultipleMessages", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageMultipleMessagesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_multiple_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_multiple";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Send multiple messages and capture their timetokens
+	UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+	if(!PubnubClient)
+	{
+		AddError("Failed to get PubnubClient from Chat");
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	const int NumMessages = 3;
+	TArray<FString> MessageTimetokens;
+	TArray<FString> MessageContents;
+	
+	FPubnubPublishSettings PublishSettings;
+	PublishSettings.StoreInHistory = true;
+	
+	for(int i = 0; i < NumMessages; i++)
+	{
+		const FString TestMessageContent = FString::Printf(TEXT("Test message %d"), i);
+		MessageContents.Add(TestMessageContent);
+		const FString FormattedMessage = UPubnubChatInternalUtilities::ChatMessageToPublishString(TestMessageContent);
+		FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(TestChannelID, FormattedMessage, PublishSettings);
+		TestFalse(FString::Printf(TEXT("PublishMessage %d should succeed"), i), PublishResult.Result.Error);
+		TestFalse(FString::Printf(TEXT("Published message %d timetoken should not be empty"), i), PublishResult.PublishedMessage.Timetoken.IsEmpty());
+		
+		if(!PublishResult.Result.Error && !PublishResult.PublishedMessage.Timetoken.IsEmpty())
+		{
+			MessageTimetokens.Add(PublishResult.PublishedMessage.Timetoken);
+		}
+	}
+	
+	TestEqual("Should have captured all message timetokens", MessageTimetokens.Num(), NumMessages);
+	
+	if(MessageTimetokens.Num() != NumMessages)
+	{
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Get each message individually and verify it's the correct one
+	for(int i = 0; i < MessageTimetokens.Num(); i++)
+	{
+		const FString& TargetTimetoken = MessageTimetokens[i];
+		const FString& ExpectedContent = MessageContents[i];
+		
+		FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(TargetTimetoken);
+		
+		TestFalse(FString::Printf(TEXT("GetMessage %d should succeed"), i), GetMessageResult.Result.Error);
+		TestNotNull(FString::Printf(TEXT("Message %d should be retrieved"), i), GetMessageResult.Message);
+		
+		if(GetMessageResult.Message)
+		{
+			TestEqual(FString::Printf(TEXT("Retrieved message %d timetoken should match"), i), GetMessageResult.Message->GetMessageTimetoken(), TargetTimetoken);
+			FPubnubChatMessageData MessageData = GetMessageResult.Message->GetMessageData();
+			TestTrue(FString::Printf(TEXT("Message %d should contain the correct text"), i), MessageData.Text.Contains(ExpectedContent));
+			TestEqual(FString::Printf(TEXT("Message %d ChannelID should match"), i), MessageData.ChannelID, TestChannelID);
+		}
+	}
+	
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
 	}
 	
 	CleanUpCurrentChatUser(Chat);

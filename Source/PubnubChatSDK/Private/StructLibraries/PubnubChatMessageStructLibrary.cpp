@@ -40,3 +40,20 @@ FPubnubChatMessageData FPubnubChatMessageData::FromPubnubMessageData(const FPubn
 	return ChatMessageData;
 }
 
+FPubnubChatMessageData FPubnubChatMessageData::FromPubnubHistoryMessageData(const FPubnubHistoryMessageData& FPubnubHistoryMessageData)
+{
+	FPubnubChatMessageData ChatMessageData;
+	ChatMessageData.Text = UPubnubChatInternalUtilities::PublishedStringToChatMessage(FPubnubHistoryMessageData.Message);
+	ChatMessageData.ChannelID = FPubnubHistoryMessageData.Channel;
+	ChatMessageData.UserID = FPubnubHistoryMessageData.UserID;
+	ChatMessageData.Meta = FPubnubHistoryMessageData.Meta;
+	ChatMessageData.Type = FPubnubHistoryMessageData.CustomMessageType;
+	
+	for (auto& MessageAction : FPubnubHistoryMessageData.MessageActions)
+	{
+		ChatMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(MessageAction));
+	}
+	
+	return ChatMessageData;
+}
+

@@ -812,6 +812,17 @@ UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, co
 	return NewMessage;
 }
 
+UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData)
+{
+	//Create and init the message object
+	UPubnubChatMessage* NewMessage = NewObject<UPubnubChatMessage>(this);
+	NewMessage->InitMessage(PubnubClient, this, HistoryMessageData.Channel, Timetoken);
+	
+	//Update repository with updated message data
+	ObjectsRepository->UpdateMessageData(NewMessage->GetInternalMessageID(), FPubnubChatMessageData::FromPubnubHistoryMessageData(HistoryMessageData));
+
+	return NewMessage;
+}
 
 UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChatMembershipData& ChatMembershipData)
 {

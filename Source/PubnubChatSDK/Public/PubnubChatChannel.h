@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
 
 #include "PubnubChatChannel.generated.h"
 
@@ -100,6 +101,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatGetRestrictionsResult GetUsersRestrictions(const int Limit = 0, FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatGetHistoryResult GetHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 25);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatMessageResult GetMessage(const FString Timetoken);
+	
 	
 private:
 	UPROPERTY()

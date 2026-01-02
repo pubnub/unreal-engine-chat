@@ -159,3 +159,18 @@ struct FPubnubChatCreateDirectConversationResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	UPubnubChatMembership* InviteeMembership;
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetHistoryResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatMessage*> Messages;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool IsMore = false;
+};
