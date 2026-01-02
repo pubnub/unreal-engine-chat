@@ -73,6 +73,9 @@ public:
 	FPubnubChatOperationResult UnpinMessage();
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatMessageResult GetPinnedMessage();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatWhoIsPresentResult WhoIsPresent(int Limit = 1000, int Offset = 0);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")

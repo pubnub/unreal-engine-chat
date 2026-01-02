@@ -15,6 +15,7 @@
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h" 
 
 
@@ -347,6 +348,33 @@ FPubnubChatOperationResult UPubnubChatChannel::UnpinMessage()
 		FPubnubChatOperationResult UpdateResult = Update(ChannelData);
 		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 	}
+	
+	return FinalResult;
+}
+
+FPubnubChatMessageResult UPubnubChatChannel::GetPinnedMessage()
+{
+	FPubnubChatMessageResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	FPubnubChatChannelData ChannelData = GetChannelData();
+	
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(ChannelData.Custom, JsonObject);
+	FString PinnedMessageTimetoken;
+	FString PinnedMessageChannelID;
+	JsonObject->TryGetStringField(UPubnubChatInternalUtilities::GetPinnedMessageTimetokenPropertyKey(), PinnedMessageTimetoken);
+	JsonObject->TryGetStringField(UPubnubChatInternalUtilities::GetPinnedMessageChannelIDPropertyKey(), PinnedMessageChannelID);
+	
+	if (PinnedMessageTimetoken.IsEmpty() || PinnedMessageChannelID.IsEmpty())
+	{ return FinalResult; }
+	
+	if (PinnedMessageChannelID == ChannelID)
+	{
+		return GetMessage(PinnedMessageTimetoken);
+	}
+	
+	//TODO:: Get message from thread here
 	
 	return FinalResult;
 }
