@@ -15,6 +15,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;
@@ -2945,6 +2946,824 @@ bool FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest::RunTest(const
 		CleanUp();
 	}, 0.1f));
 	
+	return true;
+}
+
+// ============================================================================
+// GETEVENTSHISTORY TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to get events history without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestChannelID = SDK_PREFIX + "test_get_events_history_not_init";
+			const FString StartTimetoken = TEXT("0");
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestTrue("GetEventsHistory should fail when Chat is not initialized", HistoryResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_events_history_empty_channel_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to get events history with empty ChannelID
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TEXT(""), StartTimetoken, EndTimetoken);
+		
+		TestTrue("GetEventsHistory should fail with empty ChannelID", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyStartTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.EmptyStartTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyStartTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_events_history_empty_start_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_empty_start";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to get events history with empty StartTimetoken
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, TEXT(""), EndTimetoken);
+		
+		TestTrue("GetEventsHistory should fail with empty StartTimetoken", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyEndTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.EmptyEndTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyEndTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_events_history_empty_end_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_empty_end";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to get events history with empty EndTimetoken
+		const FString StartTimetoken = TEXT("0");
+		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, TEXT(""));
+		
+		TestTrue("GetEventsHistory should fail with empty EndTimetoken", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing event
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit an event with Publish method (only published events can be retrieved)
+		const FString TestPayload = TEXT("{\"test\":\"data\"}");
+		FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TestPayload, EPubnubChatEventMethod::PCEM_Publish);
+		
+		TestFalse("EmitChatEvent should succeed", EmitResult.Error);
+		
+		// Wait a bit for event to be stored, then get events history
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, InitUserID]()
+		{
+			// Get events history with only required parameters (default Count = 100)
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have at least one event", HistoryResult.Events.Num() >= 1);
+			
+			// Verify the event we published is in the results
+			bool bFoundEvent = false;
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.Type == EPubnubChatEventType::PCET_Typing && Event.ChannelID == TestChannelID)
+				{
+					bFoundEvent = true;
+					TestEqual("Event ChannelID should match", Event.ChannelID, TestChannelID);
+					TestEqual("Event UserID should match", Event.UserID, InitUserID);
+					TestFalse("Event Timetoken should not be empty", Event.Timetoken.IsEmpty());
+					TestFalse("Event Payload should not be empty", Event.Payload.IsEmpty());
+					break;
+				}
+			}
+			TestTrue("Should find the published event in history", bFoundEvent);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.5f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit multiple events with Publish method
+		const FString TestPayload1 = TEXT("{\"test\":\"data1\"}");
+		const FString TestPayload2 = TEXT("{\"test\":\"data2\"}");
+		const FString TestPayload3 = TEXT("{\"test\":\"data3\"}");
+		
+		FPubnubChatOperationResult EmitResult1 = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TestPayload1, EPubnubChatEventMethod::PCEM_Publish);
+		TestFalse("EmitChatEvent 1 should succeed", EmitResult1.Error);
+		
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TestPayload2]()
+		{
+			FPubnubChatOperationResult EmitResult2 = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Receipt, TestChannelID, TestPayload2, EPubnubChatEventMethod::PCEM_Publish);
+			TestFalse("EmitChatEvent 2 should succeed", EmitResult2.Error);
+		}, 0.2f));
+		
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TestPayload3]()
+		{
+			FPubnubChatOperationResult EmitResult3 = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Custom, TestChannelID, TestPayload3, EPubnubChatEventMethod::PCEM_Publish);
+			TestFalse("EmitChatEvent 3 should succeed", EmitResult3.Error);
+		}, 0.4f));
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken]()
+		{
+			// Get events history with all parameters including Count
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			const int Count = 10;
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have at least 3 events", HistoryResult.Events.Num() >= 3);
+			TestTrue("Should not exceed Count limit", HistoryResult.Events.Num() <= Count);
+			
+			// Verify all three event types are present
+			bool bFoundTyping = false;
+			bool bFoundReceipt = false;
+			bool bFoundCustom = false;
+			
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.Type == EPubnubChatEventType::PCET_Typing && Event.ChannelID == TestChannelID)
+				{
+					bFoundTyping = true;
+				}
+				else if(Event.Type == EPubnubChatEventType::PCET_Receipt && Event.ChannelID == TestChannelID)
+				{
+					bFoundReceipt = true;
+				}
+				else if(Event.Type == EPubnubChatEventType::PCET_Custom && Event.ChannelID == TestChannelID)
+				{
+					bFoundCustom = true;
+				}
+			}
+			
+			TestTrue("Should find Typing event", bFoundTyping);
+			TestTrue("Should find Receipt event", bFoundReceipt);
+			TestTrue("Should find Custom event", bFoundCustom);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.6f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests that only events published with PCEM_Publish method are retrieved.
+ * Events published with PCEM_Signal should not appear in history.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryOnlyPublishEventsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.OnlyPublishEvents", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryOnlyPublishEventsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_publish_only_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_publish_only";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit event with Publish method (should appear in history)
+		const FString TestPayloadPublish = TEXT("{\"test\":\"publish\"}");
+		FPubnubChatOperationResult EmitResultPublish = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TestPayloadPublish, EPubnubChatEventMethod::PCEM_Publish);
+		TestFalse("EmitChatEvent with Publish should succeed", EmitResultPublish.Error);
+		
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
+		{
+			// Emit event with Signal method (should NOT appear in history)
+			const FString TestPayloadSignal = TEXT("{\"test\":\"signal\"}");
+			FPubnubChatOperationResult EmitResultSignal = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Receipt, TestChannelID, TestPayloadSignal, EPubnubChatEventMethod::PCEM_Signal);
+			TestFalse("EmitChatEvent with Signal should succeed", EmitResultSignal.Error);
+		}, 0.2f));
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken]()
+		{
+			// Get events history
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			
+			// Verify only the Publish event is in history, not the Signal event
+			bool bFoundPublishEvent = false;
+			bool bFoundSignalEvent = false;
+			
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.ChannelID == TestChannelID)
+				{
+					if(Event.Type == EPubnubChatEventType::PCET_Typing)
+					{
+						bFoundPublishEvent = true;
+					}
+					else if(Event.Type == EPubnubChatEventType::PCET_Receipt)
+					{
+						bFoundSignalEvent = true;
+					}
+				}
+			}
+			
+			TestTrue("Should find Publish event in history", bFoundPublishEvent);
+			TestFalse("Should NOT find Signal event in history", bFoundSignalEvent);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.4f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory with empty history (no events in the specified time range).
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyHistoryTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.EmptyHistory", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyHistoryTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Use a time range in the past where no events exist
+		// Use timetoken "0" as start and a very old timetoken as end
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
+		
+		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+		
+		TestFalse("GetEventsHistory should succeed even with empty history", HistoryResult.Result.Error);
+		TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory with Count parameter limiting the number of returned events.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryCountLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.CountLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryCountLimitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_count_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_count";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit multiple events
+		const int NumEventsToPublish = 5;
+		for(int i = 0; i < NumEventsToPublish; ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"data%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TestPayload, EPubnubChatEventMethod::PCEM_Publish);
+			TestFalse(FString::Printf(TEXT("EmitChatEvent %d should succeed"), i), EmitResult.Error);
+			
+			if(i < NumEventsToPublish - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, NumEventsToPublish]()
+		{
+			// Get events history with Count limit smaller than number of events published
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			const int CountLimit = 3;
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, CountLimit);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
+			TestTrue("Should respect Count limit", HistoryResult.Events.Num() <= CountLimit);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.6f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory with different event types to verify all types can be retrieved.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryAllEventTypesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.AllEventTypes", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryAllEventTypesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_all_types_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_all_types";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit events with all different event types (using Publish method)
+		TArray<EPubnubChatEventType> EventTypes = {
+			EPubnubChatEventType::PCET_Typing,
+			EPubnubChatEventType::PCET_Report,
+			EPubnubChatEventType::PCET_Receipt,
+			EPubnubChatEventType::PCET_Mention,
+			EPubnubChatEventType::PCET_Invite,
+			EPubnubChatEventType::PCET_Custom,
+			EPubnubChatEventType::PCET_Moderation
+		};
+		
+		for(int32 i = 0; i < EventTypes.Num(); ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"eventType%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(EventTypes[i], TestChannelID, TestPayload, EPubnubChatEventMethod::PCEM_Publish);
+			TestFalse(FString::Printf(TEXT("EmitChatEvent for type %d should succeed"), i), EmitResult.Error);
+			
+			if(i < EventTypes.Num() - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, EventTypes, InitUserID]()
+		{
+			// Get events history
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have at least as many events as published", HistoryResult.Events.Num() >= EventTypes.Num());
+			
+			// Verify all event types are present in history
+			TArray<bool> FoundEventTypes;
+			FoundEventTypes.SetNum(EventTypes.Num());
+			for(int32 i = 0; i < FoundEventTypes.Num(); ++i)
+			{
+				FoundEventTypes[i] = false;
+			}
+			
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.ChannelID == TestChannelID)
+				{
+					for(int32 i = 0; i < EventTypes.Num(); ++i)
+					{
+						if(Event.Type == EventTypes[i])
+						{
+							FoundEventTypes[i] = true;
+							TestEqual("Event ChannelID should match", Event.ChannelID, TestChannelID);
+							TestEqual("Event UserID should match", Event.UserID, InitUserID);
+							TestFalse("Event Timetoken should not be empty", Event.Timetoken.IsEmpty());
+							TestFalse("Event Payload should not be empty", Event.Payload.IsEmpty());
+							break;
+						}
+					}
+				}
+			}
+			
+			// Verify all event types were found
+			for(int32 i = 0; i < EventTypes.Num(); ++i)
+			{
+				TestTrue(FString::Printf(TEXT("Should find event type %d in history"), i), FoundEventTypes[i]);
+			}
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.8f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory IsMore parameter when exactly Count messages are returned.
+ * Verifies that IsMore is true when we get exactly the requested count, indicating more might be available.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryIsMoreTrueTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.IsMoreTrue", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryIsMoreTrueTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_ismore_true_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_ismore_true";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Publish exactly Count events (so we get exactly Count messages back)
+		const int Count = 5;
+		for(int i = 0; i < Count; ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"data%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TestPayload, EPubnubChatEventMethod::PCEM_Publish);
+			TestFalse(FString::Printf(TEXT("EmitChatEvent %d should succeed"), i), EmitResult.Error);
+			
+			if(i < Count - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, Count]()
+		{
+			// Get events history with Count matching the number of events we published
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
+			
+			// If we got exactly Count messages, IsMore should be true (indicating there might be more)
+			// Note: We're checking messages, not events, because FetchHistory returns messages
+			// If exactly Count messages were returned, there might be more available
+			TestTrue("IsMore should be true when exactly Count messages are returned", HistoryResult.IsMore);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.6f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory IsMore parameter when fewer than Count messages are returned.
+ * Verifies that IsMore is false when we get fewer than requested, indicating we got all available.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryIsMoreFalseTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.IsMoreFalse", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryIsMoreFalseTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_ismore_false_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_ismore_false";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Publish fewer events than Count (so we get fewer than Count messages back)
+		const int NumEventsToPublish = 2;
+		const int Count = 10; // Request more than we publish
+		
+		for(int i = 0; i < NumEventsToPublish; ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"data%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TestPayload, EPubnubChatEventMethod::PCEM_Publish);
+			TestFalse(FString::Printf(TEXT("EmitChatEvent %d should succeed"), i), EmitResult.Error);
+			
+			if(i < NumEventsToPublish - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, Count, NumEventsToPublish]()
+		{
+			// Get events history with Count larger than number of events we published
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
+			TestTrue("Should have fewer events than Count", HistoryResult.Events.Num() < Count);
+			
+			// If we got fewer than Count messages, IsMore should be false (indicating we got all available)
+			TestFalse("IsMore should be false when fewer than Count messages are returned", HistoryResult.IsMore);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.4f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory IsMore parameter with empty history.
+ * Verifies that IsMore is false when no events are found.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryIsMoreEmptyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.IsMoreEmpty", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryIsMoreEmptyTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_ismore_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_ismore_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Use a time range in the past where no events exist
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
+		const int Count = 10;
+		
+		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+		
+		TestFalse("GetEventsHistory should succeed even with empty history", HistoryResult.Result.Error);
+		TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);
+		
+		// With no messages returned, IsMore should be false
+		TestFalse("IsMore should be false when no messages are returned", HistoryResult.IsMore);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	return true;
 }
 

@@ -194,12 +194,37 @@ FPubnubChatEvent UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(con
 	UPubnubJsonUtilities::StringToJsonObject(MessageData.Message, JsonObject);
 
 	//Type is in Message content, so we need to extract it from there
-	Event.Type = UPubnubChatInternalConverters::StringToChatEventType(JsonObject->GetStringField(ANSI_TO_TCHAR("type")));
+	FString Type;
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type);
+	Event.Type = UPubnubChatInternalConverters::StringToChatEventType(Type);
 
 	//Event type shouldn't be in the payload, so we have to remove it. Remaining message content is the payload
 	JsonObject->RemoveField(ANSI_TO_TCHAR("type"));
 	Event.Payload = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 
+	return Event;
+}
+
+//This function assumes that IsThisEventMessage was called before and this is really Message representing a ChatEvent
+FPubnubChatEvent UPubnubChatInternalUtilities::GetEventFromPubnubHistoryMessageData(const FPubnubHistoryMessageData& MessageData)
+{
+	FPubnubChatEvent Event;
+	Event.ChannelID = MessageData.Channel;
+	Event.UserID = MessageData.UserID;
+	Event.Timetoken = MessageData.Timetoken;
+	
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageData.Message, JsonObject);
+	
+	//Get Event type and remove it from the Payload
+	FString Type;
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type);
+	Event.Type = UPubnubChatInternalConverters::StringToChatEventType(Type);
+
+	//Event type shouldn't be in the payload, so we have to remove it. Remaining message content is the payload
+	JsonObject->RemoveField(ANSI_TO_TCHAR("type"));
+	Event.Payload = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+	
 	return Event;
 }
 
@@ -216,6 +241,27 @@ FString UPubnubChatInternalUtilities::GetInviteEventPayload(const FString Channe
 FString UPubnubChatInternalUtilities::GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason)
 {
 	return FString::Printf(TEXT(R"({"channelId": "%s", "restriction": "%s", "reason": "%s"})"), *ModerationChannel, *RestrictionType, *Reason);
+}
+
+bool UPubnubChatInternalUtilities::IsThisEventMessage(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject);
+	
+	FString Type;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type))
+	{ return false; }
+	
+	//Message is an event if it has type field that matches any actual event type
+	for (EPubnubChatEventType EventType : TEnumRange<EPubnubChatEventType>())
+	{
+		if (Type == UPubnubChatInternalConverters::ChatEventTypeToString(EventType))
+		{
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()

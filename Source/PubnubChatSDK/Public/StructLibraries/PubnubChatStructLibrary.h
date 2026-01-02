@@ -191,6 +191,21 @@ struct FPubnubChatEvent
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatGetEventsHistoryResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FPubnubChatEvent> Events;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool IsMore = false;
+};
+
+USTRUCT(BlueprintType)
 struct FPubnubChatWherePresentResult
 {
 	GENERATED_BODY()

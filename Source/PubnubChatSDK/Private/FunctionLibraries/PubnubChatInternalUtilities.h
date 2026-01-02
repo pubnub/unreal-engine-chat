@@ -6,6 +6,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "PubnubChatEnumLibrary.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
+#include "PubnubStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "PubnubChatInternalUtilities.generated.h"
 
@@ -56,9 +57,12 @@ public:
 	
 	static EPubnubChatEventMethod GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType);
 	static FPubnubChatEvent GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
+	static FPubnubChatEvent GetEventFromPubnubHistoryMessageData(const FPubnubHistoryMessageData& MessageData);
 	static FString GetReceiptEventPayload(const FString& Timetoken);
 	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
 	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
+	static bool IsThisEventMessage(const FString& MessageContent);
+
 	
 	
 	/* MEMBERSHIP */

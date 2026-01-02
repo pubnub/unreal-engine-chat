@@ -515,6 +515,36 @@ FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType Event
 	return FinalResult;
 }
 
+FPubnubChatGetEventsHistoryResult UPubnubChat::GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count)
+{
+	FPubnubChatGetEventsHistoryResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, StartTimetoken);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, EndTimetoken);
+	
+	FPubnubFetchHistorySettings FetchHistorySettings;
+	FetchHistorySettings.MaxPerChannel = Count;
+	FetchHistorySettings.Start = StartTimetoken;
+	FetchHistorySettings.End = EndTimetoken;
+	FetchHistorySettings.IncludeUserID = true; //Include UserID so events can have their UserID populated
+	FPubnubFetchHistoryResult FetchHistoryResult = PubnubClient->FetchHistory(ChannelID, FetchHistorySettings);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, FetchHistoryResult.Result, "FetchHistory");
+	
+	for (auto& Message : FetchHistoryResult.Messages)
+	{
+		if (UPubnubChatInternalUtilities::IsThisEventMessage(Message.Message))
+		{
+			FinalResult.Events.Add(UPubnubChatInternalUtilities::GetEventFromPubnubHistoryMessageData(Message));
+		}
+	}
+	
+	//If we got the exact amount of messages as specified count, probably there are more events in a given range
+	FinalResult.IsMore = FetchHistoryResult.Messages.Num() == Count;
+	
+	return FinalResult;
+}
+
 FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback)
 {
 	FOnPubnubChatEventReceivedNative EventCallbackNative;
@@ -546,6 +576,10 @@ FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString Chan
 	auto EventLambda = [ThisWeak, EventType, EventCallbackNative](const FPubnubMessageData& MessageData)
 	{
 		if(!ThisWeak.IsValid())
+		{return;}
+		
+		//Just skip if this is not an event
+		if (!UPubnubChatInternalUtilities::IsThisEventMessage(MessageData.Message))
 		{return;}
 
 		FPubnubChatEvent Event = UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(MessageData);

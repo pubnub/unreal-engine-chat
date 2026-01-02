@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/EnumRange.h"
 #include "PubnubChatEnumLibrary.generated.h"
 
 
@@ -33,8 +34,11 @@ enum class EPubnubChatEventType : uint8
 	PCET_Mention				UMETA(DisplayName="Mention"),
 	PCET_Invite					UMETA(DisplayName="Invite"),
 	PCET_Custom					UMETA(DisplayName="Custom"),
-	PCET_Moderation				UMETA(DisplayName="Moderation")
+	PCET_Moderation				UMETA(DisplayName="Moderation"),
+	
+	Count
 };
+ENUM_RANGE_BY_COUNT(EPubnubChatEventType, EPubnubChatEventType::Count);
 
 UENUM(BlueprintType)
 enum class EPubnubChatEventMethod : uint8
