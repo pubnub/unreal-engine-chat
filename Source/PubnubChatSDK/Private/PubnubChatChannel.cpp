@@ -243,7 +243,7 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
 
 	//GetChannelMembers from PubnubClient to check if the user is not already member of that channel
-	FString Filter = FString::Printf(TEXT("uuid.id == \"%s\""), *User->GetUserID());
+	FString Filter = UPubnubChatInternalUtilities::GetFilterForUserID(User->GetUserID());
 	FPubnubMemberInclude Include = FPubnubMemberInclude({.IncludeCustom=true, .IncludeStatus=true, .IncludeType=true});
 	FPubnubChannelMembersResult GetChannelMembersResult = PubnubClient->GetChannelMembers(ChannelID, Include, 1, Filter);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelMembersResult.Result, "GetChannelMembers");
@@ -448,6 +448,44 @@ FPubnubChatMembershipsResult UPubnubChatChannel::GetInvitees(const int Limit, co
 	return GetMembers(Limit, FinalFilter, Sort, Page);
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::SetRestrictions(const FString UserID, bool Ban, bool Mute, FString Reason)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(UserID);
+	
+	return Chat->SetRestrictions(FPubnubChatRestriction(UserID, ChannelID, Ban, Mute, Reason));
+}
+
+FPubnubChatGetRestrictionResult UPubnubChatChannel::GetUserRestrictions(UPubnubChatUser* User)
+{
+	FPubnubChatGetRestrictionResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
+	
+	FPubnubChatGetRestrictionsResult GetRestrictionsResult = GetRestrictions(1, UPubnubChatInternalUtilities::GetFilterForUserID(User->GetUserID()));
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetRestrictionsResult.Result);
+
+	//If there was any restriction returned, just add it. If not, there is no restriction
+	if (!GetRestrictionsResult.Restrictions.IsEmpty())
+	{
+		FinalResult.Restriction = GetRestrictionsResult.Restrictions[0];
+	}
+	else
+	{
+		FinalResult.Restriction = FPubnubChatRestriction({.UserID = User->GetUserID(), .ChannelID = ChannelID});
+	}
+	
+	return FinalResult;
+}
+
+FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetUsersRestrictions(const int Limit, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	FPubnubChatGetRestrictionsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return GetRestrictions(Limit, "", Sort, Page);
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));
@@ -471,4 +509,29 @@ void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat*
 	}
 	
 	IsInitialized = true;
+}
+
+FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	FPubnubChatGetRestrictionsResult FinalResult;
+	
+	//Getting restrictions is actually getting members from moderation channel
+	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);
+	FPubnubMemberInclude Include = FPubnubMemberInclude({.IncludeCustom = true, .IncludeTotalCount = true}); 
+	FPubnubChannelMembersResult GetMembersResult = PubnubClient->GetChannelMembers(ModerationChannelID, Include, Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembersResult.Result, "GetChannelMembers");
+	
+	//Convert Custom fields to Restrictions
+	for (auto& MemberData : GetMembersResult.MembersData)
+	{
+		FPubnubChatRestriction Restriction = UPubnubChatInternalUtilities::GetRestrictionFromChannelMemberCustom(MemberData.Custom);
+		Restriction.UserID = MemberData.User.UserID;
+		Restriction.ChannelID = ChannelID;
+		FinalResult.Restrictions.Add(Restriction);
+	}
+	
+	FinalResult.Page = GetMembersResult.Page;
+	FinalResult.Total = GetMembersResult.TotalCount;
+	
+	return FinalResult;
 }

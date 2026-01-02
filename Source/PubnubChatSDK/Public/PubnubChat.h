@@ -134,6 +134,7 @@ public:
 
 	
 	/* PRESENCE */
+	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatWherePresentResult WherePresent(const FString UserID);
 	
@@ -142,10 +143,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatIsPresentResult IsPresent(const FString UserID, const FString ChannelID);
-	
 
 
 	/* MODERATION */
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
+	FPubnubChatOperationResult SetRestrictions(FPubnubChatRestriction Restriction);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
 	FPubnubChatOperationResult EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
@@ -156,6 +159,7 @@ public:
 
 
 	/* ACCESS MANAGER */
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat|Access Manager")
 	UPubnubChatAccessManager* GetAccessManager() const { return AccessManager; }
 	
@@ -185,7 +189,7 @@ private:
 
 	FPubnubChatInitChatResult InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
 	FPubnubChatUserResult GetUserForInit(const FString InUserID);
-
+	
 	
 	/* CREATORS FOR CHAT OBJECTS */
 

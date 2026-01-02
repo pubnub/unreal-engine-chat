@@ -21,64 +21,58 @@ class PUBNUBCHATSDK_API UPubnubChatInternalUtilities : public UBlueprintFunction
 	GENERATED_BODY()
 public:
 	
-
+	/* FILTERS */
+	
+	static FString GetFilterForUserID(const FString& UserID);
+	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
+	static FString GetFilterForChannelID(const FString& ChannelID);
+	static FString GetFilterForChannelsRestrictions();
+	
 	/* SOFT DELETE */
 	
-	UFUNCTION()
 	static FString GetSoftDeletedObjectPropertyKey();
-
-	UFUNCTION()
 	static FString AddDeletedPropertyToCustom(const FString CurrentCustom);
-	
-	UFUNCTION()
 	static FString RemoveDeletedPropertyFromCustom(const FString CurrentCustom);
-	
-	UFUNCTION()
 	static bool HasDeletedPropertyInCustom(const FString CurrentCustom);
 
+	
 	/* PUBLISH MESSAGE */
-
-	UFUNCTION()
+	
 	static FString ChatMessageToPublishString(const FString ChatMessage);
-
-	UFUNCTION()
 	static FString PublishedStringToChatMessage(const FString PublishedMessage);
-
-	UFUNCTION()
 	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams);
+	
+	
+	/* RESTRICTIONS */
+	
+	static FString GetRestrictionsChannelForChannelID(const FString ChannelID);
+	static FString GetModerationEventChannelForUserID(const FString UserID);
+	static FString GetChannelIDFromModerationChannel(const FString ModerationChannelID);
+	static FString GetChannelMemberCustomForRestriction(const FPubnubChatRestriction& Restriction);
+	static FPubnubChatRestriction GetRestrictionFromChannelMemberCustom(const FString& Custom);
 
 	
 	/* EVENTS */
 	
-	UFUNCTION()
 	static EPubnubChatEventMethod GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType);
-
-	UFUNCTION()
 	static FPubnubChatEvent GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
-
 	static FString GetReceiptEventPayload(const FString& Timetoken);
-
 	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
+	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
 	
 	
 	/* MEMBERSHIP */
 	
 	static FString GetLastReadMessageTimetokenPropertyKey();
-
 	static void AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken);
-
-	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
 
 	
 	/* CHANNEL */
 	
 	static FString GetPinnedMessageTimetokenPropertyKey();
-	
 	static FString GetPinnedMessageChannelIDPropertyKey();
-	
 	//Message should be validated before using this function
 	static void AddPinnedMessageToChannelData(FPubnubChatChannelData& ChannelData, UPubnubChatMessage* Message);
-	
 	static bool RemovePinnedMessageFromChannelData(FPubnubChatChannelData& ChannelData);
 	
 	/* ACCESS MANAGER */

@@ -10,6 +10,37 @@
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 
 
+FString UPubnubChatInternalUtilities::GetFilterForUserID(const FString& UserID)
+{
+	return FString::Printf(TEXT("uuid.id == \"%s\""), *UserID);
+}
+
+FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users)
+{
+	FString FinalFilter = "";
+	for(auto& User : Users)
+	{
+		if(!User)
+		{continue;}
+		if(!FinalFilter.IsEmpty())
+		{
+			FinalFilter.Append(" || ");
+		}
+		FinalFilter.Append(FString::Printf(TEXT(R"(uuid.id == "%s")"), *User->GetUserID()));
+	}
+	return FinalFilter;
+}
+
+FString UPubnubChatInternalUtilities::GetFilterForChannelID(const FString& ChannelID)
+{
+	return FString::Printf(TEXT("channel.id == \"%s\""), *ChannelID);
+}
+
+FString UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions()
+{
+	return FString::Printf(TEXT("channel.id LIKE \"%s*\""), *Pubnub_Chat_Moderation_Channel_Prefix);
+}
+
 FString UPubnubChatInternalUtilities::GetSoftDeletedObjectPropertyKey()
 {
 	return Pubnub_Chat_Soft_Deleted_Property_Name;
@@ -91,7 +122,52 @@ FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSe
 	}
 
 	return "";
+}
+
+FString UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(const FString ChannelID)
+{
+	return FString::Printf(TEXT("%s_%s"), *Pubnub_Chat_Moderation_Channel_Prefix, *ChannelID);
+}
+
+FString UPubnubChatInternalUtilities::GetModerationEventChannelForUserID(const FString UserID)
+{
+	return FString::Printf(TEXT("%s.%s"), *Pubnub_Chat_Moderation_Channel_Prefix, *UserID);
+}
+
+FString UPubnubChatInternalUtilities::GetChannelIDFromModerationChannel(const FString ModerationChannelID)
+{
+	// Extract actual channel ID from moderation channel ID (format: PUBNUB_INTERNAL_MODERATION_channelID)
+	FString ModerationPrefix = Pubnub_Chat_Moderation_Channel_Prefix + TEXT("_");
+	if(ModerationChannelID.StartsWith(ModerationPrefix))
+	{
+		return ModerationChannelID.RightChop(ModerationPrefix.Len());
+	}
 	
+	// Fallback if format is unexpected - return the original string
+	return ModerationChannelID;
+}
+
+FString UPubnubChatInternalUtilities::GetChannelMemberCustomForRestriction(const FPubnubChatRestriction& Restriction)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetBoolField(ANSI_TO_TCHAR("ban"), Restriction.Ban);
+	JsonObject->SetBoolField(ANSI_TO_TCHAR("mute"), Restriction.Mute);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("reason"), Restriction.Reason);
+	
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
+FPubnubChatRestriction UPubnubChatInternalUtilities::GetRestrictionFromChannelMemberCustom(const FString& Custom)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(Custom, JsonObject);
+	
+	FPubnubChatRestriction Restriction;
+	JsonObject->TryGetBoolField(ANSI_TO_TCHAR("ban"), Restriction.Ban);
+	JsonObject->TryGetBoolField(ANSI_TO_TCHAR("mute"), Restriction.Mute);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("reason"), Restriction.Reason);
+	
+	return Restriction;
 }
 
 EPubnubChatEventMethod UPubnubChatInternalUtilities::GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType)
@@ -137,6 +213,11 @@ FString UPubnubChatInternalUtilities::GetInviteEventPayload(const FString Channe
 	return FString::Printf(TEXT(R"({"channelType": "%s", "channelId": "%s"})"), *ChannelType, *ChannelID);
 }
 
+FString UPubnubChatInternalUtilities::GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason)
+{
+	return FString::Printf(TEXT(R"({"channelId": "%s", "restriction": "%s", "reason": "%s"})"), *ModerationChannel, *RestrictionType, *Reason);
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;
@@ -151,22 +232,6 @@ void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(F
 	}
 	JsonObject->SetStringField(GetLastReadMessageTimetokenPropertyKey(), Timetoken);
 	MembershipData.Custom = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
-}
-
-FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users)
-{
-	FString FinalFilter = "";
-	for(auto& User : Users)
-	{
-		if(!User)
-		{continue;}
-		if(!FinalFilter.IsEmpty())
-		{
-			FinalFilter.Append(" || ");
-		}
-		FinalFilter.Append(FString::Printf(TEXT(R"(uuid.id == "%s")"), *User->GetUserID()));
-	}
-	return FinalFilter;
 }
 
 FString UPubnubChatInternalUtilities::GetPinnedMessageTimetokenPropertyKey()

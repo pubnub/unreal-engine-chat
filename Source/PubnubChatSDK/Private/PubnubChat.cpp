@@ -436,6 +436,52 @@ FPubnubChatIsPresentResult UPubnubChat::IsPresent(const FString UserID, const FS
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChat::SetRestrictions(FPubnubChatRestriction Restriction)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!Restriction.UserID.IsEmpty(), TEXT("UserID in provided Restriction can't be empty"));
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!Restriction.ChannelID.IsEmpty(), TEXT("ChannelID in provided Restriction can't be empty"));
+	
+	FPubnubChatOperationResult FinalResult;
+	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(Restriction.ChannelID);
+	
+	//Make sure moderation channel exists
+	FPubnubChannelMetadataResult ChannelMetadataResult =  PubnubClient->SetChannelMetadata(ModerationChannelID, FPubnubChannelInputData());
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ChannelMetadataResult.Result, "SetChannelMetadata");
+	
+	FString RestrictionType;
+	
+	//Lift restrictions if ban and mute are false
+	if (!Restriction.Ban && !Restriction.Mute)
+	{
+		//Lifting restriction is simply removing this user membership from moderation channel
+		FPubnubChannelMembersResult RemoveChannelMembersResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, {Restriction.UserID}, FPubnubMemberInclude::FromValue(false), 1);
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveChannelMembersResult.Result, "RemoveChannelMembers");
+		
+		RestrictionType = "Lifted";
+	}
+	else
+	{
+		//Setting restriction is actually SettingChannelMembers on an internal moderation channel
+		FPubnubChannelMemberInputData ModerationMemberInputData;
+		ModerationMemberInputData.User = Restriction.UserID;
+		ModerationMemberInputData.Custom = UPubnubChatInternalUtilities::GetChannelMemberCustomForRestriction(Restriction);
+	
+		FPubnubChannelMembersResult SetChannelMembersResult = PubnubClient->SetChannelMembers(ModerationChannelID, {ModerationMemberInputData}, FPubnubMemberInclude::FromValue(false), 1);
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelMembersResult.Result, "SetChannelMembers");
+		
+		RestrictionType = Restriction.Ban? "banned" : "muted";
+	}
+	
+	//Emit moderation event that restriction was lifted
+	FString ModerationEventChannel = UPubnubChatInternalUtilities::GetModerationEventChannelForUserID(Restriction.UserID);
+	FString EventPayload = UPubnubChatInternalUtilities::GetModerationEventPayload(ModerationChannelID, RestrictionType, Restriction.Reason);
+	FPubnubChatOperationResult EmitResult =  EmitChatEvent(EPubnubChatEventType::PCET_Moderation, ModerationEventChannel, EventPayload);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, EmitResult);
+	
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod)
 {
 	FPubnubChatOperationResult FinalResult;

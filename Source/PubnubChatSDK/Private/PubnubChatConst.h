@@ -12,3 +12,5 @@ const FString Pubnub_Chat_LRMT_Property_Name = "lastReadMessageTimetoken";
 const FString Pubnub_Chat_PinnedMessageTimetoken_Property_Name = "pinnedMessageTimetoken";
 //Pinned Message Channel ID field name in Json
 const FString Pubnub_Chat_PinnedMessageChannelID_Property_Name = "pinnedMessageChannelID";
+//Prefix for restrictions channels
+const FString Pubnub_Chat_Moderation_Channel_Prefix = "PUBNUB_INTERNAL_MODERATION";

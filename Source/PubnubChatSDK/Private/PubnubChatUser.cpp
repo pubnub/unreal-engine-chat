@@ -3,11 +3,13 @@
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
+#include "PubnubChatChannel.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "PubnubChatConst.h"
 
 
 void UPubnubChatUser::BeginDestroy()
@@ -132,6 +134,45 @@ FPubnubChatMembershipsResult UPubnubChatUser::GetMemberships(const int Limit, co
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatUser::SetRestrictions(const FString ChannelID, bool Ban, bool Mute, FString Reason)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
+	
+	return Chat->SetRestrictions(FPubnubChatRestriction(UserID, ChannelID, Ban, Mute, Reason));
+}
+
+FPubnubChatGetRestrictionResult UPubnubChatUser::GetChannelRestrictions(UPubnubChatChannel* Channel)
+{
+	FPubnubChatGetRestrictionResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, Channel);
+	
+	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(Channel->GetChannelID());
+	FPubnubChatGetRestrictionsResult GetRestrictionsResult = GetRestrictions(1, UPubnubChatInternalUtilities::GetFilterForChannelID(ModerationChannelID));
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetRestrictionsResult.Result);
+
+	//If there was any restriction returned, just add it. If not, there is no restriction
+	if (!GetRestrictionsResult.Restrictions.IsEmpty())
+	{
+		FinalResult.Restriction = GetRestrictionsResult.Restrictions[0];
+	}
+	else
+	{
+		FinalResult.Restriction = FPubnubChatRestriction({.UserID = UserID, .ChannelID = Channel->GetChannelID()});
+	}
+	
+	return FinalResult;
+}
+
+FPubnubChatGetRestrictionsResult UPubnubChatUser::GetChannelsRestrictions(const int Limit, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FPubnubChatGetRestrictionsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return GetRestrictions(Limit, UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions(), Sort, Page);
+}
+
 void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init User, PubnubClient is invalid"));
@@ -149,4 +190,28 @@ void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InCha
 	}
 	
 	IsInitialized = true;
+}
+
+FPubnubChatGetRestrictionsResult UPubnubChatUser::GetRestrictions(const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FPubnubChatGetRestrictionsResult FinalResult;
+	
+	FPubnubMembershipInclude Include = FPubnubMembershipInclude({.IncludeCustom = true, .IncludeTotalCount = true}); 
+	FPubnubMembershipsResult GetMembershipsResult = PubnubClient->GetMemberships(UserID, Include, Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result, "GetMemberships");
+	
+	//Convert Custom fields to Restrictions
+	for (auto& MembershipData : GetMembershipsResult.MembershipsData)
+	{
+		FPubnubChatRestriction Restriction = UPubnubChatInternalUtilities::GetRestrictionFromChannelMemberCustom(MembershipData.Custom);
+		Restriction.UserID = UserID;
+		Restriction.ChannelID = UPubnubChatInternalUtilities::GetChannelIDFromModerationChannel(MembershipData.Channel.ChannelID);
+		
+		FinalResult.Restrictions.Add(Restriction);
+	}
+	
+	FinalResult.Page = GetMembershipsResult.Page;
+	FinalResult.Total = GetMembershipsResult.TotalCount;
+	
+	return FinalResult;
 }

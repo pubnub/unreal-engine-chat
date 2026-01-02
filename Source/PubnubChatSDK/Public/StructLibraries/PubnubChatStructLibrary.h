@@ -16,14 +16,6 @@ class UPubnubChatCallbackStop;
 
 
 USTRUCT(BlueprintType)
-struct FPubnubStringArrayWrapper
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") TArray<FString> Strings;
-};
-
-USTRUCT(BlueprintType)
 struct FPubnubChatConfig
 {
 	GENERATED_BODY()
@@ -256,6 +248,57 @@ struct FPubnubChatMembershipsResult
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TArray<UPubnubChatMembership*> Memberships;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubPage Page;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Total = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatRestriction
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString UserID = "";
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString ChannelID = "";
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool Ban = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool Mute = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Reason = "";
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetRestrictionResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatRestriction Restriction;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetRestrictionsResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FPubnubChatRestriction> Restrictions;
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FPubnubPage Page;

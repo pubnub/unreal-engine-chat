@@ -51,6 +51,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatMembershipsResult GetMemberships(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult SetRestrictions(const FString ChannelID, bool Ban, bool Mute, FString Reason = "");
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatGetRestrictionResult GetChannelRestrictions(UPubnubChatChannel* Channel);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatGetRestrictionsResult GetChannelsRestrictions(const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
@@ -63,4 +73,7 @@ private:
 	bool IsInitialized = false;
 
 	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID);
+	
+	FPubnubChatGetRestrictionsResult GetRestrictions(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	
 };
