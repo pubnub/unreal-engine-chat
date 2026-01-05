@@ -29,6 +29,16 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FString GetMessageTimetoken() const { return Timetoken; }
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FString GetCurrentText();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FString GetType() { return "text"; }
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult EditText(const FString NewText);
+
 
 private:
 	UPROPERTY()

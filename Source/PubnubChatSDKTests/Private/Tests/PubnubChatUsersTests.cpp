@@ -8,6 +8,7 @@
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "Private/PubnubChatConst.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS

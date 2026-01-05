@@ -8,6 +8,7 @@
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "PubnubChatInternalUtilities.generated.h"
 
 class FJsonObject;
@@ -100,6 +101,15 @@ public:
 	 * @return 64-bit unsigned hash value
 	 */
 	static uint64 HashString(const FString& Str, int32 Seed = 0);
+
+	/* MESSAGE ACTIONS */
+
+	/**
+	 * Sorts message actions by timetoken in ascending order (oldest first, most recent last).
+	 * Timetokens are compared numerically after conversion to int64.
+	 * @param MessageActions Array of message actions to sort (modified in place)
+	 */
+	static void SortMessageActionsByTimetoken(TArray<FPubnubChatMessageAction>& MessageActions);
 
 
 	/* TEMPLATES */

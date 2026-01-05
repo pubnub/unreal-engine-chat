@@ -8,6 +8,7 @@
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "Algo/Sort.h"
 
 
 FString UPubnubChatInternalUtilities::GetFilterForUserID(const FString& UserID)
@@ -453,4 +454,26 @@ uint64 UPubnubChatInternalUtilities::HashString(const FString& Str, int32 Seed)
 	{
 		return static_cast<uint64>(Result);
 	}
+}
+
+void UPubnubChatInternalUtilities::SortMessageActionsByTimetoken(TArray<FPubnubChatMessageAction>& MessageActions)
+{
+	Algo::Sort(MessageActions, [](const FPubnubChatMessageAction& A, const FPubnubChatMessageAction& B)
+	{
+		// Convert timetokens to int64 for proper numeric comparison
+		int64 TimetokenA = 0;
+		int64 TimetokenB = 0;
+		
+		if (!A.Timetoken.IsEmpty() && A.Timetoken.IsNumeric())
+		{
+			LexFromString(TimetokenA, *A.Timetoken);
+		}
+		
+		if (!B.Timetoken.IsEmpty() && B.Timetoken.IsNumeric())
+		{
+			LexFromString(TimetokenB, *B.Timetoken);
+		}
+		
+		return TimetokenA < TimetokenB;
+	});
 }
