@@ -16,6 +16,7 @@
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;
@@ -3764,6 +3765,938 @@ bool FPubnubChatGetEventsHistoryIsMoreEmptyTest::RunTest(const FString& Paramete
 
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FORWARDMESSAGE TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to forward message without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			// Create dummy message and channel objects
+			UPubnubChatMessage* Message = NewObject<UPubnubChatMessage>();
+			UPubnubChatChannel* Channel = NewObject<UPubnubChatChannel>();
+			
+			if(Message && Channel)
+			{
+				FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(Message, Channel);
+				
+				TestTrue("ForwardMessage should fail when Chat is not initialized", ForwardResult.Error);
+				TestFalse("ErrorMessage should not be empty", ForwardResult.ErrorMessage.IsEmpty());
+			}
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageInvalidMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.1Validation.InvalidMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageInvalidMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_invalid_message_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		const FString TestChannelID = SDK_PREFIX + "test_forward_message_invalid_message";
+		
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Try to forward message with null Message
+			FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(nullptr, CreateResult.Channel);
+			
+			TestTrue("ForwardMessage should fail with null Message", ForwardResult.Error);
+			TestFalse("ErrorMessage should not be empty", ForwardResult.ErrorMessage.IsEmpty());
+			
+			// Cleanup
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageInvalidChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.1Validation.InvalidChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageInvalidChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_invalid_channel_init";
+	const FString TestChannelID = SDK_PREFIX + "test_forward_message_invalid_channel";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel and send a message
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult]()
+	{
+		const FString TestMessageText = TEXT("Test message for forwarding");
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Try to forward message with null Channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*ReceivedMessage, nullptr);
+		
+		TestTrue("ForwardMessage should fail with null Channel", ForwardResult.Error);
+		TestFalse("ErrorMessage should not be empty", ForwardResult.ErrorMessage.IsEmpty());
+	}, 0.1f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_happy_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_happy_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_happy_dest";
+	const FString TestMessageText = TEXT("Message to forward");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
+	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
+	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	});
+	
+	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	
+	// Wait for subscriptions, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+		
+		// Verify step results contain PublishMessage step
+		bool bFoundPublishStep = false;
+		for(const FPubnubChatOperationStepResult& Step : ForwardResult.StepResults)
+		{
+			if(Step.StepName == TEXT("PublishMessage"))
+			{
+				bFoundPublishStep = true;
+				TestFalse("PublishMessage step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have PublishMessage step", bFoundPublishStep);
+	}, 0.1f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message content
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, TestMessageText]()
+	{
+		if(!*ForwardedMessage)
+		{
+			AddError("Forwarded message was not received");
+			return;
+		}
+		
+		FString ForwardedText = (*ForwardedMessage)->GetCurrentText();
+		TestEqual("Forwarded message text should match original", ForwardedText, TestMessageText);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+/**
+ * Tests ForwardMessage with message that has existing metadata.
+ * Verifies that original metadata is preserved and originalPublisher/originalChannelId are added.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageWithMetadataTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.3FullParameters.WithMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageWithMetadataTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_metadata_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_metadata_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_metadata_dest";
+	const FString TestMessageText = TEXT("Message with metadata");
+	const FString OriginalMeta = TEXT("{\"customField\":\"customValue\"}");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
+	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
+	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	});
+	
+	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	
+	// Wait for subscriptions, then send message with metadata
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText, OriginalMeta]()
+	{
+		FPubnubChatSendTextParams SendParams;
+		SendParams.Meta = OriginalMeta;
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText, SendParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+	}, 0.1f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message metadata contains originalPublisher and originalChannelId
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, SourceMessage, SourceChannelID, InitUserID]()
+	{
+		if(!*ForwardedMessage || !*SourceMessage)
+		{
+			AddError("Messages were not received");
+			return;
+		}
+		
+		FPubnubChatMessageData ForwardedMessageData = (*ForwardedMessage)->GetMessageData();
+		FPubnubChatMessageData SourceMessageData = (*SourceMessage)->GetMessageData();
+		
+		// Parse metadata to verify it contains originalPublisher and originalChannelId
+		TSharedPtr<FJsonObject> MetaJsonObject = MakeShareable(new FJsonObject);
+		UPubnubJsonUtilities::StringToJsonObject(ForwardedMessageData.Meta, MetaJsonObject);
+		
+		FString OriginalPublisher;
+		FString OriginalChannelId;
+		bool bHasOriginalPublisher = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalPublisher"), OriginalPublisher);
+		bool bHasOriginalChannelId = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalChannelId"), OriginalChannelId);
+		
+		TestTrue("Forwarded message metadata should contain originalPublisher", bHasOriginalPublisher);
+		TestTrue("Forwarded message metadata should contain originalChannelId", bHasOriginalChannelId);
+		TestEqual("originalPublisher should match source message UserID", OriginalPublisher, SourceMessageData.UserID);
+		TestEqual("originalChannelId should match source channel ID", OriginalChannelId, SourceChannelID);
+		
+		// Verify original metadata is preserved
+		FString CustomField;
+		if(MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("customField"), CustomField))
+		{
+			TestEqual("Original metadata field should be preserved", CustomField, TEXT("customValue"));
+		}
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests ForwardMessage with message that has no metadata.
+ * Verifies that new metadata is created with originalPublisher/originalChannelId.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageWithoutMetadataTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.3FullParameters.WithoutMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageWithoutMetadataTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_no_metadata_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_no_metadata_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_no_metadata_dest";
+	const FString TestMessageText = TEXT("Message without metadata");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
+	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
+	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	});
+	
+	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	
+	// Wait for subscriptions, then send message without metadata
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+	}, 0.1f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message metadata contains originalPublisher and originalChannelId
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, SourceMessage, SourceChannelID]()
+	{
+		if(!*ForwardedMessage || !*SourceMessage)
+		{
+			AddError("Messages were not received");
+			return;
+		}
+		
+		FPubnubChatMessageData ForwardedMessageData = (*ForwardedMessage)->GetMessageData();
+		FPubnubChatMessageData SourceMessageData = (*SourceMessage)->GetMessageData();
+		
+		// Parse metadata to verify it contains originalPublisher and originalChannelId
+		TSharedPtr<FJsonObject> MetaJsonObject = MakeShareable(new FJsonObject);
+		UPubnubJsonUtilities::StringToJsonObject(ForwardedMessageData.Meta, MetaJsonObject);
+		
+		FString OriginalPublisher;
+		FString OriginalChannelId;
+		bool bHasOriginalPublisher = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalPublisher"), OriginalPublisher);
+		bool bHasOriginalChannelId = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalChannelId"), OriginalChannelId);
+		
+		TestTrue("Forwarded message metadata should contain originalPublisher", bHasOriginalPublisher);
+		TestTrue("Forwarded message metadata should contain originalChannelId", bHasOriginalChannelId);
+		TestEqual("originalPublisher should match source message UserID", OriginalPublisher, SourceMessageData.UserID);
+		TestEqual("originalChannelId should match source channel ID", OriginalChannelId, SourceChannelID);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests ForwardMessage with edited message.
+ * Verifies that GetCurrentText is used (forwarded message contains edited text, not original).
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageEditedTextTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.4Advanced.EditedText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageEditedTextTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_edited_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_edited_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_edited_dest";
+	const FString OriginalText = TEXT("Original message text");
+	const FString EditedText = TEXT("Edited message text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
+	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
+	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, EditedText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == EditedText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	});
+	
+	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	
+	// Wait for subscriptions, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, OriginalText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(OriginalText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Edit the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SourceMessage, EditedText]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult EditResult = (*SourceMessage)->EditText(EditedText);
+		TestFalse("EditText should succeed", EditResult.Error);
+	}, 0.2f));
+	
+	// Wait a bit for edit to propagate, then forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+	}, 0.3f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message contains edited text (not original)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, EditedText, OriginalText]()
+	{
+		if(!*ForwardedMessage)
+		{
+			AddError("Forwarded message was not received");
+			return;
+		}
+		
+		FString ForwardedText = (*ForwardedMessage)->GetCurrentText();
+		TestEqual("Forwarded message should contain edited text", ForwardedText, EditedText);
+		TestNotEqual("Forwarded message should not contain original text", ForwardedText, OriginalText);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+			Chat->DeleteChannel(DestinationChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
 	return true;
 }
 

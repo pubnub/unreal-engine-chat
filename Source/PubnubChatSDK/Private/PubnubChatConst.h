@@ -14,3 +14,7 @@ const FString Pubnub_Chat_PinnedMessageTimetoken_Property_Name = "pinnedMessageT
 const FString Pubnub_Chat_PinnedMessageChannelID_Property_Name = "pinnedMessageChannelID";
 //Prefix for restrictions channels
 const FString Pubnub_Chat_Moderation_Channel_Prefix = "PUBNUB_INTERNAL_MODERATION";
+//OriginalPublisher of Forwarded Message in new message Meta
+const FString Pubnub_Chat_ForwardMessage_OriginalPublisher_Property_Name = "originalPublisher";
+//OriginalChannelID of Forwarded Message in new message Meta
+const FString Pubnub_Chat_ForwardMessage_OriginalChannelID_Property_Name = "originalChannelId";

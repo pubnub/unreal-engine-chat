@@ -188,7 +188,7 @@ bool FPubnubChatMessageGetCurrentTextHappyPathTest::RunTest(const FString& Param
  * Tests GetCurrentText with multiple edits - verifies that the most recent edited text is returned.
  * Sends a message, edits it multiple times, and verifies GetCurrentText always returns the latest edit.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageGetCurrentTextMultipleEditsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.GetCurrentText.3Advanced.MultipleEdits", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageGetCurrentTextMultipleEditsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.GetCurrentText.4Advanced.MultipleEdits", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
 
 bool FPubnubChatMessageGetCurrentTextMultipleEditsTest::RunTest(const FString& Parameters)
 {
@@ -891,7 +891,7 @@ bool FPubnubChatMessageEditTextHappyPathTest::RunTest(const FString& Parameters)
 /**
  * Tests EditText with multiple sequential edits - verifies that each edit succeeds and GetCurrentText always returns the most recent edit.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageEditTextMultipleEditsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.EditText.3Advanced.MultipleEdits", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageEditTextMultipleEditsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.EditText.4Advanced.MultipleEdits", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
 
 bool FPubnubChatMessageEditTextMultipleEditsTest::RunTest(const FString& Parameters)
 {

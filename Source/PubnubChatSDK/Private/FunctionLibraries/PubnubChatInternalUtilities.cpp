@@ -125,6 +125,17 @@ FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSe
 	return "";
 }
 
+FString UPubnubChatInternalUtilities::GetForwardedMessageMeta(const FString& OriginalMessageMeta, const FString& UserID, const FString& ChannelID)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(OriginalMessageMeta, JsonObject);
+	
+	JsonObject->SetStringField(Pubnub_Chat_ForwardMessage_OriginalPublisher_Property_Name, UserID);
+	JsonObject->SetStringField(Pubnub_Chat_ForwardMessage_OriginalChannelID_Property_Name, ChannelID);
+	
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
 FString UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(const FString ChannelID)
 {
 	return FString::Printf(TEXT("%s_%s"), *Pubnub_Chat_Moderation_Channel_Prefix, *ChannelID);

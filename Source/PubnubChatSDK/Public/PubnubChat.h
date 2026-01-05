@@ -160,6 +160,12 @@ public:
 	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback);
 	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative);
 
+	
+	/* MESSAGES */
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
+	FPubnubChatOperationResult ForwardMessage(UPubnubChatMessage* Message, UPubnubChatChannel* Channel);
+	
 
 	/* ACCESS MANAGER */
 	

@@ -43,6 +43,7 @@ public:
 	static FString ChatMessageToPublishString(const FString ChatMessage);
 	static FString PublishedStringToChatMessage(const FString PublishedMessage);
 	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams);
+	static FString GetForwardedMessageMeta(const FString& OriginalMessageMeta, const FString& UserID, const FString& ChannelID);
 	
 	
 	/* RESTRICTIONS */
@@ -63,7 +64,6 @@ public:
 	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
 	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
 	static bool IsThisEventMessage(const FString& MessageContent);
-
 	
 	
 	/* MEMBERSHIP */

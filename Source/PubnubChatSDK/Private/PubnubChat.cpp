@@ -629,6 +629,25 @@ FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString Chan
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChat::ForwardMessage(UPubnubChatMessage* Message, UPubnubChatChannel* Channel)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Message);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Channel);
+	
+	FPubnubChatMessageData MessageData = Message->GetMessageData();
+	
+	//PublishMessage by PubnubClient
+	FPubnubPublishSettings PublishSettings;
+	PublishSettings.MetaData = UPubnubChatInternalUtilities::GetForwardedMessageMeta(MessageData.Meta, MessageData.UserID, MessageData.ChannelID);
+	FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(Channel->GetChannelID(), UPubnubChatInternalUtilities::ChatMessageToPublishString(Message->GetCurrentText()), PublishSettings);
+
+	FPubnubChatOperationResult FinalResult;
+	FinalResult.AddStep("PublishMessage", PublishResult.Result);
+	
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChat::ReconnectSubscriptions(const FString Timetoken)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();

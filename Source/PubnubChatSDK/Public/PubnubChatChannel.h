@@ -111,6 +111,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatMessageResult GetMessage(const FString Timetoken);
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult ForwardMessage(UPubnubChatMessage* Message);
+	
 	
 private:
 	UPROPERTY()
