@@ -18,3 +18,5 @@ const FString Pubnub_Chat_Moderation_Channel_Prefix = "PUBNUB_INTERNAL_MODERATIO
 const FString Pubnub_Chat_ForwardMessage_OriginalPublisher_Property_Name = "originalPublisher";
 //OriginalChannelID of Forwarded Message in new message Meta
 const FString Pubnub_Chat_ForwardMessage_OriginalChannelID_Property_Name = "originalChannelId";
+//Some functions can't accept "0" or "" as empty timetoken, so we use this one for such purpose
+const FString Pubnub_Chat_Empty_Timetoken = "17000000000000000";

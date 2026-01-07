@@ -569,6 +569,17 @@ FPubnubChatOperationResult UPubnubChatChannel::ForwardMessage(UPubnubChatMessage
 	return Chat->ForwardMessage(Message, this);
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::EmitUserMention(const FString UserID, const FString Timetoken, const FString Text)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(UserID);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Timetoken);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Text);
+	
+	FString EventPayload = UPubnubChatInternalUtilities::GetMentionEventPayload(ChannelID, Timetoken, Text);
+	return Chat->EmitChatEvent(EPubnubChatEventType::PCET_Mention, UserID, EventPayload);
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));

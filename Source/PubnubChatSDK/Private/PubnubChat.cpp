@@ -15,6 +15,7 @@
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatConst.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatMembership.h"
 #include "Entities/PubnubChannelEntity.h"
@@ -645,6 +646,47 @@ FPubnubChatOperationResult UPubnubChat::ForwardMessage(UPubnubChatMessage* Messa
 	FPubnubChatOperationResult FinalResult;
 	FinalResult.AddStep("PublishMessage", PublishResult.Result);
 	
+	return FinalResult;
+}
+
+FPubnubChatGetUnreadMessagesCountsResult UPubnubChat::GetUnreadMessagesCounts(const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FPubnubChatGetUnreadMessagesCountsResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	FPubnubChatMembershipsResult GetMembershipsResult = CurrentUser->GetMemberships(Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result);
+	
+	TArray<FString> Channels;
+	TArray<FString> Timetokens;
+	
+	//From all User memberships for array of Channels and LRM Timetokens
+	for (auto& Membership : GetMembershipsResult.Memberships)
+	{
+		//Skip our internal channels
+		if (UPubnubChatInternalUtilities::IsPubnubInternalChannel(Membership->GetChannelID()))
+		{ continue; }
+		
+		FString Timetoken = Membership->GetLastReadMessageTimetoken();
+		Timetoken.IsEmpty() ? Timetokens.Add(Pubnub_Chat_Empty_Timetoken) : Timetokens.Add(Timetoken);
+		Channels.Add(Membership->GetChannelID());
+	}
+	
+	//Use PubnubClient to get "MessageCounts" - unread messages since provided timetoken
+	FPubnubMessageCountsMultipleResult MessageCountsResult = PubnubClient->MessageCountsMultiple(Channels, Timetokens);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, MessageCountsResult.Result, "MessageCountsMultiple");
+	
+	//Find value of Unread Message Counts for each membeship
+	for (auto& Membership : GetMembershipsResult.Memberships)
+	{
+		if (int* MessageCountsPtr = MessageCountsResult.MessageCountsPerChannel.Find(Membership->GetChannelID()))
+		{
+			FinalResult.UnreadMessagesCounts.Add(FPubnubChatUnreadMessagesCountsWrapper({Membership->Channel, Membership, *MessageCountsPtr}));
+		}
+	}
+	
+	FinalResult.Page = GetMembershipsResult.Page;
+	FinalResult.Total = GetMembershipsResult.Total;
 	return FinalResult;
 }
 

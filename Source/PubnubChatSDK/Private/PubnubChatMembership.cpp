@@ -61,6 +61,11 @@ FString UPubnubChatMembership::GetChannelID() const
 	return Channel ? Channel->GetChannelID() : TEXT("");
 }
 
+FString UPubnubChatMembership::GetLastReadMessageTimetoken()
+{
+	return UPubnubChatInternalUtilities::GetLastReadMessageTimetokenFromMembershipData(GetMembershipData());
+}
+
 FPubnubChatOperationResult UPubnubChatMembership::Delete()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();

@@ -10,6 +10,7 @@
 class UPubnubChat;
 class UPubnubChatUser;
 class UPubnubChatMessage;
+class UPubnubChatChannel;
 class UPubnubChatMembership;
 class UPubnubChatCallbackStop;
 
@@ -314,6 +315,39 @@ struct FPubnubChatGetRestrictionsResult
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TArray<FPubnubChatRestriction> Restrictions;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubPage Page;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Total = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatUnreadMessagesCountsWrapper
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatChannel* Channel;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMembership* Membership;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Count = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetUnreadMessagesCountsResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FPubnubChatUnreadMessagesCountsWrapper> UnreadMessagesCounts;
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FPubnubPage Page;

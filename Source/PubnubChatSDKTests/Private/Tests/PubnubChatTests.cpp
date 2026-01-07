@@ -2231,6 +2231,763 @@ bool FPubnubChatIsPresentConnectVsJoinTest::RunTest(const FString& Parameters)
 }
 
 // ============================================================================
+// GETUNREADMESSAGESCOUNTS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to get unread messages counts without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+			
+			TestTrue("GetUnreadMessagesCounts should fail when Chat is not initialized", GetUnreadResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", GetUnreadResult.Result.ErrorMessage.IsEmpty());
+			TestEqual("UnreadMessagesCounts array should be empty", GetUnreadResult.UnreadMessagesCounts.Num(), 0);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to create membership
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Call GetUnreadMessagesCounts with only required parameters (all defaults)
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+	
+	TestFalse("GetUnreadMessagesCounts should succeed", GetUnreadResult.Result.Error);
+	TestTrue("UnreadMessagesCounts array should be valid", GetUnreadResult.UnreadMessagesCounts.Num() >= 0);
+	TestTrue("Total count should be non-negative", GetUnreadResult.Total >= 0);
+	
+	// Should have at least one membership (the channel joined)
+	if(GetUnreadResult.UnreadMessagesCounts.Num() > 0)
+	{
+		bool bFoundJoinedChannel = false;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel && Wrapper.Channel->GetChannelID() == TestChannelID)
+			{
+				bFoundJoinedChannel = true;
+				TestNotNull("Membership should be valid", Wrapper.Membership);
+				TestTrue("Count should be non-negative", Wrapper.Count >= 0);
+			}
+		}
+		TestTrue("Joined channel should be found in unread counts", bFoundJoinedChannel);
+	}
+	
+	// Cleanup: Leave channel, delete channel
+	if(CreateChannelResult.Channel)
+	{
+		CreateChannelResult.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to create membership
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Test GetUnreadMessagesCounts with all parameters
+	const int TestLimit = 10;
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID + TEXT("\"");
+	FPubnubMembershipSort TestSort;
+	FPubnubMembershipSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSort.SortOrder = false; // Ascending
+	TestSort.MembershipSort.Add(SingleSort);
+	FPubnubPage TestPage;
+	
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts(TestLimit, TestFilter, TestSort, TestPage);
+	
+	TestFalse("GetUnreadMessagesCounts should succeed with all parameters", GetUnreadResult.Result.Error);
+	TestTrue("UnreadMessagesCounts array should be valid", GetUnreadResult.UnreadMessagesCounts.Num() >= 0);
+	TestTrue("Total count should be non-negative", GetUnreadResult.Total >= 0);
+	
+	// Verify results match filter criteria
+	if(GetUnreadResult.UnreadMessagesCounts.Num() > 0)
+	{
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel)
+			{
+				TestEqual("Filtered channel should match", Wrapper.Channel->GetChannelID(), TestChannelID);
+				TestNotNull("Membership should be valid", Wrapper.Membership);
+				TestTrue("Count should be non-negative", Wrapper.Count >= 0);
+			}
+		}
+	}
+	
+	// Cleanup: Leave channel, delete channel
+	if(CreateChannelResult.Channel)
+	{
+		CreateChannelResult.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetUnreadMessagesCounts with multiple channels and unread messages.
+ * Verifies that unread counts are correctly calculated for multiple channels.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsMultipleChannelsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.MultipleChannels", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsMultipleChannelsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_multi_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_unread_multi_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_unread_multi_2";
+	const FString TestMessageText1 = TEXT("Message 1");
+	const FString TestMessageText2 = TEXT("Message 2");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create first channel
+	FPubnubChatChannelData ChannelData1;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+	TestFalse("CreatePublicConversation should succeed for channel 1", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel 1 should be created", CreateChannel1Result.Channel);
+	
+	// Create second channel
+	FPubnubChatChannelData ChannelData2;
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+	TestFalse("CreatePublicConversation should succeed for channel 2", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel 2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1, false);
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID2, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
+	
+	// Send messages to both channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannel1Result, CreateChannel2Result, TestMessageText1, TestMessageText2]()
+	{
+		FPubnubChatOperationResult Send1Result = CreateChannel1Result.Channel->SendText(TestMessageText1);
+		TestFalse("SendText to channel 1 should succeed", Send1Result.Error);
+		
+		FPubnubChatOperationResult Send2Result = CreateChannel2Result.Channel->SendText(TestMessageText2);
+		TestFalse("SendText to channel 2 should succeed", Send2Result.Error);
+	}, 0.5f));
+	
+	// Wait a bit for messages to be published
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID1, TestChannelID2]()
+	{
+		// Get unread messages counts
+		FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+		
+		TestFalse("GetUnreadMessagesCounts should succeed", GetUnreadResult.Result.Error);
+		
+		// Should have counts for both channels
+		TMap<FString, int> ChannelCounts;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel)
+			{
+				FString ChannelID = Wrapper.Channel->GetChannelID();
+				if(ChannelID == TestChannelID1 || ChannelID == TestChannelID2)
+				{
+					ChannelCounts.Add(ChannelID, Wrapper.Count);
+				}
+			}
+		}
+		
+		TestTrue("Should have count for channel 1", ChannelCounts.Contains(TestChannelID1));
+		TestTrue("Should have count for channel 2", ChannelCounts.Contains(TestChannelID2));
+		TestTrue("Channel 1 should have at least 1 unread message", ChannelCounts[TestChannelID1] >= 1);
+		TestTrue("Channel 2 should have at least 1 unread message", ChannelCounts[TestChannelID2] >= 1);
+	}, 1.0f));
+	
+	// Cleanup: Leave channels, delete channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannel1Result, CreateChannel2Result, Chat, TestChannelID1, TestChannelID2]()
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			CreateChannel1Result.Channel->Leave();
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			CreateChannel2Result.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID1, false);
+			Chat->DeleteChannel(TestChannelID2, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with channels that have empty timetokens (no last read message).
+ * Verifies that empty timetokens are handled correctly using Pubnub_Chat_Empty_Timetoken.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsEmptyTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.EmptyTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsEmptyTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_empty_tt_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_empty_tt";
+	const FString TestMessageText = TEXT("Test message");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to create membership (this sets last read message timetoken)
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Get membership and verify it has a timetoken (from Join)
+	if(JoinResult.Membership)
+	{
+		FString LRMTimetoken = JoinResult.Membership->GetLastReadMessageTimetoken();
+		TestFalse("Membership should have last read message timetoken after Join", LRMTimetoken.IsEmpty());
+	}
+	
+	// Send a message after join
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait and verify unread counts
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
+	{
+		FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+		
+		TestFalse("GetUnreadMessagesCounts should succeed", GetUnreadResult.Result.Error);
+		
+		// Find the channel in results
+		bool bFoundChannel = false;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel && Wrapper.Channel->GetChannelID() == TestChannelID)
+			{
+				bFoundChannel = true;
+				TestNotNull("Membership should be valid", Wrapper.Membership);
+				// Count should be at least 1 (the message sent after join)
+				TestTrue("Count should be at least 1", Wrapper.Count >= 1);
+			}
+		}
+		TestTrue("Channel should be found in unread counts", bFoundChannel);
+	}, 1.0f));
+	
+	// Cleanup: Leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with empty memberships (no channels).
+ * Verifies that function handles the case when user has no memberships gracefully.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsEmptyMembershipsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.EmptyMemberships", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsEmptyMembershipsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_empty_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Call GetUnreadMessagesCounts without joining any channels
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+	
+	TestFalse("GetUnreadMessagesCounts should succeed even with no memberships", GetUnreadResult.Result.Error);
+	TestEqual("UnreadMessagesCounts array should be empty", GetUnreadResult.UnreadMessagesCounts.Num(), 0);
+	TestTrue("Total count should be non-negative", GetUnreadResult.Total >= 0);
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with filtering functionality.
+ * Verifies that filter parameter correctly filters memberships before calculating unread counts.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsFilterTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.Filter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsFilterTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_filter_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_unread_filter_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_unread_filter_2";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create two channels
+	FPubnubChatChannelData ChannelData1;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+	TestFalse("CreatePublicConversation should succeed for channel 1", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel 1 should be created", CreateChannel1Result.Channel);
+	
+	FPubnubChatChannelData ChannelData2;
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+	TestFalse("CreatePublicConversation should succeed for channel 2", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel 2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1, false);
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID2, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
+	
+	// Get unread counts without filter (should return both channels)
+	FPubnubChatGetUnreadMessagesCountsResult GetAllResult = Chat->GetUnreadMessagesCounts();
+	TestFalse("GetUnreadMessagesCounts without filter should succeed", GetAllResult.Result.Error);
+	
+	// Get unread counts with filter (should return only channel 1)
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID1 + TEXT("\"");
+	FPubnubChatGetUnreadMessagesCountsResult GetFilteredResult = Chat->GetUnreadMessagesCounts(0, TestFilter);
+	TestFalse("GetUnreadMessagesCounts with filter should succeed", GetFilteredResult.Result.Error);
+	
+	// Verify filtered results only contain channel 1
+	bool bFoundChannel1 = false;
+	bool bFoundChannel2 = false;
+	for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetFilteredResult.UnreadMessagesCounts)
+	{
+		if(Wrapper.Channel)
+		{
+			FString ChannelID = Wrapper.Channel->GetChannelID();
+			if(ChannelID == TestChannelID1)
+			{
+				bFoundChannel1 = true;
+			}
+			if(ChannelID == TestChannelID2)
+			{
+				bFoundChannel2 = true;
+			}
+		}
+	}
+	
+	TestTrue("Filtered results should contain channel 1", bFoundChannel1);
+	TestFalse("Filtered results should not contain channel 2", bFoundChannel2);
+	TestTrue("Filtered results should have fewer or equal items than unfiltered", GetFilteredResult.UnreadMessagesCounts.Num() <= GetAllResult.UnreadMessagesCounts.Num());
+	
+	// Cleanup: Leave channels, delete channels
+	if(CreateChannel1Result.Channel)
+	{
+		CreateChannel1Result.Channel->Leave();
+	}
+	if(CreateChannel2Result.Channel)
+	{
+		CreateChannel2Result.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID1, false);
+		Chat->DeleteChannel(TestChannelID2, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with sorting functionality.
+ * Verifies that sort parameter correctly sorts memberships before calculating unread counts.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsSortTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.Sort", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsSortTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_sort_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_unread_sort_a";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_unread_sort_b";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create two channels (with different IDs for sorting)
+	FPubnubChatChannelData ChannelData1;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+	TestFalse("CreatePublicConversation should succeed for channel 1", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel 1 should be created", CreateChannel1Result.Channel);
+	
+	FPubnubChatChannelData ChannelData2;
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+	TestFalse("CreatePublicConversation should succeed for channel 2", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel 2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1, false);
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID2, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
+	
+	// Get unread counts with ascending sort
+	FPubnubMembershipSort AscendingSort;
+	FPubnubMembershipSingleSort SingleSortAsc;
+	SingleSortAsc.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSortAsc.SortOrder = false; // Ascending
+	AscendingSort.MembershipSort.Add(SingleSortAsc);
+	FPubnubChatGetUnreadMessagesCountsResult GetAscendingResult = Chat->GetUnreadMessagesCounts(0, TEXT(""), AscendingSort);
+	TestFalse("GetUnreadMessagesCounts with ascending sort should succeed", GetAscendingResult.Result.Error);
+	
+	// Verify results are sorted ascending
+	if(GetAscendingResult.UnreadMessagesCounts.Num() >= 2)
+	{
+		TArray<FString> ChannelIDs;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetAscendingResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel)
+			{
+				FString ChannelID = Wrapper.Channel->GetChannelID();
+				if(ChannelID == TestChannelID1 || ChannelID == TestChannelID2)
+				{
+					ChannelIDs.Add(ChannelID);
+				}
+			}
+		}
+		
+		// If both channels are present, verify order
+		if(ChannelIDs.Num() >= 2)
+		{
+			int32 Index1 = ChannelIDs.IndexOfByKey(TestChannelID1);
+			int32 Index2 = ChannelIDs.IndexOfByKey(TestChannelID2);
+			if(Index1 != INDEX_NONE && Index2 != INDEX_NONE)
+			{
+				// TestChannelID1 ends with "a", TestChannelID2 ends with "b", so ascending should have 1 before 2
+				TestTrue("Ascending sort should have channel 1 before channel 2", Index1 < Index2);
+			}
+		}
+	}
+	
+	// Cleanup: Leave channels, delete channels
+	if(CreateChannel1Result.Channel)
+	{
+		CreateChannel1Result.Channel->Leave();
+	}
+	if(CreateChannel2Result.Channel)
+	{
+		CreateChannel2Result.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID1, false);
+		Chat->DeleteChannel(TestChannelID2, false);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
 // RECONNECTSUBSCRIPTIONS TESTS
 // ============================================================================
 

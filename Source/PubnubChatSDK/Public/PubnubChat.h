@@ -166,6 +166,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
 	FPubnubChatOperationResult ForwardMessage(UPubnubChatMessage* Message, UPubnubChatChannel* Channel);
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadMessagesCounts(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 
 	/* ACCESS MANAGER */
 	

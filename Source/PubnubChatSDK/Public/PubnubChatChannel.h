@@ -114,6 +114,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult ForwardMessage(UPubnubChatMessage* Message);
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult EmitUserMention(const FString UserID, const FString Timetoken, const FString Text);
 	
 private:
 	UPROPERTY()

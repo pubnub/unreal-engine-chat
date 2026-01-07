@@ -64,16 +64,18 @@ public:
 	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
 	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
 	static bool IsThisEventMessage(const FString& MessageContent);
+	static FString GetMentionEventPayload(const FString& ChannelID, const FString& Timetoken, const FString& Text, const FString& ParentChannel = "");
 	
 	
 	/* MEMBERSHIP */
 	
 	static FString GetLastReadMessageTimetokenPropertyKey();
 	static void AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken);
-
+	static FString GetLastReadMessageTimetokenFromMembershipData(const FPubnubChatMembershipData& MembershipData);
 	
 	/* CHANNEL */
 	
+	static bool IsPubnubInternalChannel(const FString& ChannelID);
 	static FString GetPinnedMessageTimetokenPropertyKey();
 	static FString GetPinnedMessageChannelIDPropertyKey();
 	//Message should be validated before using this function

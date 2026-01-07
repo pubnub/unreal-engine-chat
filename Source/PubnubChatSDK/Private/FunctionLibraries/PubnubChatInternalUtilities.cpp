@@ -276,6 +276,21 @@ bool UPubnubChatInternalUtilities::IsThisEventMessage(const FString& MessageCont
 	return false;
 }
 
+FString UPubnubChatInternalUtilities::GetMentionEventPayload(const FString& ChannelID, const FString& Timetoken, const FString& Text, const FString& ParentChannel)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("channel"), ChannelID);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("messageTimetoken"), Timetoken);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("text"), Text);
+	
+	if (!ParentChannel.IsEmpty())
+	{
+		JsonObject->SetStringField(ANSI_TO_TCHAR("parentChannel"), ParentChannel);
+	}
+	
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;
@@ -290,6 +305,29 @@ void UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(F
 	}
 	JsonObject->SetStringField(GetLastReadMessageTimetokenPropertyKey(), Timetoken);
 	MembershipData.Custom = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
+FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenFromMembershipData(const FPubnubChatMembershipData& MembershipData)
+{
+	if(MembershipData.Custom.IsEmpty())
+	{ return ""; }
+	
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MembershipData.Custom, JsonObject);
+	FString LRMTimetoken;
+	JsonObject->TryGetStringField(GetLastReadMessageTimetokenPropertyKey(), LRMTimetoken);
+	
+	return LRMTimetoken;
+}
+
+bool UPubnubChatInternalUtilities::IsPubnubInternalChannel(const FString& ChannelID)
+{
+	if (ChannelID.Contains(Pubnub_Chat_Moderation_Channel_Prefix))
+	{
+		return true;
+	}
+	
+	return false;
 }
 
 FString UPubnubChatInternalUtilities::GetPinnedMessageTimetokenPropertyKey()

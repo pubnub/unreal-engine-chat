@@ -42,6 +42,9 @@ public:
 	FString GetChannelID() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
+	FString GetLastReadMessageTimetoken();
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult Delete();
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
@@ -52,7 +55,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult SetLastReadMessage(UPubnubChatMessage* Message);
-
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
