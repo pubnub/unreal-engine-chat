@@ -39,6 +39,20 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult EditText(const FString NewText);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult Delete(bool Soft = false);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult Restore();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatIsDeletedResult IsDeleted();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult Pin();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult Unpin();
 
 private:
 	UPROPERTY()

@@ -3,12 +3,15 @@
 #include "PubnubChatMessage.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
+#include "PubnubChatChannel.h"
+#include "PubnubChatConst.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
 
 
 FString UPubnubChatMessage::GetInternalMessageID() const
@@ -92,6 +95,132 @@ FPubnubChatOperationResult UPubnubChatMessage::EditText(const FString NewText)
 	//Add this new message action to MessageData and update ObjectsRepository
 	CurrentMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(AddActionResult.MessageActionData));
 	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::Delete(bool Soft)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	FPubnubChatOperationResult FinalResult;
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	//Hard Delete
+	if (!Soft)
+	{
+		FPubnubDeleteMessagesSettings DeleteSettings;
+		DeleteSettings.Start = UPubnubTimetokenUtilities::AddIntToTimetoken(Timetoken, 1);
+		DeleteSettings.End = Timetoken;
+		FPubnubOperationResult DeleteResult = PubnubClient->DeleteMessages(CurrentMessageData.ChannelID, DeleteSettings);
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteResult, "DeleteMessages");
+		
+		//Remove Message data from the repository
+		Chat->ObjectsRepository->RemoveMessageData(GetInternalMessageID());
+		
+		return FinalResult;
+	}
+	
+	//Soft delete - just add message action without actually deleting the message
+	FString ActionType = UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChatMessageActionType::PCMAT_Deleted);
+	FPubnubAddMessageActionResult AddActionResult =  PubnubClient->AddMessageAction(CurrentMessageData.ChannelID, GetMessageTimetoken(), ActionType, Pubnub_Chat_Soft_Deleted_Action_Value);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, AddActionResult.Result, "AddMessageAction");
+	
+	//Add this new message action to MessageData and update ObjectsRepository
+	CurrentMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(AddActionResult.MessageActionData));
+	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::Restore()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	//Remove all "deleted" message actions
+	for (int i = CurrentMessageData.MessageActions.Num() - 1; i >= 0; i--)
+	{
+		if (CurrentMessageData.MessageActions[i].Type == EPubnubChatMessageActionType::PCMAT_Deleted)
+		{
+			FPubnubOperationResult RemoveActionResult = PubnubClient->RemoveMessageAction(CurrentMessageData.ChannelID, Timetoken, CurrentMessageData.MessageActions[i].Timetoken);
+			PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveActionResult, "RemoveMessageAction");
+			CurrentMessageData.MessageActions.RemoveAt(i);
+		}
+	}
+	
+	//Update repository with new data
+	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
+	
+	return FinalResult;
+}
+
+FPubnubChatIsDeletedResult UPubnubChatMessage::IsDeleted()
+{
+	FPubnubChatIsDeletedResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	for (auto& MessageAction : CurrentMessageData.MessageActions)
+	{
+		if (MessageAction.Type == EPubnubChatMessageActionType::PCMAT_Deleted)
+		{
+			FinalResult.IsDeleted = true;
+			return FinalResult;
+		}
+	}
+	
+	FinalResult.IsDeleted = false;
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::Pin()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	FPubnubChatOperationResult FinalResult;
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	FPubnubChatChannelResult ChannelResult = Chat->GetChannel(CurrentMessageData.ChannelID);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ChannelResult.Result);
+	
+	if (!ChannelResult.Channel)
+	{
+		FinalResult.Error = true;
+		FinalResult.ErrorMessage = TEXT("Channel related to this Message doesn't exist.");
+	}
+	
+	FPubnubChatOperationResult PinResult = Chat->PinMessageToChannel(this, ChannelResult.Channel);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PinResult);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::Unpin()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	FPubnubChatOperationResult FinalResult;
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	FPubnubChatChannelResult ChannelResult = Chat->GetChannel(CurrentMessageData.ChannelID);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ChannelResult.Result);
+	
+	if (!ChannelResult.Channel)
+	{
+		FinalResult.Error = true;
+		FinalResult.ErrorMessage = TEXT("Channel related to this Message doesn't exist.");
+	}
+	
+	FPubnubChatMessageResult PinnedMessageResult = ChannelResult.Channel->GetPinnedMessage();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PinnedMessageResult.Result);
+	
+	//Unpin message only if this message is actually pinned to the channel
+	if (PinnedMessageResult.Message && PinnedMessageResult.Message->Timetoken == Timetoken)
+	{
+		FPubnubChatOperationResult PinResult = Chat->UnpinMessageFromChannel(ChannelResult.Channel);
+		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PinResult);
+	}
 	
 	return FinalResult;
 }
