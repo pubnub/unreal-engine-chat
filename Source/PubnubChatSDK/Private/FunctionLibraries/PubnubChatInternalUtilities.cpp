@@ -340,6 +340,7 @@ FString UPubnubChatInternalUtilities::GetPinnedMessageChannelIDPropertyKey()
 	return Pubnub_Chat_PinnedMessageChannelID_Property_Name;
 }
 
+//Message should be validated before using this function
 void UPubnubChatInternalUtilities::AddPinnedMessageToChannelData(FPubnubChatChannelData& ChannelData, UPubnubChatMessage* Message)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
@@ -369,6 +370,46 @@ bool UPubnubChatInternalUtilities::RemovePinnedMessageFromChannelData(FPubnubCha
 		ChannelData.Custom = UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 	}
 	return RemovedPinnedMessage;
+}
+
+TArray<FPubnubChatMessageAction> UPubnubChatInternalUtilities::FilterMessageActionsOfType(const TArray<FPubnubChatMessageAction>& MessageActions, const EPubnubChatMessageActionType& MessageActionType)
+{
+	TArray<FPubnubChatMessageAction> FilteredMessageActions;
+	for (auto& MessageAction : MessageActions)
+	{
+		if (MessageAction.Type == MessageActionType)
+		{
+			FilteredMessageActions.Add(MessageAction);
+		}
+	}
+	return FilteredMessageActions;
+}
+
+FPubnubChatMessageAction UPubnubChatInternalUtilities::GetMessageReactionForUserID(const TArray<FPubnubChatMessageAction>& MessageReactions, const FString& Reaction, const FString& UserID)
+{
+	for (auto& MessageReaction : MessageReactions)
+	{
+		if (MessageReaction.Value == Reaction && MessageReaction.UserID == UserID)
+		{
+			return MessageReaction;
+		}
+	}
+	
+	return FPubnubChatMessageAction();
+}
+
+bool UPubnubChatInternalUtilities::RemoveReactionFromReactionsArray(TArray<FPubnubChatMessageAction>& MessageReactions, const FPubnubChatMessageAction& Reaction)
+{
+	for (int i = 0; i < MessageReactions.Num(); i++)
+	{
+		if (MessageReactions[i].UserID == Reaction.UserID && MessageReactions[i].Timetoken == Reaction.Timetoken)
+		{
+			MessageReactions.RemoveAt(i);
+			return true;
+		}
+	}
+	return false;
+	
 }
 
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)

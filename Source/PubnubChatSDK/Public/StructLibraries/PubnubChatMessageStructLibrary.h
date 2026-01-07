@@ -70,3 +70,27 @@ struct FPubnubChatMessageResult
 	UPubnubChatMessage* Message = nullptr;
 };
 
+USTRUCT(BlueprintType)
+struct FPubnubChatGetReactionsResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FPubnubChatMessageAction> Reactions;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatHasReactionResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool HasReaction = false;
+};
+

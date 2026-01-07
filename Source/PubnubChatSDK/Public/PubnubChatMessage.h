@@ -53,6 +53,15 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Unpin();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult ToggleReaction(const FString Reaction);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatGetReactionsResult GetReactions();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatHasReactionResult HasUserReaction(const FString Reaction);
 
 private:
 	UPROPERTY()

@@ -73,14 +73,22 @@ public:
 	static void AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken);
 	static FString GetLastReadMessageTimetokenFromMembershipData(const FPubnubChatMembershipData& MembershipData);
 	
+	
 	/* CHANNEL */
 	
 	static bool IsPubnubInternalChannel(const FString& ChannelID);
 	static FString GetPinnedMessageTimetokenPropertyKey();
 	static FString GetPinnedMessageChannelIDPropertyKey();
-	//Message should be validated before using this function
 	static void AddPinnedMessageToChannelData(FPubnubChatChannelData& ChannelData, UPubnubChatMessage* Message);
 	static bool RemovePinnedMessageFromChannelData(FPubnubChatChannelData& ChannelData);
+	
+	
+	/* MESSAGE ACTIONS */
+	
+	static TArray<FPubnubChatMessageAction> FilterMessageActionsOfType(const TArray<FPubnubChatMessageAction>& MessageActions, const EPubnubChatMessageActionType& MessageActionType);
+	static FPubnubChatMessageAction GetMessageReactionForUserID(const TArray<FPubnubChatMessageAction>& MessageReactions, const FString& Reaction, const FString& UserID);
+	static bool RemoveReactionFromReactionsArray(TArray<FPubnubChatMessageAction>& MessageReactions, const FPubnubChatMessageAction& Reaction);
+	
 	
 	/* ACCESS MANAGER */
 

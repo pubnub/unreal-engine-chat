@@ -3916,5 +3916,1965 @@ bool FPubnubChatMessageUnpinDifferentMessagePinnedTest::RunTest(const FString& P
 	return true;
 }
 
+// ============================================================================
+// TOGGLEREACTION TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageToggleReactionNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ToggleReaction.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageToggleReactionNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_togglereaction_not_init_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create uninitialized message object
+		UPubnubChatMessage* UninitializedMessage = NewObject<UPubnubChatMessage>(Chat);
+		
+		// Try to toggle reaction with uninitialized message
+		FPubnubChatOperationResult ToggleResult = UninitializedMessage->ToggleReaction(TEXT("👍"));
+		TestTrue("ToggleReaction should fail with uninitialized message", ToggleResult.Error);
+		TestFalse("ErrorMessage should not be empty", ToggleResult.ErrorMessage.IsEmpty());
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageToggleReactionEmptyReactionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ToggleReaction.1Validation.EmptyReaction", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageToggleReactionEmptyReactionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_togglereaction_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_togglereaction_empty";
+	const FString TestMessageText = TEXT("Test message");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Try to toggle reaction with empty string
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TEXT(""));
+		TestTrue("ToggleReaction should fail with empty reaction", ToggleResult.Error);
+		TestFalse("ErrorMessage should not be empty", ToggleResult.ErrorMessage.IsEmpty());
+	}, 0.1f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageToggleReactionHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ToggleReaction.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageToggleReactionHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_togglereaction_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_togglereaction_happy";
+	const FString TestMessageText = TEXT("Test message for reactions");
+	const FString TestReaction = TEXT("👍");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Add reaction (first toggle)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		// Verify no reaction exists before toggle
+		FPubnubChatHasReactionResult HasReactionBefore = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionBefore.Result.Error);
+		TestFalse("User should not have reaction before toggle", HasReactionBefore.HasReaction);
+		
+		// Toggle reaction (should add it)
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Verify reaction was added
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Verify user has the reaction
+		FPubnubChatHasReactionResult HasReactionAfter = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionAfter.Result.Error);
+		TestTrue("User should have reaction after toggle", HasReactionAfter.HasReaction);
+		
+		// Verify reaction appears in GetReactions
+		FPubnubChatGetReactionsResult GetReactionsResult = (*ReceivedMessage)->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should return at least one reaction", GetReactionsResult.Reactions.Num() >= 1);
+		
+		bool bFoundReaction = false;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			{
+				bFoundReaction = true;
+				TestFalse("Reaction timetoken should not be empty", Reaction.Timetoken.IsEmpty());
+				break;
+			}
+		}
+		TestTrue("Reaction should be found in GetReactions", bFoundReaction);
+	}, 0.3f));
+	
+	// Remove reaction (second toggle)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Toggle reaction again (should remove it)
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed on second toggle", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Verify reaction was removed
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Verify user no longer has the reaction
+		FPubnubChatHasReactionResult HasReactionAfter = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionAfter.Result.Error);
+		TestFalse("User should not have reaction after second toggle", HasReactionAfter.HasReaction);
+		
+		// Verify message data is updated correctly
+		FPubnubChatMessageData MessageData = (*ReceivedMessage)->GetMessageData();
+		bool bHasReactionAction = false;
+		for(const FPubnubChatMessageAction& Action : MessageData.MessageActions)
+		{
+			if(Action.Value == TestReaction && Action.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			{
+				bHasReactionAction = true;
+				break;
+			}
+		}
+		TestFalse("Message should not have reaction action after removal", bHasReactionAction);
+	}, 0.3f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests ToggleReaction with multiple different reactions from the same user.
+ * Verifies that a user can add multiple different reactions and toggle them independently.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageToggleReactionMultipleReactionsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ToggleReaction.4Advanced.MultipleReactions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageToggleReactionMultipleReactionsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_togglereaction_multi_init";
+	const FString TestChannelID = SDK_PREFIX + "test_togglereaction_multi";
+	const FString TestMessageText = TEXT("Test message for multiple reactions");
+	const FString Reaction1 = TEXT("👍");
+	const FString Reaction2 = TEXT("❤️");
+	const FString Reaction3 = TEXT("😊");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Add first reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction1]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(Reaction1);
+		TestFalse("ToggleReaction should succeed for reaction 1", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Add second reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction2]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(Reaction2);
+		TestFalse("ToggleReaction should succeed for reaction 2", ToggleResult.Error);
+	}, 0.3f));
+	
+	// Add third reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction3]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(Reaction3);
+		TestFalse("ToggleReaction should succeed for reaction 3", ToggleResult.Error);
+	}, 0.3f));
+	
+	// Verify all reactions are present
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction1, Reaction2, Reaction3]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Verify user has all reactions
+		FPubnubChatHasReactionResult HasReaction1 = (*ReceivedMessage)->HasUserReaction(Reaction1);
+		TestFalse("HasUserReaction check should succeed for reaction 1", HasReaction1.Result.Error);
+		TestTrue("User should have reaction 1", HasReaction1.HasReaction);
+		
+		FPubnubChatHasReactionResult HasReaction2 = (*ReceivedMessage)->HasUserReaction(Reaction2);
+		TestFalse("HasUserReaction check should succeed for reaction 2", HasReaction2.Result.Error);
+		TestTrue("User should have reaction 2", HasReaction2.HasReaction);
+		
+		FPubnubChatHasReactionResult HasReaction3 = (*ReceivedMessage)->HasUserReaction(Reaction3);
+		TestFalse("HasUserReaction check should succeed for reaction 3", HasReaction3.Result.Error);
+		TestTrue("User should have reaction 3", HasReaction3.HasReaction);
+		
+		// Verify GetReactions returns all three reactions
+		FPubnubChatGetReactionsResult GetReactionsResult = (*ReceivedMessage)->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should return at least 3 reactions", GetReactionsResult.Reactions.Num() >= 3);
+		
+		int FoundReactions = 0;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == Reaction1 || Reaction.Value == Reaction2 || Reaction.Value == Reaction3)
+			{
+				FoundReactions++;
+			}
+		}
+		TestEqual("Should find all 3 reactions", FoundReactions, 3);
+	}, 0.3f));
+	
+	// Remove one reaction (middle one)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction2]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(Reaction2);
+		TestFalse("ToggleReaction should succeed to remove reaction 2", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Verify only two reactions remain
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction1, Reaction2, Reaction3]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Verify user still has reactions 1 and 3, but not 2
+		FPubnubChatHasReactionResult HasReaction1 = (*ReceivedMessage)->HasUserReaction(Reaction1);
+		TestTrue("User should still have reaction 1", HasReaction1.HasReaction);
+		
+		FPubnubChatHasReactionResult HasReaction2 = (*ReceivedMessage)->HasUserReaction(Reaction2);
+		TestFalse("User should not have reaction 2", HasReaction2.HasReaction);
+		
+		FPubnubChatHasReactionResult HasReaction3 = (*ReceivedMessage)->HasUserReaction(Reaction3);
+		TestTrue("User should still have reaction 3", HasReaction3.HasReaction);
+		
+		// Verify GetReactions returns only 2 reactions
+		FPubnubChatGetReactionsResult GetReactionsResult = (*ReceivedMessage)->GetReactions();
+		int FoundReactions = 0;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == Reaction1 || Reaction.Value == Reaction3)
+			{
+				FoundReactions++;
+			}
+			if(Reaction.Value == Reaction2)
+			{
+				AddError("Reaction 2 should not be present");
+			}
+		}
+		TestEqual("Should find exactly 2 reactions", FoundReactions, 2);
+	}, 0.3f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests ToggleReaction with multiple users reacting to the same message.
+ * Verifies that reactions from different users are tracked independently.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageToggleReactionMultipleUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ToggleReaction.4Advanced.MultipleUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageToggleReactionMultipleUsersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_togglereaction_multi_user_init";
+	const FString SecondUserID = SDK_PREFIX + "test_togglereaction_multi_user_second";
+	const FString TestChannelID = SDK_PREFIX + "test_togglereaction_multi_user";
+	const FString TestMessageText = TEXT("Test message for multiple users");
+	const FString TestReaction = TEXT("👍");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create second user
+	FPubnubChatUserResult CreateSecondUserResult = Chat->CreateUser(SecondUserID);
+	TestFalse("CreateUser should succeed for second user", CreateSecondUserResult.Result.Error);
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(SecondUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// First user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for first user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Create second Chat instance for second user and add reaction
+	TSharedPtr<UPubnubChat*> SecondChat = MakeShared<UPubnubChat*>(nullptr);
+	TSharedPtr<UPubnubChatChannel*> SecondChannel = MakeShared<UPubnubChatChannel*>(nullptr);
+	TSharedPtr<UPubnubChatMessage*> SecondUserMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestChannelID, TestReaction, SecondUserID, SecondChat, SecondChannel, SecondUserMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Create second Chat instance for second user
+		const FString TestPublishKey = GetTestPublishKey();
+		const FString TestSubscribeKey = GetTestSubscribeKey();
+		FPubnubChatConfig ChatConfig;
+		FPubnubChatInitChatResult SecondInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SecondUserID, ChatConfig);
+		TestFalse("InitChat should succeed for second user", SecondInitResult.Result.Error);
+		TestNotNull("Second Chat should be created", SecondInitResult.Chat);
+		
+		if(!SecondInitResult.Chat)
+		{
+			AddError("Failed to create second Chat instance");
+			return;
+		}
+		
+		*SecondChat = SecondInitResult.Chat;
+		
+		// Get channel for second user
+		FPubnubChatChannelResult GetChannelResult = (*SecondChat)->GetChannel(TestChannelID);
+		TestFalse("GetChannel should succeed for second user", GetChannelResult.Result.Error);
+		TestNotNull("Channel should be found", GetChannelResult.Channel);
+		
+		if(!GetChannelResult.Channel)
+		{
+			AddError("Failed to get channel for second user");
+			return;
+		}
+		
+		*SecondChannel = GetChannelResult.Channel;
+		
+		// Connect second user to channel (they won't receive the message via subscription since it was already sent)
+		FPubnubChatConnectResult SecondConnectResult = (*SecondChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
+		TestFalse("Connect should succeed for second user", SecondConnectResult.Result.Error);
+	}, 0.3f));
+	
+	// Get message for second user using GetMessage (since message was sent before they connected)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, SecondChannel, SecondUserMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		
+		// Get message for second user
+		FPubnubChatMessageResult GetMessageResult = (*SecondChannel)->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed for second user", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved for second user", GetMessageResult.Message);
+		if(GetMessageResult.Message)
+		{
+			*SecondUserMessage = GetMessageResult.Message;
+		}
+	}, 0.3f));
+	
+	// Second user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SecondUserMessage, TestReaction]()
+	{
+		if(!*SecondUserMessage)
+		{
+			AddError("Second user message was not retrieved");
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*SecondUserMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for second user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Refresh message data from server and verify both users' reactions are present
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, TestReaction, InitUserID]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Refresh message from server to get latest reactions
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved", GetMessageResult.Message);
+		
+		if(!GetMessageResult.Message)
+		{
+			return;
+		}
+		
+		// First user should have the reaction
+		FPubnubChatHasReactionResult HasReactionResult = GetMessageResult.Message->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestTrue("First user should have reaction", HasReactionResult.HasReaction);
+		
+		// GetReactions should return reactions from both users
+		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should return at least 2 reactions", GetReactionsResult.Reactions.Num() >= 2);
+		
+		// Count reactions with the same value but different users
+		int ReactionCount = 0;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			{
+				ReactionCount++;
+				TestFalse("Reaction should have non-empty UserID", Reaction.UserID.IsEmpty());
+				TestFalse("Reaction should have non-empty Timetoken", Reaction.Timetoken.IsEmpty());
+			}
+		}
+		TestTrue("Should find reactions from multiple users", ReactionCount >= 2);
+	}, 0.5f));
+	
+	// First user removes their reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed to remove first user's reaction", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Refresh message data and verify first user no longer has reaction, but second user's reaction remains
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Refresh message from server to get latest reactions
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved", GetMessageResult.Message);
+		
+		if(!GetMessageResult.Message)
+		{
+			return;
+		}
+		
+		// First user should no longer have the reaction
+		FPubnubChatHasReactionResult HasReactionResult = GetMessageResult.Message->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestFalse("First user should not have reaction after toggle", HasReactionResult.HasReaction);
+		
+		// GetReactions should still return at least one reaction (from second user)
+		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should still return at least 1 reaction", GetReactionsResult.Reactions.Num() >= 1);
+		
+		// Verify at least one reaction with the same value exists (from second user)
+		bool bFoundOtherUserReaction = false;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			{
+				bFoundOtherUserReaction = true;
+				break;
+			}
+		}
+		TestTrue("Should still find reaction from second user", bFoundOtherUserReaction);
+	}, 0.3f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID, SecondUserID, SecondChat, SecondChannel]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(*SecondChannel)
+		{
+			(*SecondChannel)->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(SecondUserID, false);
+		}
+		if(*SecondChat)
+		{
+			CleanUpCurrentChatUser(*SecondChat);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// GETREACTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageGetReactionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.GetReactions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageGetReactionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_getreactions_not_init_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create uninitialized message object
+		UPubnubChatMessage* UninitializedMessage = NewObject<UPubnubChatMessage>(Chat);
+		
+		// Try to get reactions with uninitialized message
+		FPubnubChatGetReactionsResult GetReactionsResult = UninitializedMessage->GetReactions();
+		TestTrue("GetReactions should fail with uninitialized message", GetReactionsResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", GetReactionsResult.Result.ErrorMessage.IsEmpty());
+		TestEqual("Reactions array should be empty", GetReactionsResult.Reactions.Num(), 0);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageGetReactionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.GetReactions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageGetReactionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_getreactions_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_getreactions_happy";
+	const FString TestMessageText = TEXT("Test message for GetReactions");
+	const FString TestReaction = TEXT("👍");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Get reactions before adding any (should be empty)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatGetReactionsResult GetReactionsResult = (*ReceivedMessage)->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestEqual("GetReactions should return empty array for message without reactions", GetReactionsResult.Reactions.Num(), 0);
+	}, 0.1f));
+	
+	// Add reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Get reactions after adding (should have one)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatGetReactionsResult GetReactionsResult = (*ReceivedMessage)->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should return at least one reaction", GetReactionsResult.Reactions.Num() >= 1);
+		
+		// Verify reaction details
+		bool bFoundReaction = false;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == TestReaction)
+			{
+				bFoundReaction = true;
+				TestEqual("Reaction type should be PCMAT_Reaction", Reaction.Type, EPubnubChatMessageActionType::PCMAT_Reaction);
+				TestFalse("Reaction timetoken should not be empty", Reaction.Timetoken.IsEmpty());
+				TestFalse("Reaction UserID should not be empty", Reaction.UserID.IsEmpty());
+				break;
+			}
+		}
+		TestTrue("Reaction should be found in GetReactions", bFoundReaction);
+	}, 0.3f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetReactions with multiple reactions from different users.
+ * Verifies that GetReactions correctly returns all reactions regardless of which user added them.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageGetReactionsMultipleUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.GetReactions.4Advanced.MultipleUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageGetReactionsMultipleUsersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_getreactions_multi_user_init";
+	const FString SecondUserID = SDK_PREFIX + "test_getreactions_multi_user_second";
+	const FString ThirdUserID = SDK_PREFIX + "test_getreactions_multi_user_third";
+	const FString TestChannelID = SDK_PREFIX + "test_getreactions_multi_user";
+	const FString TestMessageText = TEXT("Test message for multiple users reactions");
+	const FString TestReaction = TEXT("👍");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create additional users
+	FPubnubChatUserResult CreateSecondUserResult = Chat->CreateUser(SecondUserID);
+	TestFalse("CreateUser should succeed for second user", CreateSecondUserResult.Result.Error);
+	
+	FPubnubChatUserResult CreateThirdUserResult = Chat->CreateUser(ThirdUserID);
+	TestFalse("CreateUser should succeed for third user", CreateThirdUserResult.Result.Error);
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(SecondUserID, false);
+			Chat->DeleteUser(ThirdUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// First user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for first user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Create second and third Chat instances and add reactions
+	TSharedPtr<UPubnubChat*> SecondChat = MakeShared<UPubnubChat*>(nullptr);
+	TSharedPtr<UPubnubChat*> ThirdChat = MakeShared<UPubnubChat*>(nullptr);
+	TSharedPtr<UPubnubChatChannel*> SecondChannel = MakeShared<UPubnubChatChannel*>(nullptr);
+	TSharedPtr<UPubnubChatChannel*> ThirdChannel = MakeShared<UPubnubChatChannel*>(nullptr);
+	TSharedPtr<UPubnubChatMessage*> SecondUserMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<UPubnubChatMessage*> ThirdUserMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestChannelID, TestReaction, SecondUserID, ThirdUserID, SecondChat, ThirdChat, SecondChannel, ThirdChannel, SecondUserMessage, ThirdUserMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Create second Chat instance for second user
+		const FString TestPublishKey = GetTestPublishKey();
+		const FString TestSubscribeKey = GetTestSubscribeKey();
+		FPubnubChatConfig ChatConfig;
+		
+		FPubnubChatInitChatResult SecondInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SecondUserID, ChatConfig);
+		TestFalse("InitChat should succeed for second user", SecondInitResult.Result.Error);
+		TestNotNull("Second Chat should be created", SecondInitResult.Chat);
+		if(!SecondInitResult.Chat) return;
+		*SecondChat = SecondInitResult.Chat;
+		
+		FPubnubChatInitChatResult ThirdInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, ThirdUserID, ChatConfig);
+		TestFalse("InitChat should succeed for third user", ThirdInitResult.Result.Error);
+		TestNotNull("Third Chat should be created", ThirdInitResult.Chat);
+		if(!ThirdInitResult.Chat) return;
+		*ThirdChat = ThirdInitResult.Chat;
+		
+		// Get channels for second and third users
+		FPubnubChatChannelResult GetChannelResult2 = (*SecondChat)->GetChannel(TestChannelID);
+		TestFalse("GetChannel should succeed for second user", GetChannelResult2.Result.Error);
+		TestNotNull("Channel should be found for second user", GetChannelResult2.Channel);
+		if(!GetChannelResult2.Channel) return;
+		*SecondChannel = GetChannelResult2.Channel;
+		
+		FPubnubChatChannelResult GetChannelResult3 = (*ThirdChat)->GetChannel(TestChannelID);
+		TestFalse("GetChannel should succeed for third user", GetChannelResult3.Result.Error);
+		TestNotNull("Channel should be found for third user", GetChannelResult3.Channel);
+		if(!GetChannelResult3.Channel) return;
+		*ThirdChannel = GetChannelResult3.Channel;
+		
+		// Connect second and third users to channel (they won't receive the message via subscription since it was already sent)
+		FPubnubChatConnectResult SecondConnectResult = (*SecondChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
+		TestFalse("Connect should succeed for second user", SecondConnectResult.Result.Error);
+		
+		FPubnubChatConnectResult ThirdConnectResult = (*ThirdChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
+		TestFalse("Connect should succeed for third user", ThirdConnectResult.Result.Error);
+	}, 0.3f));
+	
+	// Get message for second and third users using GetMessage (since message was sent before they connected)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, SecondChannel, ThirdChannel, SecondUserMessage, ThirdUserMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		
+		// Get message for second user
+		FPubnubChatMessageResult GetMessageResult2 = (*SecondChannel)->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed for second user", GetMessageResult2.Result.Error);
+		TestNotNull("Message should be retrieved for second user", GetMessageResult2.Message);
+		if(GetMessageResult2.Message)
+		{
+			*SecondUserMessage = GetMessageResult2.Message;
+		}
+		
+		// Get message for third user
+		FPubnubChatMessageResult GetMessageResult3 = (*ThirdChannel)->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed for third user", GetMessageResult3.Result.Error);
+		TestNotNull("Message should be retrieved for third user", GetMessageResult3.Message);
+		if(GetMessageResult3.Message)
+		{
+			*ThirdUserMessage = GetMessageResult3.Message;
+		}
+	}, 0.3f));
+	
+	// Second user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SecondUserMessage, TestReaction]()
+	{
+		if(!*SecondUserMessage)
+		{
+			AddError("Second user message was not retrieved");
+			return;
+		}
+		FPubnubChatOperationResult ToggleResult = (*SecondUserMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for second user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Third user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThirdUserMessage, TestReaction]()
+	{
+		if(!*ThirdUserMessage)
+		{
+			AddError("Third user message was not retrieved");
+			return;
+		}
+		FPubnubChatOperationResult ToggleResult = (*ThirdUserMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for third user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Refresh message from server and verify GetReactions returns all reactions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Refresh message from server to get latest reactions from all users
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved", GetMessageResult.Message);
+		
+		if(!GetMessageResult.Message)
+		{
+			return;
+		}
+		
+		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should return at least 3 reactions", GetReactionsResult.Reactions.Num() >= 3);
+		
+		// Count reactions with the same value
+		int ReactionCount = 0;
+		TArray<FString> UserIDs;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			{
+				ReactionCount++;
+				TestFalse("Reaction should have non-empty UserID", Reaction.UserID.IsEmpty());
+				TestFalse("Reaction should have non-empty Timetoken", Reaction.Timetoken.IsEmpty());
+				UserIDs.AddUnique(Reaction.UserID);
+			}
+		}
+		TestTrue("Should find reactions from multiple users", ReactionCount >= 3);
+		TestTrue("Should have reactions from at least 3 different users", UserIDs.Num() >= 3);
+	}, 0.5f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID, SecondUserID, ThirdUserID, SecondChat, ThirdChat, SecondChannel, ThirdChannel]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(*SecondChannel)
+		{
+			(*SecondChannel)->Disconnect();
+		}
+		if(*ThirdChannel)
+		{
+			(*ThirdChannel)->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(SecondUserID, false);
+			Chat->DeleteUser(ThirdUserID, false);
+		}
+		if(*SecondChat)
+		{
+			CleanUpCurrentChatUser(*SecondChat);
+		}
+		if(*ThirdChat)
+		{
+			CleanUpCurrentChatUser(*ThirdChat);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// HASUSERREACTION TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasUserReactionNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasUserReaction.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageHasUserReactionNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_hasuserreaction_not_init_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create uninitialized message object
+		UPubnubChatMessage* UninitializedMessage = NewObject<UPubnubChatMessage>(Chat);
+		
+		// Try to check reaction with uninitialized message
+		FPubnubChatHasReactionResult HasReactionResult = UninitializedMessage->HasUserReaction(TEXT("👍"));
+		TestTrue("HasUserReaction should fail with uninitialized message", HasReactionResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HasReactionResult.Result.ErrorMessage.IsEmpty());
+		TestFalse("HasReaction should be false for uninitialized message", HasReactionResult.HasReaction);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasUserReactionEmptyReactionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasUserReaction.1Validation.EmptyReaction", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageHasUserReactionEmptyReactionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_hasuserreaction_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_hasuserreaction_empty";
+	const FString TestMessageText = TEXT("Test message");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Try to check reaction with empty string
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatHasReactionResult HasReactionResult = (*ReceivedMessage)->HasUserReaction(TEXT(""));
+		TestTrue("HasUserReaction should fail with empty reaction", HasReactionResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HasReactionResult.Result.ErrorMessage.IsEmpty());
+		TestFalse("HasReaction should be false for empty reaction", HasReactionResult.HasReaction);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasUserReactionHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasUserReaction.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageHasUserReactionHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_hasuserreaction_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_hasuserreaction_happy";
+	const FString TestMessageText = TEXT("Test message for HasUserReaction");
+	const FString TestReaction = TEXT("👍");
+	const FString OtherReaction = TEXT("❤️");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Check reaction before adding (should be false)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatHasReactionResult HasReactionResult = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestFalse("User should not have reaction before adding", HasReactionResult.HasReaction);
+	}, 0.1f));
+	
+	// Add reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Check reaction after adding (should be true)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction, OtherReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// User should have the reaction they added
+		FPubnubChatHasReactionResult HasReactionResult = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestTrue("User should have reaction after adding", HasReactionResult.HasReaction);
+		
+		// User should not have a different reaction
+		FPubnubChatHasReactionResult HasOtherReactionResult = (*ReceivedMessage)->HasUserReaction(OtherReaction);
+		TestFalse("HasUserReaction check should succeed for other reaction", HasOtherReactionResult.Result.Error);
+		TestFalse("User should not have other reaction", HasOtherReactionResult.HasReaction);
+	}, 0.3f));
+	
+	// Remove reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed to remove", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Check reaction after removing (should be false)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatHasReactionResult HasReactionResult = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestFalse("User should not have reaction after removing", HasReactionResult.HasReaction);
+	}, 0.3f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests HasUserReaction with multiple users - verifies that each user's reactions are tracked independently.
+ * User A adds a reaction, User B adds the same reaction, but HasUserReaction only returns true for the user who actually added it.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasUserReactionMultipleUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasUserReaction.4Advanced.MultipleUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageHasUserReactionMultipleUsersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_hasuserreaction_multi_user_init";
+	const FString SecondUserID = SDK_PREFIX + "test_hasuserreaction_multi_user_second";
+	const FString TestChannelID = SDK_PREFIX + "test_hasuserreaction_multi_user";
+	const FString TestMessageText = TEXT("Test message for multiple users HasUserReaction");
+	const FString TestReaction = TEXT("👍");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create second user
+	FPubnubChatUserResult CreateSecondUserResult = Chat->CreateUser(SecondUserID);
+	TestFalse("CreateUser should succeed for second user", CreateSecondUserResult.Result.Error);
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(SecondUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
+	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	
+	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// First user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for first user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Verify first user has the reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// First user should have the reaction
+		FPubnubChatHasReactionResult HasReactionResult = (*ReceivedMessage)->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestTrue("First user should have reaction", HasReactionResult.HasReaction);
+	}, 0.3f));
+	
+	// Create second Chat instance for second user and add reaction
+	TSharedPtr<UPubnubChat*> SecondChat = MakeShared<UPubnubChat*>(nullptr);
+	TSharedPtr<UPubnubChatChannel*> SecondChannel = MakeShared<UPubnubChatChannel*>(nullptr);
+	TSharedPtr<UPubnubChatMessage*> SecondUserMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestChannelID, TestReaction, SecondUserID, SecondChat, SecondChannel, SecondUserMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Create second Chat instance for second user
+		const FString TestPublishKey = GetTestPublishKey();
+		const FString TestSubscribeKey = GetTestSubscribeKey();
+		FPubnubChatConfig ChatConfig;
+		FPubnubChatInitChatResult SecondInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SecondUserID, ChatConfig);
+		TestFalse("InitChat should succeed for second user", SecondInitResult.Result.Error);
+		TestNotNull("Second Chat should be created", SecondInitResult.Chat);
+		if(!SecondInitResult.Chat) return;
+		*SecondChat = SecondInitResult.Chat;
+		
+		// Get channel for second user
+		FPubnubChatChannelResult GetChannelResult = (*SecondChat)->GetChannel(TestChannelID);
+		TestFalse("GetChannel should succeed for second user", GetChannelResult.Result.Error);
+		TestNotNull("Channel should be found", GetChannelResult.Channel);
+		if(!GetChannelResult.Channel) return;
+		*SecondChannel = GetChannelResult.Channel;
+		
+		// Connect second user to channel (they won't receive the message via subscription since it was already sent)
+		FPubnubChatConnectResult SecondConnectResult = (*SecondChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
+		TestFalse("Connect should succeed for second user", SecondConnectResult.Result.Error);
+	}, 0.3f));
+	
+	// Get message for second user using GetMessage (since message was sent before they connected)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, SecondChannel, SecondUserMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		
+		// Get message for second user
+		FPubnubChatMessageResult GetMessageResult = (*SecondChannel)->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed for second user", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved for second user", GetMessageResult.Message);
+		if(GetMessageResult.Message)
+		{
+			*SecondUserMessage = GetMessageResult.Message;
+		}
+	}, 0.3f));
+	
+	// Second user adds reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SecondUserMessage, TestReaction]()
+	{
+		if(!*SecondUserMessage)
+		{
+			AddError("Second user message was not retrieved");
+			return;
+		}
+		FPubnubChatOperationResult ToggleResult = (*SecondUserMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed for second user", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Refresh message from server and verify first user still has the reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Refresh message from server to get latest reactions from all users
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved", GetMessageResult.Message);
+		
+		if(!GetMessageResult.Message)
+		{
+			return;
+		}
+		
+		// First user should still have the reaction
+		FPubnubChatHasReactionResult HasReactionResult = GetMessageResult.Message->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestTrue("First user should still have reaction", HasReactionResult.HasReaction);
+		
+		// GetReactions should show reactions from both users
+		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should return at least 2 reactions", GetReactionsResult.Reactions.Num() >= 2);
+	}, 0.5f));
+	
+	// First user removes their reaction
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		FPubnubChatOperationResult ToggleResult = (*ReceivedMessage)->ToggleReaction(TestReaction);
+		TestFalse("ToggleReaction should succeed to remove first user's reaction", ToggleResult.Error);
+	}, 0.1f));
+	
+	// Refresh message from server and verify first user no longer has the reaction (but second user's reaction still exists)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, TestReaction]()
+	{
+		if(!*ReceivedMessage)
+		{
+			return;
+		}
+		
+		// Refresh message from server to get latest reactions from all users
+		FString MessageTimetoken = (*ReceivedMessage)->GetMessageTimetoken();
+		FPubnubChatMessageResult GetMessageResult = CreateResult.Channel->GetMessage(MessageTimetoken);
+		TestFalse("GetMessage should succeed", GetMessageResult.Result.Error);
+		TestNotNull("Message should be retrieved", GetMessageResult.Message);
+		
+		if(!GetMessageResult.Message)
+		{
+			return;
+		}
+		
+		// First user should no longer have the reaction
+		FPubnubChatHasReactionResult HasReactionResult = GetMessageResult.Message->HasUserReaction(TestReaction);
+		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
+		TestFalse("First user should not have reaction after removal", HasReactionResult.HasReaction);
+		
+		// GetReactions should still show at least one reaction (from second user)
+		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
+		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
+		TestTrue("GetReactions should still return at least 1 reaction", GetReactionsResult.Reactions.Num() >= 1);
+		
+		// Verify at least one reaction with the same value exists (from second user)
+		bool bFoundOtherUserReaction = false;
+		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		{
+			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			{
+				bFoundOtherUserReaction = true;
+				break;
+			}
+		}
+		TestTrue("Should still find reaction from second user", bFoundOtherUserReaction);
+	}, 0.3f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID, SecondUserID, SecondChat, SecondChannel]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(*SecondChannel)
+		{
+			(*SecondChannel)->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(SecondUserID, false);
+		}
+		if(*SecondChat)
+		{
+			CleanUpCurrentChatUser(*SecondChat);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

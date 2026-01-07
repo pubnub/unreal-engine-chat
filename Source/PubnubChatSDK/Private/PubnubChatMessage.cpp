@@ -8,6 +8,7 @@
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
+#include "PubnubChatUser.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
@@ -122,6 +123,11 @@ FPubnubChatOperationResult UPubnubChatMessage::Delete(bool Soft)
 	}
 	
 	//Soft delete - just add message action without actually deleting the message
+	
+	//If message is already deleted, don't add new message action
+	if (IsDeleted().IsDeleted)
+	{ return FinalResult; }
+
 	FString ActionType = UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChatMessageActionType::PCMAT_Deleted);
 	FPubnubAddMessageActionResult AddActionResult =  PubnubClient->AddMessageAction(CurrentMessageData.ChannelID, GetMessageTimetoken(), ActionType, Pubnub_Chat_Soft_Deleted_Action_Value);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, AddActionResult.Result, "AddMessageAction");
@@ -188,6 +194,7 @@ FPubnubChatOperationResult UPubnubChatMessage::Pin()
 	{
 		FinalResult.Error = true;
 		FinalResult.ErrorMessage = TEXT("Channel related to this Message doesn't exist.");
+		return FinalResult;
 	}
 	
 	FPubnubChatOperationResult PinResult = Chat->PinMessageToChannel(this, ChannelResult.Channel);
@@ -210,6 +217,7 @@ FPubnubChatOperationResult UPubnubChatMessage::Unpin()
 	{
 		FinalResult.Error = true;
 		FinalResult.ErrorMessage = TEXT("Channel related to this Message doesn't exist.");
+		return FinalResult;
 	}
 	
 	FPubnubChatMessageResult PinnedMessageResult = ChannelResult.Channel->GetPinnedMessage();
@@ -222,6 +230,70 @@ FPubnubChatOperationResult UPubnubChatMessage::Unpin()
 		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PinResult);
 	}
 	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::ToggleReaction(const FString Reaction)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Reaction);
+	
+	FPubnubChatOperationResult FinalResult;
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	FPubnubChatGetReactionsResult GetReactionsResult = GetReactions();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetReactionsResult.Result);
+	
+	FPubnubChatMessageAction ReactionToToggle = UPubnubChatInternalUtilities::GetMessageReactionForUserID(GetReactionsResult.Reactions, Reaction, Chat->CurrentUserID);
+	
+	//If there is already such reaction from CurrentUser, we remove it
+	if (!ReactionToToggle.Timetoken.IsEmpty())
+	{
+		FPubnubOperationResult RemoveActionResult = PubnubClient->RemoveMessageAction(CurrentMessageData.ChannelID, Timetoken, ReactionToToggle.Timetoken);
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveActionResult, "RemoveMessageAction");
+		
+		//Remove this message action from message data
+		UPubnubChatInternalUtilities::RemoveReactionFromReactionsArray(CurrentMessageData.MessageActions, ReactionToToggle);
+	}
+	else
+	{
+		FString ActionType = UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChatMessageActionType::PCMAT_Reaction);
+		FPubnubAddMessageActionResult AddActionResult = PubnubClient->AddMessageAction(CurrentMessageData.ChannelID, Timetoken, ActionType, Reaction);
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, AddActionResult.Result, "AddMessageAction");
+		
+		CurrentMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(AddActionResult.MessageActionData));
+	}
+	
+	//Update repository with new MessageData (with added or removed message action
+	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
+	
+	return FinalResult;
+}
+
+FPubnubChatGetReactionsResult UPubnubChatMessage::GetReactions()
+{
+	FPubnubChatGetReactionsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	//Filter message actions of type Reaction
+	FinalResult.Reactions = UPubnubChatInternalUtilities::FilterMessageActionsOfType(CurrentMessageData.MessageActions, EPubnubChatMessageActionType::PCMAT_Reaction);
+	
+	return FinalResult;
+}
+
+FPubnubChatHasReactionResult UPubnubChatMessage::HasUserReaction(const FString Reaction)
+{
+	FPubnubChatHasReactionResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, Reaction);
+	
+	FPubnubChatGetReactionsResult GetReactionsResult = GetReactions();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetReactionsResult.Result);
+	
+	FPubnubChatMessageAction MessageReaction = UPubnubChatInternalUtilities::GetMessageReactionForUserID(GetReactionsResult.Reactions, Reaction, Chat->CurrentUserID);
+	FinalResult.HasReaction = !MessageReaction.Timetoken.IsEmpty();
 	return FinalResult;
 }
 
