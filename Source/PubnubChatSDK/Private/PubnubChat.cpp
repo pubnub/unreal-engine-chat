@@ -638,6 +638,8 @@ FPubnubChatOperationResult UPubnubChat::ForwardMessage(UPubnubChatMessage* Messa
 	
 	FPubnubChatMessageData MessageData = Message->GetMessageData();
 	
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((Channel->GetChannelID() != MessageData.ChannelID), TEXT("Can't forward message to the same channel"));
+	
 	//PublishMessage by PubnubClient
 	FPubnubPublishSettings PublishSettings;
 	PublishSettings.MetaData = UPubnubChatInternalUtilities::GetForwardedMessageMeta(MessageData.Meta, MessageData.UserID, MessageData.ChannelID);

@@ -4,6 +4,7 @@
 #include "PubnubChat.h"
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatCallbackStop.h"
 #include "PubnubChatMembership.h"
 #include "PubnubClient.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"

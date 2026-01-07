@@ -291,6 +291,17 @@ FString UPubnubChatInternalUtilities::GetMentionEventPayload(const FString& Chan
 	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
+FString UPubnubChatInternalUtilities::GetReportMessageEventPayload(const FString& Text, const FString& Reason, const FString& ChannelID, const FString& UserID, const FString& Timetoken)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("text"), Text);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("reason"), Reason);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("timetoken"), Timetoken);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("channelId"), ChannelID);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("userId"), UserID);
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;

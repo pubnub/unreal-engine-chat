@@ -297,6 +297,29 @@ FPubnubChatHasReactionResult UPubnubChatMessage::HasUserReaction(const FString R
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatMessage::Forward(UPubnubChatChannel* Channel)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Channel);
+	
+	return Chat->ForwardMessage(this, Channel);
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::Report(const FString Reason)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	FPubnubChatOperationResult FinalResult;
+	FPubnubChatMessageData CurrentMessageData = GetMessageData();
+	
+	FString EventChannel = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(CurrentMessageData.ChannelID);
+	FString EventPayload = UPubnubChatInternalUtilities::GetReportMessageEventPayload(GetCurrentText(), Reason, CurrentMessageData.ChannelID, CurrentMessageData.UserID, Timetoken);
+	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Moderation, EventChannel, EventPayload);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, EmitEventResult);
+	
+	return FinalResult;
+}
+
 void UPubnubChatMessage::InitMessage(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID, const FString InTimetoken)
 {
 	if(!InPubnubClient)

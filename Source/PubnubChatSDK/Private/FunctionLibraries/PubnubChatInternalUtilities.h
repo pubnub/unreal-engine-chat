@@ -65,7 +65,7 @@ public:
 	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
 	static bool IsThisEventMessage(const FString& MessageContent);
 	static FString GetMentionEventPayload(const FString& ChannelID, const FString& Timetoken, const FString& Text, const FString& ParentChannel = "");
-	
+	static FString GetReportMessageEventPayload(const FString& Text, const FString& Reason, const FString& ChannelID, const FString& UserID, const FString& Timetoken);
 	
 	/* MEMBERSHIP */
 	

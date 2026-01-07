@@ -62,6 +62,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FPubnubChatHasReactionResult HasUserReaction(const FString Reaction);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult Forward(UPubnubChatChannel* Channel);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatOperationResult Report(const FString Reason = "");
+	
 
 private:
 	UPROPERTY()
