@@ -100,9 +100,8 @@ bool FPubnubChatMembershipUpdateHappyPathTest::RunTest(const FString& Parameters
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -186,9 +185,8 @@ bool FPubnubChatMembershipUpdateFullParametersTest::RunTest(const FString& Param
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -280,9 +278,8 @@ bool FPubnubChatMembershipUpdateMultipleTimesTest::RunTest(const FString& Parame
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -406,9 +403,8 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenEmptyTimetokenTest::RunTest
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -474,9 +470,8 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenHappyPathTest::RunTest(cons
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -565,7 +560,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenFullParametersTest::RunTest
 			InitialMembershipData.Status = TEXT("active");
 			InitialMembershipData.Type = TEXT("member");
 			
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -653,9 +648,8 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenMultipleTimesTest::RunTest(
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -733,10 +727,9 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenRepositoryUpdateTest::RunTe
 		if(CreateResult.Channel)
 		{
 			// Join to create membership
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
 			InitialMembershipData.Custom = TEXT("{\"test\":\"data\"}");
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -826,9 +819,8 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 	TestEqual("Channel Type should be public", CreatedChannelData.Type, TEXT("public"));
 	
 	// Join to create membership
-	FOnPubnubChatChannelMessageReceived MessageCallback;
 	FPubnubChatMembershipData InitialMembershipData;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, InitialMembershipData);
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(InitialMembershipData);
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	TestNotNull("Membership should be created", JoinResult.Membership);
 	

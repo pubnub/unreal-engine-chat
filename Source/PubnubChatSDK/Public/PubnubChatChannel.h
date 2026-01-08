@@ -15,8 +15,8 @@ class UPubnubChat;
 class UPubnubChatUser;
 class UPubnubChatMessage;
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
-DECLARE_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
 
 /**
  * 
@@ -32,6 +32,15 @@ public:
 
 	virtual void BeginDestroy() override;
 	
+	/* DELEGATES */
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatChannelMessageReceived OnMessageReceived;
+	
+	FOnPubnubChatChannelMessageReceivedNative OnMessageReceivedNative;
+	
+	/* PUBLIC FUNCTIONS */
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
 	FPubnubChatChannelData GetChannelData() const;
 	
@@ -42,15 +51,11 @@ public:
 	FPubnubChatOperationResult Update(FPubnubChatChannelData ChannelData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
-	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceived MessageCallback);
-
-	FPubnubChatConnectResult Connect(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative);
+	FPubnubChatOperationResult Connect();
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
-	FPubnubChatJoinResult Join(FOnPubnubChatChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
-
-	FPubnubChatJoinResult Join(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
-
+	FPubnubChatJoinResult Join(FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Disconnect();
 

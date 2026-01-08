@@ -74,27 +74,12 @@ struct FPubnubChatGetChannelSuggestionsResult
 };
 
 USTRUCT(BlueprintType)
-struct FPubnubChatConnectResult
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FPubnubChatOperationResult Result;
-	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	UPubnubChatCallbackStop* CallbackStop = nullptr;
-};
-
-USTRUCT(BlueprintType)
 struct FPubnubChatJoinResult
 {
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FPubnubChatOperationResult Result;
-	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	UPubnubChatCallbackStop* CallbackStop = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	UPubnubChatMembership* Membership = nullptr;

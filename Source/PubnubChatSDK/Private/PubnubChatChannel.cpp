@@ -70,85 +70,36 @@ FPubnubChatOperationResult UPubnubChatChannel::Update(FPubnubChatChannelData Cha
 	return FinalResult;
 }
 
-FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessageReceived MessageCallback)
+FPubnubChatOperationResult UPubnubChatChannel::Connect()
 {
-	FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative;
-	MessageCallbackNative.BindLambda([MessageCallback](UPubnubChatMessage* Message)
-	{
-		MessageCallback.ExecuteIfBound(Message);
-	});
-	return Connect(MessageCallbackNative);
-}
-
-FPubnubChatConnectResult UPubnubChatChannel::Connect(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative)
-{
-	FPubnubChatConnectResult FinalResult;
-	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	
 	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
 	
 	//Add lister to subscription with provided callback
-	FDelegateHandle DelegateHandle =  ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak, MessageCallbackNative](const FPubnubMessageData& MessageData)
+	FDelegateHandle DelegateHandle =  ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
 	{
 		if(!ThisWeak.IsValid())
 		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
 
-		if(!ThisWeak.Get()->Chat)
+		if(!ThisChannel->Chat)
 		{return;}
 		
-		MessageCallbackNative.ExecuteIfBound(ThisWeak.Get()->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
+		ThisChannel->OnMessageReceived.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
+		ThisChannel->OnMessageReceivedNative.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
 	});
 	
 	//Subscribe with this channel Subscription
 	FPubnubOperationResult SubscribeResult = ConnectSubscription->Subscribe();
-	FinalResult.Result.AddStep("Subscribe", SubscribeResult);
-
-	//Create CallbackStop with remove listener function
-	UPubnubChatCallbackStop* CallbackStop = NewObject<UPubnubChatCallbackStop>(this);
-	auto DisconnectLambda = [ThisWeak, DelegateHandle]()->FPubnubChatOperationResult
-	{
-		if(!ThisWeak.IsValid())
-		{return FPubnubChatOperationResult::CreateError("This Channel was already destroyed");}
-
-		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
-
-		if(!ThisChannel->ConnectSubscription)
-		{return FPubnubChatOperationResult::CreateError("This Channel ConnectionSubscription was already destroyed");}
-
-		//Remove the listener
-		ThisChannel->ConnectSubscription->OnPubnubMessageNative.Remove(DelegateHandle);
-
-		//If there are no more listeners, just unsubscribe
-		if(!ThisChannel->ConnectSubscription->OnPubnubMessageNative.IsBound())
-		{
-			FPubnubChatOperationResult FinalResult;
-			FPubnubOperationResult UnsubscribeResult = ThisChannel->ConnectSubscription->Unsubscribe();
-			FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
-			return FinalResult;
-		}
-
-		//This is ok, we removed listener, but didn't unsubscribe as there are still other active listeners
-		FPubnubChatOperationResult SuccessResult;
-		SuccessResult.MarkSuccess();
-		return SuccessResult;
-	};
-	CallbackStop->InitCallbackStop(DisconnectLambda);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
 	
-	FinalResult.CallbackStop = CallbackStop;
 	return FinalResult;
 }
 
-FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceived MessageCallback, FPubnubChatMembershipData MembershipData)
-{
-	FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative;
-	MessageCallbackNative.BindLambda([MessageCallback](UPubnubChatMessage* Message)
-	{
-		MessageCallback.ExecuteIfBound(Message);
-	});
-	return Join(MessageCallbackNative, MembershipData);
-}
-
-FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceivedNative MessageCallbackNative, FPubnubChatMembershipData MembershipData)
+FPubnubChatJoinResult UPubnubChatChannel::Join(FPubnubChatMembershipData MembershipData)
 {
 	FPubnubChatJoinResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
@@ -164,15 +115,14 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FOnPubnubChatChannelMessageReceiv
 	UPubnubChatMembership* CreatedMembership = Chat->CreateMembershipObject(Chat->CurrentUser, this, MembershipData);
 
 	//Connect
-	FPubnubChatConnectResult ConnectResult = Connect(MessageCallbackNative);
-	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, ConnectResult.Result);
+	FPubnubChatOperationResult ConnectResult = Connect();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, ConnectResult);
 
 	//SetLastReadMessageTimetoken for created membership
 	FPubnubChatOperationResult SetLRMTResult =  CreatedMembership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetLRMTResult);
 
 	//Fill required data to the result
-	FinalResult.CallbackStop = ConnectResult.CallbackStop;
 	FinalResult.Membership = CreatedMembership;
 	
 	return FinalResult;
@@ -185,7 +135,7 @@ FPubnubChatOperationResult UPubnubChatChannel::Disconnect()
 	//Remove message related delegates
 	ConnectSubscription->OnPubnubMessageNative.Clear();
 
-	//Unsubcribe and return result
+	//Unsubscribe and return result
 	FPubnubChatOperationResult FinalResult;
 	FPubnubOperationResult UnsubscribeResult = ConnectSubscription->Unsubscribe();
 	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);

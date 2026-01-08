@@ -3602,8 +3602,7 @@ bool FPubnubChatUserWherePresentHappyPathTest::RunTest(const FString& Parameters
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -3693,8 +3692,7 @@ bool FPubnubChatUserIsPresentOnHappyPathTest::RunTest(const FString& Parameters)
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -3825,8 +3823,7 @@ bool FPubnubChatUserGetMembershipsHappyPathTest::RunTest(const FString& Paramete
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Get memberships with default parameters (only required)
@@ -3930,8 +3927,7 @@ bool FPubnubChatUserGetMembershipsFullParametersTest::RunTest(const FString& Par
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Test GetMemberships with all parameters
@@ -4047,8 +4043,7 @@ bool FPubnubChatUserGetMembershipsMultipleChannelsTest::RunTest(const FString& P
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult1 = CreateResult1.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult1 = CreateResult1.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join1 should succeed", JoinResult1.Result.Error);
 	
 	// Create second channel and join
@@ -4076,7 +4071,7 @@ bool FPubnubChatUserGetMembershipsMultipleChannelsTest::RunTest(const FString& P
 		return false;
 	}
 	
-	FPubnubChatJoinResult JoinResult2 = CreateResult2.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult2 = CreateResult2.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join2 should succeed", JoinResult2.Result.Error);
 	
 	// Get all memberships
@@ -4195,8 +4190,7 @@ bool FPubnubChatUserGetMembershipsPaginationTest::RunTest(const FString& Paramet
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Get first page with limit
@@ -4312,8 +4306,7 @@ bool FPubnubChatUserGetMembershipsFilterTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult1 = CreateResult1.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult1 = CreateResult1.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join1 should succeed", JoinResult1.Result.Error);
 	
 	// Create second channel and join
@@ -4341,7 +4334,7 @@ bool FPubnubChatUserGetMembershipsFilterTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	FPubnubChatJoinResult JoinResult2 = CreateResult2.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult2 = CreateResult2.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join2 should succeed", JoinResult2.Result.Error);
 	
 	// Get all memberships without filter
@@ -4469,8 +4462,7 @@ bool FPubnubChatUserGetMembershipsSortTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult1 = CreateResult1.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult1 = CreateResult1.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join1 should succeed", JoinResult1.Result.Error);
 	
 	// Create second channel and join
@@ -4498,7 +4490,7 @@ bool FPubnubChatUserGetMembershipsSortTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	FPubnubChatJoinResult JoinResult2 = CreateResult2.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult2 = CreateResult2.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join2 should succeed", JoinResult2.Result.Error);
 	
 	// Get memberships with ascending sort by channel ID
@@ -4638,8 +4630,7 @@ bool FPubnubChatUserGetMembershipsWithInvitedTest::RunTest(const FString& Parame
 		return false;
 	}
 	
-	FOnPubnubChatChannelMessageReceived MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Create target user

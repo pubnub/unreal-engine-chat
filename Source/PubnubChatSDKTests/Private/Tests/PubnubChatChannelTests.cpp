@@ -891,12 +891,10 @@ bool FPubnubChatChannelConnectNotInitializedTest::RunTest(const FString& Paramet
 			UPubnubChatChannel* Channel = NewObject<UPubnubChatChannel>(Chat);
 			if(Channel)
 			{
-				FOnPubnubChatChannelMessageReceived MessageCallback;
-				FPubnubChatConnectResult ConnectResult = Channel->Connect(MessageCallback);
+				FPubnubChatOperationResult ConnectResult = Channel->Connect();
 				
-				TestTrue("Connect should fail when Channel is not initialized", ConnectResult.Result.Error);
-				TestNull("CallbackStop should not be created", ConnectResult.CallbackStop);
-				TestFalse("ErrorMessage should not be empty", ConnectResult.Result.ErrorMessage.IsEmpty());
+				TestTrue("Connect should fail when Channel is not initialized", ConnectResult.Error);
+				TestFalse("ErrorMessage should not be empty", ConnectResult.ErrorMessage.IsEmpty());
 			}
 		}
 	}
@@ -941,16 +939,16 @@ bool FPubnubChatChannelConnectHappyPathTest::RunTest(const FString& Parameters)
 		
 		if(CreateResult.Channel)
 		{
-			// Connect with callback
-			FOnPubnubChatChannelMessageReceived MessageCallback;
-			FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+			// Connect
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 			
-			TestFalse("Connect should succeed", ConnectResult.Result.Error);
-			TestNotNull("CallbackStop should be created", ConnectResult.CallbackStop);
+			FPlatformProcess::Sleep(0.1);
+			
+			TestFalse("Connect should succeed", ConnectResult.Error);
 			
 			// Verify step results contain Subscribe step
 			bool bFoundSubscribe = false;
-			for(const FPubnubChatOperationStepResult& Step : ConnectResult.Result.StepResults)
+			for(const FPubnubChatOperationStepResult& Step : ConnectResult.StepResults)
 			{
 				if(Step.StepName == TEXT("Subscribe"))
 				{
@@ -1012,13 +1010,11 @@ bool FPubnubChatChannelConnectFullParametersTest::RunTest(const FString& Paramet
 		
 		if(CreateResult.Channel)
 		{
-			// Connect with callback (only parameter)
-			FOnPubnubChatChannelMessageReceived MessageCallback;
-			FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
+			// Connect
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 			
-			TestFalse("Connect should succeed with callback", ConnectResult.Result.Error);
-			TestNotNull("CallbackStop should be created", ConnectResult.CallbackStop);
-			TestTrue("StepResults should contain at least one step", ConnectResult.Result.StepResults.Num() > 0);
+			TestFalse("Connect should succeed with callback", ConnectResult.Error);
+			TestTrue("StepResults should contain at least one step", ConnectResult.StepResults.Num() > 0);
 			
 			// Cleanup: Disconnect and delete channel
 			if(CreateResult.Channel)
@@ -1077,19 +1073,12 @@ bool FPubnubChatChannelConnectMultipleTimesTest::RunTest(const FString& Paramete
 		if(CreateResult.Channel)
 		{
 			// Connect first time
-			FOnPubnubChatChannelMessageReceived MessageCallback1;
-			FPubnubChatConnectResult ConnectResult1 = CreateResult.Channel->Connect(MessageCallback1);
-			TestFalse("First Connect should succeed", ConnectResult1.Result.Error);
-			TestNotNull("First CallbackStop should be created", ConnectResult1.CallbackStop);
+			FPubnubChatOperationResult ConnectResult1 = CreateResult.Channel->Connect();
+			TestFalse("First Connect should succeed", ConnectResult1.Error);
 			
 			// Connect second time
-			FOnPubnubChatChannelMessageReceived MessageCallback2;
-			FPubnubChatConnectResult ConnectResult2 = CreateResult.Channel->Connect(MessageCallback2);
-			TestFalse("Second Connect should succeed", ConnectResult2.Result.Error);
-			TestNotNull("Second CallbackStop should be created", ConnectResult2.CallbackStop);
-			
-			// Both CallbackStops should be different objects
-			TestNotEqual("CallbackStops should be different objects", ConnectResult1.CallbackStop, ConnectResult2.CallbackStop);
+			FPubnubChatOperationResult ConnectResult2 = CreateResult.Channel->Connect();
+			TestFalse("Second Connect should succeed", ConnectResult2.Error);
 			
 			// Cleanup: Disconnect and delete channel
 			if(CreateResult.Channel)
@@ -1144,19 +1133,16 @@ bool FPubnubChatChannelConnectAfterDisconnectTest::RunTest(const FString& Parame
 		if(CreateResult.Channel)
 		{
 			// Connect first time
-			FOnPubnubChatChannelMessageReceived MessageCallback1;
-			FPubnubChatConnectResult ConnectResult1 = CreateResult.Channel->Connect(MessageCallback1);
-			TestFalse("First Connect should succeed", ConnectResult1.Result.Error);
+			FPubnubChatOperationResult ConnectResult1 = CreateResult.Channel->Connect();
+			TestFalse("First Connect should succeed", ConnectResult1.Error);
 			
 			// Disconnect
 			FPubnubChatOperationResult DisconnectResult = CreateResult.Channel->Disconnect();
 			TestFalse("Disconnect should succeed", DisconnectResult.Error);
 			
 			// Connect again
-			FOnPubnubChatChannelMessageReceived MessageCallback2;
-			FPubnubChatConnectResult ConnectResult2 = CreateResult.Channel->Connect(MessageCallback2);
-			TestFalse("Second Connect should succeed after disconnect", ConnectResult2.Result.Error);
-			TestNotNull("Second CallbackStop should be created", ConnectResult2.CallbackStop);
+			FPubnubChatOperationResult ConnectResult2 = CreateResult.Channel->Connect();
+			TestFalse("Second Connect should succeed after disconnect", ConnectResult2.Error);
 			
 			// Cleanup: Disconnect and delete channel
 			if(CreateResult.Channel)
@@ -1255,9 +1241,8 @@ bool FPubnubChatChannelDisconnectHappyPathTest::RunTest(const FString& Parameter
 		if(CreateResult.Channel)
 		{
 			// Connect first
-			FOnPubnubChatChannelMessageReceived MessageCallback;
-			FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-			TestFalse("Connect should succeed", ConnectResult.Result.Error);
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
 			
 			// Disconnect
 			FPubnubChatOperationResult DisconnectResult = CreateResult.Channel->Disconnect();
@@ -1325,9 +1310,8 @@ bool FPubnubChatChannelDisconnectFullParametersTest::RunTest(const FString& Para
 		if(CreateResult.Channel)
 		{
 			// Connect first
-			FOnPubnubChatChannelMessageReceived MessageCallback;
-			FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-			TestFalse("Connect should succeed", ConnectResult.Result.Error);
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
 			
 			// Disconnect (no parameters)
 			FPubnubChatOperationResult DisconnectResult = CreateResult.Channel->Disconnect();
@@ -1442,9 +1426,8 @@ bool FPubnubChatChannelDisconnectMultipleTimesTest::RunTest(const FString& Param
 		if(CreateResult.Channel)
 		{
 			// Connect first
-			FOnPubnubChatChannelMessageReceived MessageCallback;
-			FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-			TestFalse("Connect should succeed", ConnectResult.Result.Error);
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
 			
 			// Disconnect first time
 			FPubnubChatOperationResult DisconnectResult1 = CreateResult.Channel->Disconnect();
@@ -1603,17 +1586,17 @@ bool FPubnubChatChannelSendTextQuotedMessageDifferentChannelTest::RunTest(const 
 		{
 			// Connect to channel 1 to receive messages
 			UPubnubChatMessage* ReceivedMessage = nullptr;
-			FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-			MessageCallback.BindLambda([&ReceivedMessage](UPubnubChatMessage* Message)
+			auto MessageLambda = [&ReceivedMessage](UPubnubChatMessage* Message)
 			{
 				if(Message && !ReceivedMessage)
 				{
 					ReceivedMessage = Message;
 				}
-			});
+			};
+			CreateResult1.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 			
-			FPubnubChatConnectResult ConnectResult = CreateResult1.Channel->Connect(MessageCallback);
-			TestFalse("Connect should succeed", ConnectResult.Result.Error);
+			FPubnubChatOperationResult ConnectResult = CreateResult1.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
 			
 			// Send a message in channel 1
 			FPubnubChatOperationResult SendResult1 = CreateResult1.Channel->SendText(TEXT("Original message"));
@@ -1808,17 +1791,17 @@ bool FPubnubChatChannelSendTextFullParametersTest::RunTest(const FString& Parame
 		{
 			// Connect to receive messages
 			UPubnubChatMessage* ReceivedMessage = nullptr;
-			FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-			MessageCallback.BindLambda([&ReceivedMessage](UPubnubChatMessage* Message)
+			auto MessageLambda = [&ReceivedMessage](UPubnubChatMessage* Message)
 			{
 				if(Message && !ReceivedMessage)
 				{
 					ReceivedMessage = Message;
 				}
-			});
+			};
+			CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 			
-			FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-			TestFalse("Connect should succeed", ConnectResult.Result.Error);
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
 			
 			// Send first message to quote
 			const FString OriginalMessage = TEXT("Original message");
@@ -2054,8 +2037,7 @@ bool FPubnubChatChannelSendTextConnectReceiveTest::RunTest(const FString& Parame
 	const FString TestMessage = TEXT("Test message for connect receive");
 	
 	// Connect with callback
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessageText, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessageText, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -2064,11 +2046,11 @@ bool FPubnubChatChannelSendTextConnectReceiveTest::RunTest(const FString& Parame
 			*ReceivedMessageText = MessageData.Text;
 			TestEqual("Received message text should match", MessageData.Text, TestMessage);
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ConnectResult.CallbackStop);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait a bit for subscription to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessage]()
@@ -2164,18 +2146,18 @@ bool FPubnubChatChannelSendTextDisconnectNotReceiveTest::RunTest(const FString& 
 	const FString TestMessage = TEXT("Test message after disconnect");
 	
 	// Connect with callback
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
 			*bMessageReceived = true;
 			AddError("Message should NOT be received after disconnect");
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait a bit for subscription to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult]()
@@ -2277,8 +2259,7 @@ bool FPubnubChatChannelSendTextMultipleCallbacksTest::RunTest(const FString& Par
 	const FString TestMessage = TEXT("Test message for multiple callbacks");
 	
 	// Connect first time with callback 1
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback1;
-	MessageCallback1.BindLambda([this, bMessage1Received, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda1 = [this, bMessage1Received, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -2286,15 +2267,14 @@ bool FPubnubChatChannelSendTextMultipleCallbacksTest::RunTest(const FString& Par
 			FPubnubChatMessageData MessageData = Message->GetMessageData();
 			TestEqual("Callback1 received message text should match", MessageData.Text, TestMessage);
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda1);
 	
-	FPubnubChatConnectResult ConnectResult1 = CreateResult.Channel->Connect(MessageCallback1);
-	TestFalse("First Connect should succeed", ConnectResult1.Result.Error);
-	TestNotNull("First CallbackStop should be created", ConnectResult1.CallbackStop);
+	FPubnubChatOperationResult ConnectResult1 = CreateResult.Channel->Connect();
+	TestFalse("First Connect should succeed", ConnectResult1.Error);
 	
 	// Connect second time with callback 2
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback2;
-	MessageCallback2.BindLambda([this, bMessage2Received, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda2 = [this, bMessage2Received, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -2302,15 +2282,14 @@ bool FPubnubChatChannelSendTextMultipleCallbacksTest::RunTest(const FString& Par
 			FPubnubChatMessageData MessageData = Message->GetMessageData();
 			TestEqual("Callback2 received message text should match", MessageData.Text, TestMessage);
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda2);
 	
-	FPubnubChatConnectResult ConnectResult2 = CreateResult.Channel->Connect(MessageCallback2);
-	TestFalse("Second Connect should succeed", ConnectResult2.Result.Error);
-	TestNotNull("Second CallbackStop should be created", ConnectResult2.CallbackStop);
+	FPubnubChatOperationResult ConnectResult2 = CreateResult.Channel->Connect();
+	TestFalse("Second Connect should succeed", ConnectResult2.Error);
 	
 	// Connect third time with callback 3
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback3;
-	MessageCallback3.BindLambda([this, bMessage3Received, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda3 = [this, bMessage3Received, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -2318,11 +2297,11 @@ bool FPubnubChatChannelSendTextMultipleCallbacksTest::RunTest(const FString& Par
 			FPubnubChatMessageData MessageData = Message->GetMessageData();
 			TestEqual("Callback3 received message text should match", MessageData.Text, TestMessage);
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda3);
 	
-	FPubnubChatConnectResult ConnectResult3 = CreateResult.Channel->Connect(MessageCallback3);
-	TestFalse("Third Connect should succeed", ConnectResult3.Result.Error);
-	TestNotNull("Third CallbackStop should be created", ConnectResult3.CallbackStop);
+	FPubnubChatOperationResult ConnectResult3 = CreateResult.Channel->Connect();
+	TestFalse("Third Connect should succeed", ConnectResult3.Error);
 	
 	// Wait a bit for subscriptions to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessage]()
@@ -2404,12 +2383,10 @@ bool FPubnubChatChannelJoinNotInitializedTest::RunTest(const FString& Parameters
 			UPubnubChatChannel* Channel = NewObject<UPubnubChatChannel>(Chat);
 			if(Channel)
 			{
-				FOnPubnubChatChannelMessageReceived MessageCallback;
 				FPubnubChatMembershipData MembershipData;
-				FPubnubChatJoinResult JoinResult = Channel->Join(MessageCallback, MembershipData);
+				FPubnubChatJoinResult JoinResult = Channel->Join(MembershipData);
 				
 				TestTrue("Join should fail when Channel is not initialized", JoinResult.Result.Error);
-				TestNull("CallbackStop should not be created", JoinResult.CallbackStop);
 				TestNull("Membership should not be created", JoinResult.Membership);
 				TestFalse("ErrorMessage should not be empty", JoinResult.Result.ErrorMessage.IsEmpty());
 			}
@@ -2456,13 +2433,11 @@ bool FPubnubChatChannelJoinHappyPathTest::RunTest(const FString& Parameters)
 		
 		if(CreateResult.Channel)
 		{
-			// Join with only required parameters (MessageCallback and default MembershipData)
-			FOnPubnubChatChannelMessageReceived MessageCallback;
+			// Join with only required parameters (default MembershipData)
 			FPubnubChatMembershipData MembershipData; // Default empty struct
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			
 			TestFalse("Join should succeed", JoinResult.Result.Error);
-			TestNotNull("CallbackStop should be created", JoinResult.CallbackStop);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
 			if(JoinResult.Membership)
@@ -2545,16 +2520,14 @@ bool FPubnubChatChannelJoinFullParametersTest::RunTest(const FString& Parameters
 		if(CreateResult.Channel)
 		{
 			// Join with all MembershipData parameters set
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData MembershipData;
 			MembershipData.Custom = TEXT("{\"test\":\"custom\"}");
 			MembershipData.Status = TEXT("active");
 			MembershipData.Type = TEXT("member");
 			
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			
 			TestFalse("Join should succeed with all parameters", JoinResult.Result.Error);
-			TestNotNull("CallbackStop should be created", JoinResult.CallbackStop);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
 			if(JoinResult.Membership)
@@ -2628,23 +2601,16 @@ bool FPubnubChatChannelJoinMultipleTimesTest::RunTest(const FString& Parameters)
 		if(CreateResult.Channel)
 		{
 			// Join first time
-			FOnPubnubChatChannelMessageReceived MessageCallback1;
 			FPubnubChatMembershipData MembershipData1;
-			FPubnubChatJoinResult JoinResult1 = CreateResult.Channel->Join(MessageCallback1, MembershipData1);
+			FPubnubChatJoinResult JoinResult1 = CreateResult.Channel->Join(MembershipData1);
 			TestFalse("First Join should succeed", JoinResult1.Result.Error);
-			TestNotNull("First CallbackStop should be created", JoinResult1.CallbackStop);
 			TestNotNull("First Membership should be created", JoinResult1.Membership);
 			
 			// Join second time
-			FOnPubnubChatChannelMessageReceived MessageCallback2;
 			FPubnubChatMembershipData MembershipData2;
-			FPubnubChatJoinResult JoinResult2 = CreateResult.Channel->Join(MessageCallback2, MembershipData2);
+			FPubnubChatJoinResult JoinResult2 = CreateResult.Channel->Join(MembershipData2);
 			TestFalse("Second Join should succeed", JoinResult2.Result.Error);
-			TestNotNull("Second CallbackStop should be created", JoinResult2.CallbackStop);
 			TestNotNull("Second Membership should be created", JoinResult2.Membership);
-			
-			// Both CallbackStops should be different objects
-			TestNotEqual("CallbackStops should be different objects", JoinResult1.CallbackStop, JoinResult2.CallbackStop);
 			
 			// Both Memberships should reference the same channel and user
 			if(JoinResult1.Membership && JoinResult2.Membership)
@@ -2706,9 +2672,8 @@ bool FPubnubChatChannelJoinAfterLeaveTest::RunTest(const FString& Parameters)
 		if(CreateResult.Channel)
 		{
 			// Join first time
-			FOnPubnubChatChannelMessageReceived MessageCallback1;
 			FPubnubChatMembershipData MembershipData1;
-			FPubnubChatJoinResult JoinResult1 = CreateResult.Channel->Join(MessageCallback1, MembershipData1);
+			FPubnubChatJoinResult JoinResult1 = CreateResult.Channel->Join(MembershipData1);
 			TestFalse("First Join should succeed", JoinResult1.Result.Error);
 			TestNotNull("First Membership should be created", JoinResult1.Membership);
 			
@@ -2717,11 +2682,9 @@ bool FPubnubChatChannelJoinAfterLeaveTest::RunTest(const FString& Parameters)
 			TestFalse("Leave should succeed", LeaveResult.Error);
 			
 			// Join again
-			FOnPubnubChatChannelMessageReceived MessageCallback2;
 			FPubnubChatMembershipData MembershipData2;
-			FPubnubChatJoinResult JoinResult2 = CreateResult.Channel->Join(MessageCallback2, MembershipData2);
+			FPubnubChatJoinResult JoinResult2 = CreateResult.Channel->Join(MembershipData2);
 			TestFalse("Second Join should succeed after leave", JoinResult2.Result.Error);
-			TestNotNull("Second CallbackStop should be created", JoinResult2.CallbackStop);
 			TestNotNull("Second Membership should be created", JoinResult2.Membership);
 			
 			// Cleanup: Leave and delete channel
@@ -2777,13 +2740,12 @@ bool FPubnubChatChannelJoinMembershipCreationTest::RunTest(const FString& Parame
 		if(CreateResult.Channel)
 		{
 			// Join with specific membership data
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData MembershipData;
 			MembershipData.Custom = TEXT("{\"role\":\"admin\"}");
 			MembershipData.Status = TEXT("active");
 			MembershipData.Type = TEXT("member");
 			
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -2873,8 +2835,7 @@ bool FPubnubChatChannelJoinSendReceiveTest::RunTest(const FString& Parameters)
 	const FString TestMessage = TEXT("Test message for join receive");
 	
 	// Join with callback
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessageText, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessageText, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -2883,12 +2844,12 @@ bool FPubnubChatChannelJoinSendReceiveTest::RunTest(const FString& Parameters)
 			*ReceivedMessageText = MessageData.Text;
 			TestEqual("Received message text should match", MessageData.Text, TestMessage);
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	FPubnubChatMembershipData MembershipData;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 	TestFalse("Join should succeed", JoinResult.Result.Error);
-	TestNotNull("CallbackStop should be created", JoinResult.CallbackStop);
 	TestNotNull("Membership should be created", JoinResult.Membership);
 	
 	// Wait a bit for subscription to be ready
@@ -2989,8 +2950,7 @@ bool FPubnubChatChannelWhoIsPresentHappyPathTest::RunTest(const FString& Paramet
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -3069,8 +3029,7 @@ bool FPubnubChatChannelIsPresentHappyPathTest::RunTest(const FString& Parameters
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -3181,9 +3140,8 @@ bool FPubnubChatChannelLeaveHappyPathTest::RunTest(const FString& Parameters)
 		if(CreateResult.Channel)
 		{
 			// Join first
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData MembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
@@ -3262,13 +3220,12 @@ bool FPubnubChatChannelLeaveFullParametersTest::RunTest(const FString& Parameter
 		if(CreateResult.Channel)
 		{
 			// Join first with all membership data
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData MembershipData;
 			MembershipData.Custom = TEXT("{\"test\":\"data\"}");
 			MembershipData.Status = TEXT("active");
 			MembershipData.Type = TEXT("member");
 			
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			
 			// Leave (no parameters, but verify all steps)
@@ -3405,9 +3362,8 @@ bool FPubnubChatChannelLeaveMultipleTimesTest::RunTest(const FString& Parameters
 		if(CreateResult.Channel)
 		{
 			// Join first
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData MembershipData;
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			
 			// Leave first time
@@ -3467,13 +3423,12 @@ bool FPubnubChatChannelLeaveMembershipRemovalTest::RunTest(const FString& Parame
 		if(CreateResult.Channel)
 		{
 			// Join with membership data
-			FOnPubnubChatChannelMessageReceived MessageCallback;
 			FPubnubChatMembershipData MembershipData;
 			MembershipData.Custom = TEXT("{\"role\":\"admin\"}");
 			MembershipData.Status = TEXT("active");
 			MembershipData.Type = TEXT("member");
 			
-			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MessageCallback, MembershipData);
+			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			

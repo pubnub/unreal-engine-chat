@@ -57,8 +57,7 @@ public:
 
 	/**Listener to react for chat destroyed, equivalent that accepts lambdas*/
 	FOnPubnubChatDestroyedNative OnChatDestroyedNative;
-
-	//TODO:: decide if delegate names should have "PubnubChat" or "Chat" or without
+	
 	/**Listener to react for connection status changed */
 	UPROPERTY(BlueprintAssignable, Category = "PubnubChat|Delegates")
 	FOnPubnubChatConnectionStatusChanged OnConnectionStatusChanged;

@@ -1068,8 +1068,7 @@ bool FPubnubChatWherePresentHappyPathTest::RunTest(const FString& Parameters)
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1153,11 +1152,10 @@ bool FPubnubChatWherePresentFullParametersTest::RunTest(const FString& Parameter
 	}
 	
 	// Join both channels
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join1 should succeed", Join1Result.Result.Error);
 	
-	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join2 should succeed", Join2Result.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1289,12 +1287,11 @@ bool FPubnubChatWherePresentConnectVsJoinTest::RunTest(const FString& Parameters
 	}
 	
 	// Connect to first channel (without membership)
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatConnectResult ConnectResult = CreateChannelConnectResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateChannelConnectResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Join second channel (with membership)
-	FPubnubChatJoinResult JoinResult = CreateChannelJoinResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelJoinResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1453,8 +1450,7 @@ bool FPubnubChatWhoIsPresentHappyPathTest::RunTest(const FString& Parameters)
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1533,8 +1529,7 @@ bool FPubnubChatWhoIsPresentFullParametersTest::RunTest(const FString& Parameter
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1682,8 +1677,7 @@ bool FPubnubChatWhoIsPresentJoinVsConnectTest::RunTest(const FString& Parameters
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1762,8 +1756,7 @@ bool FPubnubChatWhoIsPresentPaginationTest::RunTest(const FString& Parameters)
 	}
 	
 	// Join channel
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -1955,8 +1948,7 @@ bool FPubnubChatIsPresentHappyPathTest::RunTest(const FString& Parameters)
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -2034,8 +2026,7 @@ bool FPubnubChatIsPresentFullParametersTest::RunTest(const FString& Parameters)
 	}
 	
 	// Join channel to make user present
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -2185,12 +2176,11 @@ bool FPubnubChatIsPresentConnectVsJoinTest::RunTest(const FString& Parameters)
 	}
 	
 	// Connect to first channel (without membership)
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatConnectResult ConnectResult = CreateChannelConnectResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateChannelConnectResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Join second channel (with membership)
-	FPubnubChatJoinResult JoinResult = CreateChannelJoinResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelJoinResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait a bit for presence to propagate
@@ -2317,8 +2307,7 @@ bool FPubnubChatGetUnreadMessagesCountsHappyPathTest::RunTest(const FString& Par
 	}
 	
 	// Join channel to create membership
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Call GetUnreadMessagesCounts with only required parameters (all defaults)
@@ -2406,8 +2395,7 @@ bool FPubnubChatGetUnreadMessagesCountsFullParametersTest::RunTest(const FString
 	}
 	
 	// Join channel to create membership
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Test GetUnreadMessagesCounts with all parameters
@@ -2523,11 +2511,10 @@ bool FPubnubChatGetUnreadMessagesCountsMultipleChannelsTest::RunTest(const FStri
 	}
 	
 	// Join both channels
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
 	
-	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
 	
 	// Send messages to both channels
@@ -2639,8 +2626,7 @@ bool FPubnubChatGetUnreadMessagesCountsEmptyTimetokenTest::RunTest(const FString
 	}
 	
 	// Join channel to create membership (this sets last read message timetoken)
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Get membership and verify it has a timetoken (from Join)
@@ -2802,11 +2788,10 @@ bool FPubnubChatGetUnreadMessagesCountsFilterTest::RunTest(const FString& Parame
 	}
 	
 	// Join both channels
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
 	
-	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
 	
 	// Get unread counts without filter (should return both channels)
@@ -2922,11 +2907,10 @@ bool FPubnubChatGetUnreadMessagesCountsSortTest::RunTest(const FString& Paramete
 	}
 	
 	// Join both channels
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
 	
-	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
 	
 	// Get unread counts with ascending sort
@@ -3188,8 +3172,7 @@ bool FPubnubChatReconnectSubscriptionsRestoresMessageReceptionTest::RunTest(cons
 	const FString TestMessage = TEXT("Test message for reconnect");
 	
 	// Set up message listener
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, bMessageReceivedAfterReconnect, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, bMessageReceivedAfterReconnect, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -3206,10 +3189,11 @@ bool FPubnubChatReconnectSubscriptionsRestoresMessageReceptionTest::RunTest(cons
 				}
 			}
 		}
-	});
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	// Join channel to subscribe
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait for subscription to be ready, then send a message
@@ -3501,8 +3485,7 @@ bool FPubnubChatDisconnectSubscriptionsPreventsMessageReceptionTest::RunTest(con
 	const FString TestMessage = TEXT("Test message");
 	
 	// Set up message listener
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, TestMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, TestMessage](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -3520,10 +3503,11 @@ bool FPubnubChatDisconnectSubscriptionsPreventsMessageReceptionTest::RunTest(con
 				}
 			}
 		}
-	});
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	// Join channel to subscribe
-	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(MessageCallback, FPubnubChatMembershipData());
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	
 	// Wait for subscription to be ready, then send a message
@@ -4665,18 +4649,18 @@ bool FPubnubChatForwardMessageInvalidChannelTest::RunTest(const FString& Paramet
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult]()
@@ -4792,22 +4776,21 @@ bool FPubnubChatForwardMessageHappyPathTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect to source channel to receive original message
-	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
-	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*SourceMessage)
 		{
 			*bSourceMessageReceived = true;
 			*SourceMessage = Message;
 		}
-	});
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
 	
-	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
-	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
 	
 	// Connect to destination channel to receive forwarded message
-	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
-	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -4818,10 +4801,11 @@ bool FPubnubChatForwardMessageHappyPathTest::RunTest(const FString& Parameters)
 				*ForwardedMessage = Message;
 			}
 		}
-	});
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
 	
-	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
-	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
 	
 	// Wait for subscriptions, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
@@ -4974,22 +4958,21 @@ bool FPubnubChatForwardMessageWithMetadataTest::RunTest(const FString& Parameter
 	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect to source channel to receive original message
-	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
-	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*SourceMessage)
 		{
 			*bSourceMessageReceived = true;
 			*SourceMessage = Message;
 		}
-	});
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
 	
-	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
-	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
 	
 	// Connect to destination channel to receive forwarded message
-	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
-	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -5000,10 +4983,11 @@ bool FPubnubChatForwardMessageWithMetadataTest::RunTest(const FString& Parameter
 				*ForwardedMessage = Message;
 			}
 		}
-	});
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
 	
-	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
-	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
 	
 	// Wait for subscriptions, then send message with metadata
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText, OriginalMeta]()
@@ -5162,22 +5146,21 @@ bool FPubnubChatForwardMessageWithoutMetadataTest::RunTest(const FString& Parame
 	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect to source channel to receive original message
-	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
-	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*SourceMessage)
 		{
 			*bSourceMessageReceived = true;
 			*SourceMessage = Message;
 		}
-	});
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
 	
-	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
-	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
 	
 	// Connect to destination channel to receive forwarded message
-	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
-	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -5188,10 +5171,11 @@ bool FPubnubChatForwardMessageWithoutMetadataTest::RunTest(const FString& Parame
 				*ForwardedMessage = Message;
 			}
 		}
-	});
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
 	
-	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
-	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
 	
 	// Wait for subscriptions, then send message without metadata
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
@@ -5346,22 +5330,21 @@ bool FPubnubChatForwardMessageEditedTextTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect to source channel to receive original message
-	FOnPubnubChatChannelMessageReceivedNative SourceMessageCallback;
-	SourceMessageCallback.BindLambda([this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*SourceMessage)
 		{
 			*bSourceMessageReceived = true;
 			*SourceMessage = Message;
 		}
-	});
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
 	
-	FPubnubChatConnectResult SourceConnectResult = CreateSourceResult.Channel->Connect(SourceMessageCallback);
-	TestFalse("Connect to source channel should succeed", SourceConnectResult.Result.Error);
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
 	
 	// Connect to destination channel to receive forwarded message
-	FOnPubnubChatChannelMessageReceivedNative DestMessageCallback;
-	DestMessageCallback.BindLambda([this, bForwardedMessageReceived, ForwardedMessage, EditedText](UPubnubChatMessage* Message)
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, EditedText](UPubnubChatMessage* Message)
 	{
 		if(Message)
 		{
@@ -5372,10 +5355,11 @@ bool FPubnubChatForwardMessageEditedTextTest::RunTest(const FString& Parameters)
 				*ForwardedMessage = Message;
 			}
 		}
-	});
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
 	
-	FPubnubChatConnectResult DestConnectResult = CreateDestResult.Channel->Connect(DestMessageCallback);
-	TestFalse("Connect to destination channel should succeed", DestConnectResult.Result.Error);
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
 	
 	// Wait for subscriptions, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, OriginalText]()

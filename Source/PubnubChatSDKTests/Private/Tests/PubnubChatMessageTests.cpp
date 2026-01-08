@@ -119,18 +119,18 @@ bool FPubnubChatMessageGetCurrentTextHappyPathTest::RunTest(const FString& Param
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait a bit for subscription to be ready, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -239,18 +239,18 @@ bool FPubnubChatMessageGetCurrentTextMultipleEditsTest::RunTest(const FString& P
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, OriginalText]()
@@ -426,18 +426,18 @@ bool FPubnubChatMessageGetCurrentTextViaGetMessageTest::RunTest(const FString& P
 	TSharedPtr<FString> MessageTimetoken = MakeShared<FString>();
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
 	{
 		if(Message && MessageTimetoken->IsEmpty())
 		{
 			*bMessageReceived = true;
 			*MessageTimetoken = Message->GetMessageTimetoken();
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, OriginalText]()
@@ -685,18 +685,18 @@ bool FPubnubChatMessageEditTextEmptyNewTextTest::RunTest(const FString& Paramete
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -795,18 +795,18 @@ bool FPubnubChatMessageEditTextHappyPathTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, OriginalText]()
@@ -943,18 +943,18 @@ bool FPubnubChatMessageEditTextMultipleEditsTest::RunTest(const FString& Paramet
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, OriginalText]()
@@ -1154,18 +1154,18 @@ bool FPubnubChatMessageEditTextViaGetMessageTest::RunTest(const FString& Paramet
 	TSharedPtr<FString> MessageTimetoken = MakeShared<FString>();
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
 	{
 		if(Message && MessageTimetoken->IsEmpty())
 		{
 			*bMessageReceived = true;
 			*MessageTimetoken = Message->GetMessageTimetoken();
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, OriginalText]()
@@ -1377,18 +1377,18 @@ bool FPubnubChatMessageDeleteHappyPathTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -1523,8 +1523,7 @@ bool FPubnubChatMessageDeleteHardDeleteTest::RunTest(const FString& Parameters)
 	TSharedPtr<FString> MessageTimetoken = MakeShared<FString>();
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage, MessageTimetoken](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage, MessageTimetoken](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
@@ -1532,10 +1531,11 @@ bool FPubnubChatMessageDeleteHardDeleteTest::RunTest(const FString& Parameters)
 			*ReceivedMessage = Message;
 			*MessageTimetoken = Message->GetMessageTimetoken();
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -1650,18 +1650,18 @@ bool FPubnubChatMessageDeleteSoftViaGetMessageTest::RunTest(const FString& Param
 	TSharedPtr<FString> MessageTimetoken = MakeShared<FString>();
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
 	{
 		if(Message && MessageTimetoken->IsEmpty())
 		{
 			*bMessageReceived = true;
 			*MessageTimetoken = Message->GetMessageTimetoken();
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -1855,18 +1855,18 @@ bool FPubnubChatMessageRestoreHappyPathTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2012,18 +2012,18 @@ bool FPubnubChatMessageRestoreNonDeletedTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2139,18 +2139,18 @@ bool FPubnubChatMessageRestoreMultipleDeletesTest::RunTest(const FString& Parame
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2358,18 +2358,18 @@ bool FPubnubChatMessageIsDeletedHappyPathTest::RunTest(const FString& Parameters
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2481,18 +2481,18 @@ bool FPubnubChatMessageIsDeletedDeletedMessageTest::RunTest(const FString& Param
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2626,18 +2626,18 @@ bool FPubnubChatMessageIsDeletedAfterRestoreTest::RunTest(const FString& Paramet
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2766,18 +2766,18 @@ bool FPubnubChatMessageIsDeletedViaGetMessageTest::RunTest(const FString& Parame
 	TSharedPtr<FString> MessageTimetoken = MakeShared<FString>();
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, MessageTimetoken](UPubnubChatMessage* Message)
 	{
 		if(Message && MessageTimetoken->IsEmpty())
 		{
 			*bMessageReceived = true;
 			*MessageTimetoken = Message->GetMessageTimetoken();
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -2967,18 +2967,18 @@ bool FPubnubChatMessagePinChannelDoesNotExistTest::RunTest(const FString& Parame
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -3088,18 +3088,18 @@ bool FPubnubChatMessagePinHappyPathTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -3227,8 +3227,7 @@ bool FPubnubChatMessagePinTwiceTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> SecondMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive messages
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bFirstMessageReceived, bSecondMessageReceived, FirstMessage, SecondMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bFirstMessageReceived, bSecondMessageReceived, FirstMessage, SecondMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*FirstMessage)
 		{
@@ -3240,10 +3239,11 @@ bool FPubnubChatMessagePinTwiceTest::RunTest(const FString& Parameters)
 			*bSecondMessageReceived = true;
 			*SecondMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send first message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, FirstMessageText]()
@@ -3428,18 +3428,18 @@ bool FPubnubChatMessageUnpinChannelDoesNotExistTest::RunTest(const FString& Para
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -3549,18 +3549,18 @@ bool FPubnubChatMessageUnpinHappyPathTest::RunTest(const FString& Parameters)
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -3702,18 +3702,18 @@ bool FPubnubChatMessageUnpinNoPinnedMessageTest::RunTest(const FString& Paramete
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -3818,8 +3818,7 @@ bool FPubnubChatMessageUnpinDifferentMessagePinnedTest::RunTest(const FString& P
 	TSharedPtr<UPubnubChatMessage*> SecondMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive messages
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bFirstMessageReceived, bSecondMessageReceived, FirstMessage, SecondMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bFirstMessageReceived, bSecondMessageReceived, FirstMessage, SecondMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*FirstMessage)
 		{
@@ -3831,10 +3830,11 @@ bool FPubnubChatMessageUnpinDifferentMessagePinnedTest::RunTest(const FString& P
 			*bSecondMessageReceived = true;
 			*SecondMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send first message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, FirstMessageText]()
@@ -4008,18 +4008,18 @@ bool FPubnubChatMessageToggleReactionEmptyReactionTest::RunTest(const FString& P
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -4118,18 +4118,18 @@ bool FPubnubChatMessageToggleReactionHappyPathTest::RunTest(const FString& Param
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -4310,18 +4310,18 @@ bool FPubnubChatMessageToggleReactionMultipleReactionsTest::RunTest(const FStrin
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -4536,18 +4536,18 @@ bool FPubnubChatMessageToggleReactionMultipleUsersTest::RunTest(const FString& P
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -4616,8 +4616,8 @@ bool FPubnubChatMessageToggleReactionMultipleUsersTest::RunTest(const FString& P
 		*SecondChannel = GetChannelResult.Channel;
 		
 		// Connect second user to channel (they won't receive the message via subscription since it was already sent)
-		FPubnubChatConnectResult SecondConnectResult = (*SecondChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
-		TestFalse("Connect should succeed for second user", SecondConnectResult.Result.Error);
+		FPubnubChatOperationResult SecondConnectResult = (*SecondChannel)->Connect();
+		TestFalse("Connect should succeed for second user", SecondConnectResult.Error);
 	}, 0.3f));
 	
 	// Get message for second user using GetMessage (since message was sent before they connected)
@@ -4875,18 +4875,18 @@ bool FPubnubChatMessageGetReactionsHappyPathTest::RunTest(const FString& Paramet
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -5043,18 +5043,18 @@ bool FPubnubChatMessageGetReactionsMultipleUsersTest::RunTest(const FString& Par
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -5127,11 +5127,11 @@ bool FPubnubChatMessageGetReactionsMultipleUsersTest::RunTest(const FString& Par
 		*ThirdChannel = GetChannelResult3.Channel;
 		
 		// Connect second and third users to channel (they won't receive the message via subscription since it was already sent)
-		FPubnubChatConnectResult SecondConnectResult = (*SecondChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
-		TestFalse("Connect should succeed for second user", SecondConnectResult.Result.Error);
+		FPubnubChatOperationResult SecondConnectResult = (*SecondChannel)->Connect();
+		TestFalse("Connect should succeed for second user", SecondConnectResult.Error);
 		
-		FPubnubChatConnectResult ThirdConnectResult = (*ThirdChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
-		TestFalse("Connect should succeed for third user", ThirdConnectResult.Result.Error);
+		FPubnubChatOperationResult ThirdConnectResult = (*ThirdChannel)->Connect();
+		TestFalse("Connect should succeed for third user", ThirdConnectResult.Error);
 	}, 0.3f));
 	
 	// Get message for second and third users using GetMessage (since message was sent before they connected)
@@ -5356,18 +5356,18 @@ bool FPubnubChatMessageHasUserReactionEmptyReactionTest::RunTest(const FString& 
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -5468,18 +5468,18 @@ bool FPubnubChatMessageHasUserReactionHappyPathTest::RunTest(const FString& Para
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -5647,18 +5647,18 @@ bool FPubnubChatMessageHasUserReactionMultipleUsersTest::RunTest(const FString& 
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
 	// Connect with callback to receive message
-	FOnPubnubChatChannelMessageReceivedNative MessageCallback;
-	MessageCallback.BindLambda([this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
 	{
 		if(Message && !*ReceivedMessage)
 		{
 			*bMessageReceived = true;
 			*ReceivedMessage = Message;
 		}
-	});
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
-	FPubnubChatConnectResult ConnectResult = CreateResult.Channel->Connect(MessageCallback);
-	TestFalse("Connect should succeed", ConnectResult.Result.Error);
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
 	
 	// Wait for subscription, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -5729,8 +5729,8 @@ bool FPubnubChatMessageHasUserReactionMultipleUsersTest::RunTest(const FString& 
 		*SecondChannel = GetChannelResult.Channel;
 		
 		// Connect second user to channel (they won't receive the message via subscription since it was already sent)
-		FPubnubChatConnectResult SecondConnectResult = (*SecondChannel)->Connect(FOnPubnubChatChannelMessageReceivedNative());
-		TestFalse("Connect should succeed for second user", SecondConnectResult.Result.Error);
+		FPubnubChatOperationResult SecondConnectResult = (*SecondChannel)->Connect();
+		TestFalse("Connect should succeed for second user", SecondConnectResult.Error);
 	}, 0.3f));
 	
 	// Get message for second user using GetMessage (since message was sent before they connected)
