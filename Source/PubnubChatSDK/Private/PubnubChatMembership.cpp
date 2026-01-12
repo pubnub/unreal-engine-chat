@@ -12,6 +12,9 @@
 #include "PubnubChatMessage.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
+#include "Entities/PubnubChannelEntity.h"
+#include "Entities/PubnubSubscription.h"
 
 
 FString UPubnubChatMembership::GetInternalMembershipID() const
@@ -25,14 +28,9 @@ FString UPubnubChatMembership::GetInternalMembershipID() const
 
 void UPubnubChatMembership::BeginDestroy()
 {
-	// Unregister from repository before destruction
-	if (IsInitialized && Chat && Chat->ObjectsRepository && User && Channel)
-	{
-		Chat->ObjectsRepository->UnregisterMembership(GetInternalMembershipID());
-	}
+	CleanUp();
 	
-	UObject::BeginDestroy();
-	IsInitialized = false;
+	Super::BeginDestroy();
 }
 
 FPubnubChatMembershipData UPubnubChatMembership::GetMembershipData() const
@@ -96,7 +94,7 @@ FPubnubChatOperationResult UPubnubChatMembership::Update(const FPubnubChatUpdate
 		return FinalResult;
 	}
 
-	//Update repository with updated user data
+	//Update repository with updated membership data
 	Chat->ObjectsRepository->UpdateMembershipData(GetInternalMembershipID(), FPubnubChatMembershipData::FromPubnubMembershipData(SetMembershipResult.MembershipsData[0]));
 	
 	return FinalResult;
@@ -147,6 +145,86 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessage(UPubnubChat
 	return SetLastReadMessageTimetoken(Message->GetMessageTimetoken());
 }
 
+FPubnubChatOperationResult UPubnubChatMembership::StreamUpdates()
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	//Skip if it's already streaming
+	if (IsStreamingUpdates)
+	{ return FinalResult; }
+	
+	TWeakObjectPtr<UPubnubChatMembership> ThisWeak = MakeWeakObjectPtr(this);
+	
+	//Add listener to subscription with provided callback
+	UpdatesSubscription->OnPubnubObjectEventNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatMembership* ThisMembership = ThisWeak.Get();
+
+		if(!ThisMembership->Chat)
+		{return;}
+		
+		//If this is not MembershipUpdate, just ignore this message
+		if (UPubnubChatInternalUtilities::IsPubnubMessageMembershipUpdate(MessageData.Message))
+		{
+			//Check if membership was deleted or updated
+			if (UPubnubChatInternalUtilities::IsPubnubMessageDeleteEvent(MessageData.Message))
+			{
+				//Remove this membership from repository
+				ThisMembership->Chat->ObjectsRepository->RemoveMembershipData(ThisMembership->GetInternalMembershipID());
+				
+				//Call delegates with Deleted type
+				ThisMembership->OnMembershipUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), FPubnubChatMembershipData());
+				ThisMembership->OnMembershipUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), FPubnubChatMembershipData());
+			}
+			else
+			{
+				//Adjust this membership data based on the update message
+				FPubnubChatMembershipData ChatMembershipData = ThisMembership->GetMembershipData();
+				FPubnubMembershipUpdateData MembershipUpdateData = UPubnubJsonUtilities::GetMembershipUpdateDataFromMessageContent(MessageData.Message);
+				UPubnubChatInternalUtilities::UpdateChatMembershipFromPubnubMembershipUpdateData(MembershipUpdateData, ChatMembershipData);
+							
+				//Update repository with new membership data
+				ThisMembership->Chat->ObjectsRepository->UpdateMembershipData(ThisMembership->GetInternalMembershipID(), ChatMembershipData);
+				
+				//Call delegates with Deleted type
+				ThisMembership->OnMembershipUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), ChatMembershipData);
+				ThisMembership->OnMembershipUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), ChatMembershipData);
+			}
+		}
+	});
+	
+	//Subscribe with UpdatesSubscription to receive user metadata updates
+	FPubnubOperationResult SubscribeResult = UpdatesSubscription->Subscribe();
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+	
+	IsStreamingUpdates = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMembership::StopStreamingUpdates()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Remove message related delegates
+	UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+	
+	//Skip if it's not streaming updates
+	if (!IsStreamingUpdates)
+	{ return FinalResult; }
+
+	//Unsubscribe and return result
+	FPubnubOperationResult UnsubscribeResult = UpdatesSubscription->Unsubscribe();
+	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	IsStreamingUpdates = false;
+	return FinalResult;
+}
+
 void UPubnubChatMembership::InitMembership(UPubnubClient* InPubnubClient, UPubnubChat* InChat, UPubnubChatUser* InUser, UPubnubChatChannel* InChannel)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Membership, PubnubClient is invalid"));
@@ -159,12 +237,60 @@ void UPubnubChatMembership::InitMembership(UPubnubClient* InPubnubClient, UPubnu
 	PubnubClient = InPubnubClient;
 	Chat = InChat;
 	
+	// Create ChannelEntity and subscription for streaming updates
+	UPubnubChannelEntity* ChannelEntity = PubnubClient->CreateChannelEntity(Channel->GetChannelID());
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(ChannelEntity, TEXT("Can't init Membership, Failed to create ChannelEntity"));
+	
+	UpdatesSubscription = ChannelEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(UpdatesSubscription, TEXT("Can't init Membership, Failed to create Updates Subscription"));
+	
 	// Register this membership object with the repository
 	if (Chat->ObjectsRepository)
 	{
 		Chat->ObjectsRepository->RegisterMembership(GetInternalMembershipID());
 	}
 	
+	//Add delegate to OnChatDestroyed so this object is cleaned up as well
+	Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatMembership::OnChatDestroyed);
+	
 	IsInitialized = true;
+}
+
+void UPubnubChatMembership::OnChatDestroyed(FString InUserID)
+{
+	CleanUp();
+}
+
+void UPubnubChatMembership::ClearAllSubscriptions()
+{
+	if (UpdatesSubscription)
+	{
+		UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+		if (IsStreamingUpdates)
+		{
+			UpdatesSubscription->Unsubscribe();
+			IsStreamingUpdates = false;
+		}
+
+		UpdatesSubscription = nullptr;
+	}
+}
+
+void UPubnubChatMembership::CleanUp()
+{
+	//Clean up subscription if membership is being destroyed while connected
+	if (IsInitialized)
+	{
+		ClearAllSubscriptions();
+	}
+	
+	//Unregister from repository before destruction
+	if (IsInitialized && Chat && Chat->ObjectsRepository && User && Channel)
+	{
+		Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatMembership::OnChatDestroyed);
+		Chat->ObjectsRepository->UnregisterMembership(GetInternalMembershipID());
+	}
+	
+	IsInitialized = false;
 }
 

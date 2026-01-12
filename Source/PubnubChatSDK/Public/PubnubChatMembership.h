@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
+#include "PubnubChatEnumLibrary.h"
 
 #include "PubnubChatMembership.generated.h"
 
@@ -12,6 +13,10 @@ class UPubnubClient;
 class UPubnubChat;
 class UPubnubChatUser;
 class UPubnubChatChannel;
+class UPubnubSubscription;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnPubnubChatMembershipUpdateReceived, EPubnubChatStreamedUpdateType, UpdateType, FString, ChannelID, FString, UserID, FPubnubChatMembershipData, MembershipData);
+DECLARE_MULTICAST_DELEGATE_FourParams(FOnPubnubChatMembershipUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData);
 
 /**
  * 
@@ -25,6 +30,13 @@ class PUBNUBCHATSDK_API UPubnubChatMembership : public UObject
 public:
 
 	virtual void BeginDestroy() override;
+
+	/* DELEGATES */
+
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatMembershipUpdateReceived OnMembershipUpdateReceived;
+	FOnPubnubChatMembershipUpdateReceivedNative OnMembershipUpdateReceivedNative;
+
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Membership")
 	FPubnubChatMembershipData GetMembershipData() const;
@@ -56,6 +68,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult SetLastReadMessage(UPubnubChatMessage* Message);
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
+	FPubnubChatOperationResult StreamUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
+	FPubnubChatOperationResult StopStreamingUpdates();
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
@@ -68,6 +86,10 @@ private:
 	
 	UPROPERTY()
 	bool IsInitialized = false;
+	UPROPERTY()
+	UPubnubSubscription* UpdatesSubscription = nullptr;
+	
+	bool IsStreamingUpdates = false;
 
 	void InitMembership(UPubnubClient* InPubnubClient, UPubnubChat* InChat, UPubnubChatUser* InUser, UPubnubChatChannel* InChannel);
 
@@ -77,5 +99,10 @@ private:
 	 * @return Composite membership identifier
 	 */
 	FString GetInternalMembershipID() const;
+	
+	UFUNCTION()
+	void OnChatDestroyed(FString InUserID);
+	void ClearAllSubscriptions();
+	void CleanUp();
 };
 
