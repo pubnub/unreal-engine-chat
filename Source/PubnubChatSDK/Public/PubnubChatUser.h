@@ -5,11 +5,16 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
+#include "PubnubChatEnumLibrary.h"
 
 #include "PubnubChatUser.generated.h"
 
 class UPubnubClient;
 class UPubnubChat;
+class UPubnubSubscription;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceived, EPubnubChatStreamedUpdateType, UpdateType, FString, UserID, FPubnubChatUserData, UserData);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString UserID, const FPubnubChatUserData& UserData);
 
 /**
  * 
@@ -23,6 +28,12 @@ class PUBNUBCHATSDK_API UPubnubChatUser : public UObject
 public:
 
 	virtual void BeginDestroy() override;
+	
+	/* DELEGATES */
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatUserUpdateReceived OnUserUpdateReceived;
+	FOnPubnubChatUserUpdateReceivedNative OnUserUpdateReceivedNative;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FPubnubChatUserData GetUserData() const;
@@ -60,6 +71,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatGetRestrictionsResult GetChannelsRestrictions(const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StreamUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StopStreamingUpdates();
 	
 private:
 	UPROPERTY()
@@ -68,12 +84,18 @@ private:
 	TObjectPtr<UPubnubChat> Chat = nullptr;
 	UPROPERTY()
 	FString UserID = "";
-	
+	UPROPERTY()
+	UPubnubSubscription* UpdatesSubscription = nullptr;
 
 	bool IsInitialized = false;
+	bool IsStreamingUpdates = false;
 
 	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID);
 	
 	FPubnubChatGetRestrictionsResult GetRestrictions(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	UFUNCTION()
+	void OnChatDestroyed(FString InUserID);
+	void ClearAllSubscriptions();
+	void CleanUp();
 };

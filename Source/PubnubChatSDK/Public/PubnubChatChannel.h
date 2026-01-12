@@ -153,6 +153,9 @@ private:
 	
 	FPubnubChatGetRestrictionsResult GetRestrictions(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
 	
+	UFUNCTION()
+	void OnChatDestroyed(FString UserID);
 	void ClearAllSubscriptions();
+	void CleanUp();
 };
 

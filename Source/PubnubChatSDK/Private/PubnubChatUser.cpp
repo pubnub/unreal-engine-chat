@@ -7,21 +7,19 @@
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
+#include "Entities/PubnubUserMetadataEntity.h"
+#include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "PubnubChatConst.h"
 
 
 void UPubnubChatUser::BeginDestroy()
 {
-	// Unregister from repository before destruction
-	if (IsInitialized && Chat && Chat->ObjectsRepository && !UserID.IsEmpty())
-	{
-		Chat->ObjectsRepository->UnregisterUser(UserID);
-	}
+	CleanUp();
 	
-	UObject::BeginDestroy();
-	IsInitialized = false;
+	Super::BeginDestroy();
 }
 
 FPubnubChatUserData UPubnubChatUser::GetUserData() const
@@ -173,6 +171,87 @@ FPubnubChatGetRestrictionsResult UPubnubChatUser::GetChannelsRestrictions(const 
 	return GetRestrictions(Limit, UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions(), Sort, Page);
 }
 
+FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	//Skip if it's already streaming
+	if (IsStreamingUpdates)
+	{ return FinalResult; }
+	
+	TWeakObjectPtr<UPubnubChatUser> ThisWeak = MakeWeakObjectPtr(this);
+	
+	//Add listener to subscription with provided callback
+	UpdatesSubscription->OnPubnubObjectEventNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatUser* ThisUser = ThisWeak.Get();
+
+		if(!ThisUser->Chat)
+		{return;}
+		
+		//If this is not UserUpdate, just ignore this message
+		if (UPubnubChatInternalUtilities::IsPubnubMessageUserUpdate(MessageData.Message))
+		{
+			//Check if user was deleted or updated
+			if (UPubnubChatInternalUtilities::IsPubnubMessageDeleteEvent(MessageData.Message))
+			{
+				//Remove this user from repository
+				ThisUser->Chat->ObjectsRepository->RemoveUserData(ThisUser->UserID);
+				
+				//Call delegates with Deleted type
+				ThisUser->OnUserUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisUser->UserID, FPubnubChatUserData());
+				ThisUser->OnUserUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisUser->UserID, FPubnubChatUserData());
+			}
+			else
+			{
+				//Adjust this user data based on the update message
+				FPubnubChatUserData ChatUserData = ThisUser->GetUserData();
+				FPubnubUserUpdateData UserUpdateData = UPubnubJsonUtilities::GetUserUpdateDataFromMessageContent(MessageData.Message);
+				UPubnubChatInternalUtilities::UpdateChatUserFromPubnubUserUpdateData(UserUpdateData, ChatUserData);
+							
+				//Update repository with new user data
+				ThisUser->Chat->ObjectsRepository->UpdateUserData(ThisUser->UserID, ChatUserData);
+							
+				//Call delegates with new user data
+				ThisUser->OnUserUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisUser->UserID, ChatUserData);
+				ThisUser->OnUserUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisUser->UserID, ChatUserData);
+			}
+		}
+	});
+	
+	//Subscribe with UpdatesSubscription to receive user metadata updates
+	FPubnubOperationResult SubscribeResult = UpdatesSubscription->Subscribe();
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+	
+	IsStreamingUpdates = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatUser::StopStreamingUpdates()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Remove message related delegates
+	UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+	
+	//Skip if it's not streaming updates
+	if (!IsStreamingUpdates)
+	{ return FinalResult; }
+
+	//Unsubscribe and return result
+	FPubnubOperationResult UnsubscribeResult = UpdatesSubscription->Unsubscribe();
+	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	IsStreamingUpdates = false;
+	return FinalResult;
+}
+
+
 void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init User, PubnubClient is invalid"));
@@ -182,12 +261,21 @@ void UPubnubChatUser::InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InCha
 	UserID = InUserID;
 	PubnubClient = InPubnubClient;
 	Chat = InChat;
+
+	UPubnubUserMetadataEntity* UserEntity = PubnubClient->CreateUserMetadataEntity(UserID);
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(UserEntity, TEXT("Can't init User, Failed to create UserMetadataEntity"));
+
+	UpdatesSubscription = UserEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(UpdatesSubscription, TEXT("Can't init User, Failed to create Updates Subscription"));
 	
 	// Register this user object with the repository
 	if (Chat->ObjectsRepository)
 	{
 		Chat->ObjectsRepository->RegisterUser(UserID);
 	}
+	
+	//Add delegate to OnChatDestroyed to this object is cleaned up as well
+	Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatUser::OnChatDestroyed);
 	
 	IsInitialized = true;
 }
@@ -215,3 +303,42 @@ FPubnubChatGetRestrictionsResult UPubnubChatUser::GetRestrictions(const int Limi
 	
 	return FinalResult;
 }
+
+void UPubnubChatUser::OnChatDestroyed(FString InUserID)
+{
+	CleanUp();
+}
+
+void UPubnubChatUser::ClearAllSubscriptions()
+{
+	if (UpdatesSubscription)
+	{
+		UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+		if (IsStreamingUpdates)
+		{
+			UpdatesSubscription->Unsubscribe();
+			IsStreamingUpdates = false;
+		}
+
+		UpdatesSubscription = nullptr;
+	}
+}
+
+void UPubnubChatUser::CleanUp()
+{
+	//Clean up subscription if channel is being destroyed while connected
+	if (IsInitialized)
+	{
+		ClearAllSubscriptions();
+	}
+	
+	//Unregister from repository before destruction
+	if (IsInitialized && Chat && Chat->ObjectsRepository && !UserID.IsEmpty())
+	{
+		Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatUser::OnChatDestroyed);
+		Chat->ObjectsRepository->UnregisterChannel(UserID);
+	}
+	
+	IsInitialized = false;
+}
+

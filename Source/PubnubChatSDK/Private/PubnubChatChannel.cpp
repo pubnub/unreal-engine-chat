@@ -21,21 +21,9 @@
 
 void UPubnubChatChannel::BeginDestroy()
 {
-	//Clean up subscription if channel is being destroyed while connected
-	if (IsInitialized)
-	{
-		ClearAllSubscriptions();
-	}
+	CleanUp();
 	
-	//Unregister from repository before destruction
-	if (IsInitialized && Chat && Chat->ObjectsRepository && !ChannelID.IsEmpty())
-	{
-		Chat->ObjectsRepository->UnregisterChannel(ChannelID);
-	}
-	
-	UObject::BeginDestroy();
-	
-	IsInitialized = false;
+	Super::BeginDestroy();
 }
 
 FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
@@ -643,6 +631,9 @@ void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat*
 		Chat->ObjectsRepository->RegisterChannel(ChannelID);
 	}
 	
+	//Add delegate to OnChatDestroyed to this object is cleaned up as well
+	Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatChannel::OnChatDestroyed);
+	
 	IsInitialized = true;
 }
 
@@ -671,19 +662,52 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 	return FinalResult;
 }
 
+void UPubnubChatChannel::OnChatDestroyed(FString UserID)
+{
+	CleanUp();
+}
+
 void UPubnubChatChannel::ClearAllSubscriptions()
 {
 	if (ConnectSubscription)
 	{
 		ConnectSubscription->OnPubnubMessageNative.Clear();
-		ConnectSubscription->Unsubscribe();
+		if (IsConnected)
+		{
+			ConnectSubscription->Unsubscribe();
+			IsConnected = false;
+		}
+
 		ConnectSubscription = nullptr;
 	}
-
+	
 	if (UpdatesSubscription)
 	{
-		UpdatesSubscription->OnPubnubMessageNative.Clear();
-		UpdatesSubscription->Unsubscribe();
+		UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+		if (IsStreamingUpdates)
+		{
+			UpdatesSubscription->Unsubscribe();
+			IsStreamingUpdates = false;
+		}
+
 		UpdatesSubscription = nullptr;
 	}
+}
+
+void UPubnubChatChannel::CleanUp()
+{
+	//Clean up subscription if channel is being destroyed while connected
+	if (IsInitialized)
+	{
+		ClearAllSubscriptions();
+	}
+	
+	//Unregister from repository before destruction
+	if (IsInitialized && Chat && Chat->ObjectsRepository && !ChannelID.IsEmpty())
+	{
+		Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatChannel::OnChatDestroyed);
+		Chat->ObjectsRepository->UnregisterChannel(ChannelID);
+	}
+	
+	IsInitialized = false;
 }

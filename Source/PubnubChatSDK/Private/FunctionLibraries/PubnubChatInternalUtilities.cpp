@@ -456,7 +456,7 @@ bool UPubnubChatInternalUtilities::IsPubnubMessageUserUpdate(const FString& Mess
 	{ return false; }
 	
 	//Pubnub Core SDK Message is User Update if those 2 fields are exactly matching
-	if (Source == "objects" && Type == "user")
+	if (Source == "objects" && Type == "uuid")
 	{ return true; }
 	
 	return false;

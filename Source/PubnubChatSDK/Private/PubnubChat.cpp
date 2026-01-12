@@ -823,6 +823,7 @@ UPubnubChatUser* UPubnubChat::CreateUserObject(const FString UserID, const FPubn
 	//Update repository with updated user data
 	ObjectsRepository->UpdateUserData(UserID, FPubnubChatUserData::FromPubnubUserData(UserData));
 
+
 	//Create and return the user object
 	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
 	NewUser->InitUser(PubnubClient, this, UserID);
