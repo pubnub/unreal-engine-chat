@@ -104,7 +104,7 @@ FPubnubChatGetUsersResult UPubnubChat::GetUsers(const int Limit, const FString F
 	return FinalResult;
 }
 
-FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatUserData UserData)
+FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData)
 {
 	FPubnubChatUserResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
@@ -115,11 +115,11 @@ FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatU
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetUserResult.Result);
 	
 	//SetUserMetadata by PubnubClient
-	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserInputData());
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UpdateUserData.ToPubnubUserInputData(), FPubnubGetMetadataInclude::FromValue(true));
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
 
 	//Create user object and return final result
-	FinalResult.User = CreateUserObject(UserID, UserData);
+	FinalResult.User = CreateUserObject(UserID, SetUserResult.UserData);
 	return FinalResult;
 }
 
@@ -303,7 +303,7 @@ FPubnubChatGetChannelsResult UPubnubChat::GetChannels(const int Limit, const FSt
 	return FinalResult;
 }
 
-FPubnubChatChannelResult UPubnubChat::UpdateChannel(const FString ChannelID, FPubnubChatChannelData ChannelData)
+FPubnubChatChannelResult UPubnubChat::UpdateChannel(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData)
 {
 	FPubnubChatChannelResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
@@ -313,12 +313,12 @@ FPubnubChatChannelResult UPubnubChat::UpdateChannel(const FString ChannelID, FPu
 	FPubnubChatChannelResult GetChannelResult = GetChannel(ChannelID);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelResult.Result);
 
-	//SetChannelMetadata by PubnubClient
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelInputData());
+	//SetChannelMetadata by PubnubClient - include all fields in response
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, UpdateChannelData.ToPubnubChannelInputData(), FPubnubGetMetadataInclude::FromValue(true));
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
 
 	//Create channel object and return final result
-	FinalResult.Channel = CreateChannelObject(ChannelID, ChannelData);
+	FinalResult.Channel = CreateChannelObject(ChannelID, SetChannelResult.ChannelData);
 	return FinalResult;
 }
 

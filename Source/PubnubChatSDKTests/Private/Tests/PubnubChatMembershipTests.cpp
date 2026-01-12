@@ -9,6 +9,7 @@
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -50,7 +51,7 @@ bool FPubnubChatMembershipUpdateNotInitializedTest::RunTest(const FString& Param
 			UPubnubChatMembership* Membership = NewObject<UPubnubChatMembership>(Chat);
 			if(Membership)
 			{
-				FPubnubChatMembershipData MembershipData;
+				FPubnubChatUpdateMembershipInputData MembershipData;
 				FPubnubChatOperationResult UpdateResult = Membership->Update(MembershipData);
 				
 				TestTrue("Update should fail when Membership is not initialized", UpdateResult.Error);
@@ -108,7 +109,11 @@ bool FPubnubChatMembershipUpdateHappyPathTest::RunTest(const FString& Parameters
 			if(JoinResult.Membership)
 			{
 				// Update with default MembershipData (required parameter)
-				FPubnubChatMembershipData UpdateMembershipData; // Default empty struct
+				// Note: To clear fields, we need to set ForceSet flags even for empty values
+				FPubnubChatUpdateMembershipInputData UpdateMembershipData; // Default empty struct
+				UpdateMembershipData.ForceSetCustom = true; // Force clear Custom field
+				UpdateMembershipData.ForceSetStatus = true; // Force clear Status field
+				UpdateMembershipData.ForceSetType = true; // Force clear Type field
 				FPubnubChatOperationResult UpdateResult = JoinResult.Membership->Update(UpdateMembershipData);
 				
 				TestFalse("Update should succeed", UpdateResult.Error);
@@ -193,10 +198,14 @@ bool FPubnubChatMembershipUpdateFullParametersTest::RunTest(const FString& Param
 			if(JoinResult.Membership)
 			{
 				// Update with all MembershipData parameters set
-				FPubnubChatMembershipData UpdateMembershipData;
+				FPubnubChatUpdateMembershipInputData UpdateMembershipData;
 				UpdateMembershipData.Custom = TEXT("{\"role\":\"admin\",\"level\":5}");
 				UpdateMembershipData.Status = TEXT("active");
 				UpdateMembershipData.Type = TEXT("member");
+				// Set ForceSet flags only for fields we're updating
+				UpdateMembershipData.ForceSetCustom = true;
+				UpdateMembershipData.ForceSetStatus = true;
+				UpdateMembershipData.ForceSetType = true;
 				
 				FPubnubChatOperationResult UpdateResult = JoinResult.Membership->Update(UpdateMembershipData);
 				
@@ -216,7 +225,11 @@ bool FPubnubChatMembershipUpdateFullParametersTest::RunTest(const FString& Param
 				
 				// Verify all membership data was updated correctly in repository
 				FPubnubChatMembershipData RetrievedData = JoinResult.Membership->GetMembershipData();
-				TestEqual("Retrieved Custom should match updated Custom", RetrievedData.Custom, UpdateMembershipData.Custom);
+				
+				// Compare Custom field as JSON objects (JSON key ordering may differ)
+				bool bCustomEqual = UPubnubJsonUtilities::AreJsonObjectStringsEqual(UpdateMembershipData.Custom, RetrievedData.Custom);
+				TestTrue("Retrieved Custom should match updated Custom", bCustomEqual);
+				
 				TestEqual("Retrieved Status should match updated Status", RetrievedData.Status, UpdateMembershipData.Status);
 				TestEqual("Retrieved Type should match updated Type", RetrievedData.Type, UpdateMembershipData.Type);
 			}
@@ -286,19 +299,25 @@ bool FPubnubChatMembershipUpdateMultipleTimesTest::RunTest(const FString& Parame
 			if(JoinResult.Membership)
 			{
 				// First update
-				FPubnubChatMembershipData UpdateData1;
+				FPubnubChatUpdateMembershipInputData UpdateData1;
 				UpdateData1.Custom = TEXT("{\"step\":1}");
 				UpdateData1.Status = TEXT("active");
 				UpdateData1.Type = TEXT("member");
+				UpdateData1.ForceSetCustom = true;
+				UpdateData1.ForceSetStatus = true;
+				UpdateData1.ForceSetType = true;
 				
 				FPubnubChatOperationResult UpdateResult1 = JoinResult.Membership->Update(UpdateData1);
 				TestFalse("First Update should succeed", UpdateResult1.Error);
 				
 				// Second update
-				FPubnubChatMembershipData UpdateData2;
+				FPubnubChatUpdateMembershipInputData UpdateData2;
 				UpdateData2.Custom = TEXT("{\"step\":2}");
 				UpdateData2.Status = TEXT("inactive");
 				UpdateData2.Type = TEXT("moderator");
+				UpdateData2.ForceSetCustom = true;
+				UpdateData2.ForceSetStatus = true;
+				UpdateData2.ForceSetType = true;
 				
 				FPubnubChatOperationResult UpdateResult2 = JoinResult.Membership->Update(UpdateData2);
 				TestFalse("Second Update should succeed", UpdateResult2.Error);

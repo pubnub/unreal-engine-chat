@@ -31,7 +31,7 @@ public:
 	FString GetUserID() const { return UserID; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
-	FPubnubChatOperationResult Update(FPubnubChatUserData UserData);
+	FPubnubChatOperationResult Update(FPubnubChatUpdateUserInputData UpdateUserData);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Delete(bool Soft = false);

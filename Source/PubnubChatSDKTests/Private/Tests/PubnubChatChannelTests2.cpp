@@ -3554,7 +3554,7 @@ bool FPubnubChatChannelUpdateNotInitializedTest::RunTest(const FString& Paramete
 			UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
 			
 			// Try to update with uninitialized channel
-			FPubnubChatOperationResult UpdateResult = UninitializedChannel->Update(ChannelData);
+			FPubnubChatOperationResult UpdateResult = UninitializedChannel->Update(FPubnubChatUpdateChannelInputData());
 			TestTrue("Update should fail with uninitialized channel", UpdateResult.Error);
 		}
 		
@@ -3617,7 +3617,7 @@ bool FPubnubChatChannelUpdateHappyPathTest::RunTest(const FString& Parameters)
 	}
 	
 	// Update channel with minimal data (empty ChannelData)
-	FPubnubChatChannelData UpdateData;
+	FPubnubChatUpdateChannelInputData UpdateData;
 	FPubnubChatOperationResult UpdateResult = CreateResult.Channel->Update(UpdateData);
 	TestFalse("Update should succeed", UpdateResult.Error);
 	
@@ -3683,12 +3683,18 @@ bool FPubnubChatChannelUpdateFullParametersTest::RunTest(const FString& Paramete
 	}
 	
 	// Update channel with all parameters
-	FPubnubChatChannelData UpdateData;
+	FPubnubChatUpdateChannelInputData UpdateData;
 	UpdateData.ChannelName = TEXT("UpdatedChannelName");
 	UpdateData.Description = TEXT("Updated description");
 	UpdateData.Custom = TEXT("{\"updated\":\"custom\"}");
 	UpdateData.Status = TEXT("updatedStatus");
 	UpdateData.Type = TEXT("updatedType");
+	// Set ForceSet flags only for fields we're updating
+	UpdateData.ForceSetChannelName = true;
+	UpdateData.ForceSetDescription = true;
+	UpdateData.ForceSetCustom = true;
+	UpdateData.ForceSetStatus = true;
+	UpdateData.ForceSetType = true;
 	
 	FPubnubChatOperationResult UpdateResult = CreateResult.Channel->Update(UpdateData);
 	TestFalse("Update should succeed with all parameters", UpdateResult.Error);
@@ -3763,9 +3769,11 @@ bool FPubnubChatChannelUpdateMultipleTimesTest::RunTest(const FString& Parameter
 	}
 	
 	// First update
-	FPubnubChatChannelData FirstUpdateData;
+	FPubnubChatUpdateChannelInputData FirstUpdateData;
 	FirstUpdateData.ChannelName = TEXT("FirstUpdate");
 	FirstUpdateData.Description = TEXT("First description");
+	FirstUpdateData.ForceSetChannelName = true;
+	FirstUpdateData.ForceSetDescription = true;
 	FPubnubChatOperationResult FirstUpdateResult = CreateResult.Channel->Update(FirstUpdateData);
 	TestFalse("First Update should succeed", FirstUpdateResult.Error);
 	
@@ -3775,9 +3783,11 @@ bool FPubnubChatChannelUpdateMultipleTimesTest::RunTest(const FString& Parameter
 	TestEqual("Description should match first update", RetrievedAfterFirst.Description, FirstUpdateData.Description);
 	
 	// Second update
-	FPubnubChatChannelData SecondUpdateData;
+	FPubnubChatUpdateChannelInputData SecondUpdateData;
 	SecondUpdateData.ChannelName = TEXT("SecondUpdate");
 	SecondUpdateData.Description = TEXT("Second description");
+	SecondUpdateData.ForceSetChannelName = true;
+	SecondUpdateData.ForceSetDescription = true;
 	FPubnubChatOperationResult SecondUpdateResult = CreateResult.Channel->Update(SecondUpdateData);
 	TestFalse("Second Update should succeed", SecondUpdateResult.Error);
 	

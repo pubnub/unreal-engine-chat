@@ -90,7 +90,7 @@ public:
 	FPubnubChatGetUsersResult GetUsers(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	FPubnubChatUserResult UpdateUser(const FString UserID, FPubnubChatUserData UserData);
+	FPubnubChatUserResult UpdateUser(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult DeleteUser(const FString UserID, bool Soft = false);
@@ -117,7 +117,7 @@ public:
 	FPubnubChatGetChannelsResult GetChannels(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
-	FPubnubChatChannelResult UpdateChannel(const FString ChannelID, FPubnubChatChannelData ChannelData);
+	FPubnubChatChannelResult UpdateChannel(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult DeleteChannel(const FString ChannelID, bool Soft = false);

@@ -3505,7 +3505,7 @@ bool FPubnubChatUpdateChannelNotInitializedTest::RunTest(const FString& Paramete
 		if(Chat)
 		{
 			const FString TestChannelID = SDK_PREFIX + "test_update_channel_not_init";
-			FPubnubChatChannelData ChannelData;
+			FPubnubChatUpdateChannelInputData ChannelData;
 			FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
 			
 			TestTrue("UpdateChannel should fail when Chat is not initialized", UpdateResult.Result.Error);
@@ -3542,7 +3542,7 @@ bool FPubnubChatUpdateChannelEmptyChannelIDTest::RunTest(const FString& Paramete
 	if(Chat)
 	{
 		// Try to update channel with empty ChannelID
-		FPubnubChatChannelData ChannelData;
+		FPubnubChatUpdateChannelInputData ChannelData;
 		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TEXT(""), ChannelData);
 		
 		TestTrue("UpdateChannel should fail with empty ChannelID", UpdateResult.Result.Error);
@@ -3579,7 +3579,7 @@ bool FPubnubChatUpdateChannelNonExistingChannelTest::RunTest(const FString& Para
 	if(Chat)
 	{
 		// Try to update channel that doesn't exist (without creating it first)
-		FPubnubChatChannelData ChannelData;
+		FPubnubChatUpdateChannelInputData ChannelData;
 		ChannelData.ChannelName = TEXT("NonExistingChannel");
 		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(NonExistingChannelID, ChannelData);
 		
@@ -3625,8 +3625,9 @@ bool FPubnubChatUpdateChannelHappyPathTest::RunTest(const FString& Parameters)
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Update channel with minimal data
-		FPubnubChatChannelData ChannelData;
+		FPubnubChatUpdateChannelInputData ChannelData;
 		ChannelData.ChannelName = TEXT("UpdatedChannel");
+		ChannelData.ForceSetChannelName = true;
 		
 		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
 		
@@ -3683,12 +3684,18 @@ bool FPubnubChatUpdateChannelFullParametersTest::RunTest(const FString& Paramete
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Update channel with all parameters
-		FPubnubChatChannelData ChannelData;
+		FPubnubChatUpdateChannelInputData ChannelData;
 		ChannelData.ChannelName = TEXT("UpdatedFullChannel");
 		ChannelData.Description = TEXT("Updated channel description");
 		ChannelData.Custom = TEXT("{\"updated\":\"data\"}");
 		ChannelData.Status = TEXT("updatedStatus");
 		ChannelData.Type = TEXT("updatedType");
+		// Set ForceSet flags only for fields we're updating
+		ChannelData.ForceSetChannelName = true;
+		ChannelData.ForceSetDescription = true;
+		ChannelData.ForceSetCustom = true;
+		ChannelData.ForceSetStatus = true;
+		ChannelData.ForceSetType = true;
 		
 		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
 		
@@ -3750,23 +3757,29 @@ bool FPubnubChatUpdateChannelMultipleTimesTest::RunTest(const FString& Parameter
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Update channel first time
-		FPubnubChatChannelData ChannelData1;
+		FPubnubChatUpdateChannelInputData ChannelData1;
 		ChannelData1.ChannelName = TEXT("FirstUpdate");
 		ChannelData1.Description = TEXT("First description");
+		ChannelData1.ForceSetChannelName = true;
+		ChannelData1.ForceSetDescription = true;
 		FPubnubChatChannelResult UpdateResult1 = Chat->UpdateChannel(TestChannelID, ChannelData1);
 		TestFalse("First UpdateChannel should succeed", UpdateResult1.Result.Error);
 		
 		// Update channel second time
-		FPubnubChatChannelData ChannelData2;
+		FPubnubChatUpdateChannelInputData ChannelData2;
 		ChannelData2.ChannelName = TEXT("SecondUpdate");
 		ChannelData2.Description = TEXT("Second description");
+		ChannelData2.ForceSetChannelName = true;
+		ChannelData2.ForceSetDescription = true;
 		FPubnubChatChannelResult UpdateResult2 = Chat->UpdateChannel(TestChannelID, ChannelData2);
 		TestFalse("Second UpdateChannel should succeed", UpdateResult2.Result.Error);
 		
 		// Update channel third time
-		FPubnubChatChannelData ChannelData3;
+		FPubnubChatUpdateChannelInputData ChannelData3;
 		ChannelData3.ChannelName = TEXT("ThirdUpdate");
 		ChannelData3.Description = TEXT("Third description");
+		ChannelData3.ForceSetChannelName = true;
+		ChannelData3.ForceSetDescription = true;
 		FPubnubChatChannelResult UpdateResult3 = Chat->UpdateChannel(TestChannelID, ChannelData3);
 		TestFalse("Third UpdateChannel should succeed", UpdateResult3.Result.Error);
 		
@@ -3825,9 +3838,11 @@ bool FPubnubChatUpdateChannelDataSynchronizationTest::RunTest(const FString& Par
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Update channel
-		FPubnubChatChannelData ChannelData;
+		FPubnubChatUpdateChannelInputData ChannelData;
 		ChannelData.ChannelName = TEXT("SyncedChannel");
 		ChannelData.Description = TEXT("Synced description");
+		ChannelData.ForceSetChannelName = true;
+		ChannelData.ForceSetDescription = true;
 		FPubnubChatChannelResult UpdateResult = Chat->UpdateChannel(TestChannelID, ChannelData);
 		TestFalse("UpdateChannel should succeed", UpdateResult.Result.Error);
 		

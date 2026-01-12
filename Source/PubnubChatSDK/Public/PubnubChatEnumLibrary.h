@@ -66,3 +66,10 @@ enum class EPubnubChatAccessManagerResourceType : uint8
 	PCAMRT_Users			UMETA(DisplayName="Uuids"),
 	PCAMRT_Channels			UMETA(DisplayName="Channels"),
 };
+
+UENUM(BlueprintType)
+enum class EPubnubChatStreamedUpdateType : uint8
+{
+	PCSUT_Updated			UMETA(DisplayName="Updated"),
+	PCSUT_Deleted			UMETA(DisplayName="Deleted"),
+};

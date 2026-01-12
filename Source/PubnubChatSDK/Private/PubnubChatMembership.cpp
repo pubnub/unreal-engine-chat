@@ -78,17 +78,26 @@ FPubnubChatOperationResult UPubnubChatMembership::Delete()
 	return FinalResult;
 }
 
-FPubnubChatOperationResult UPubnubChatMembership::Update(const FPubnubChatMembershipData& MembershipData)
+FPubnubChatOperationResult UPubnubChatMembership::Update(const FPubnubChatUpdateMembershipInputData& UpdateMembershipData)
 {
 	FPubnubChatOperationResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 
 	//SetMemberships by PubnubClient
-	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(GetUserID(), {MembershipData.ToPubnubMembershipInputData(GetChannelID())}, FPubnubMembershipInclude::FromValue(false), 1);
+	FString Filter = UPubnubChatInternalUtilities::GetFilterForChannelID(GetChannelID());
+	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(GetUserID(), {UpdateMembershipData.ToPubnubMembershipInputData(GetChannelID())}, FPubnubMembershipInclude::FromValue(true), 1, Filter);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
+	
+	//This should never happen in case of successful SetMemberships, but check just in case
+	if (SetMembershipResult.MembershipsData.IsEmpty())
+	{
+		FinalResult.Error = true;
+		FinalResult.ErrorMessage  = FString::Printf(TEXT("[%s]: SetMemberships succeeded, but returned no Membership. There is mismatch between local and server data."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
+		return FinalResult;
+	}
 
 	//Update repository with updated user data
-	Chat->ObjectsRepository->UpdateMembershipData(GetInternalMembershipID(), MembershipData);
+	Chat->ObjectsRepository->UpdateMembershipData(GetInternalMembershipID(), FPubnubChatMembershipData::FromPubnubMembershipData(SetMembershipResult.MembershipsData[0]));
 	
 	return FinalResult;
 }
@@ -104,7 +113,7 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(co
 	UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(MembershipData, Timetoken);
 
 	//Update Membership with new data
-	FPubnubChatOperationResult UpdateResult = Update(MembershipData);
+	FPubnubChatOperationResult UpdateResult = Update(FPubnubChatUpdateMembershipInputData::FromChatMembershipData(MembershipData));
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 
 	//If this is not public channel Emit Receipt Event

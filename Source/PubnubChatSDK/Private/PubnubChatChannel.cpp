@@ -22,12 +22,9 @@
 void UPubnubChatChannel::BeginDestroy()
 {
 	//Clean up subscription if channel is being destroyed while connected
-	if (IsInitialized && ConnectSubscription)
+	if (IsInitialized)
 	{
-		//Clear all listeners and unsubscribe
-		ConnectSubscription->OnPubnubMessageNative.Clear();
-		ConnectSubscription->Unsubscribe();
-		ConnectSubscription = nullptr;
+		ClearAllSubscriptions();
 	}
 	
 	//Unregister from repository before destruction
@@ -55,17 +52,17 @@ FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
 	return FPubnubChatChannelData();
 }
 
-FPubnubChatOperationResult UPubnubChatChannel::Update(FPubnubChatChannelData ChannelData)
+FPubnubChatOperationResult UPubnubChatChannel::Update(FPubnubChatUpdateChannelInputData UpdateChannelData)
 {
 	FPubnubChatOperationResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	
-	//SetChannelMetadata by PubnubClient
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, ChannelData.ToPubnubChannelInputData());
+	//SetChannelMetadata by PubnubClient - include all fields in response
+	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, UpdateChannelData.ToPubnubChannelInputData(), FPubnubGetMetadataInclude::FromValue(true));
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
 	
 	//Update repository with updated channel data
-	Chat->ObjectsRepository->UpdateChannelData(ChannelID, ChannelData);
+	Chat->ObjectsRepository->UpdateChannelData(ChannelID, FPubnubChatChannelData::FromPubnubChannelData(SetChannelResult.ChannelData));
 
 	return FinalResult;
 }
@@ -75,10 +72,14 @@ FPubnubChatOperationResult UPubnubChatChannel::Connect()
 	FPubnubChatOperationResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	
+	//Skip if it's already connected
+	if (IsConnected)
+	{ return FinalResult; }
+	
 	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
 	
 	//Add lister to subscription with provided callback
-	FDelegateHandle DelegateHandle =  ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
+	ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
 	{
 		if(!ThisWeak.IsValid())
 		{return;}
@@ -107,7 +108,7 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FPubnubChatMembershipData Members
 	//SetMemberships by PubnubClient
 	FPubnubMembershipInputData MembershipInputData = MembershipData.ToPubnubMembershipInputData(ChannelID);
 	//This forces to reset status if not provided by User. Otherwise, Status could stay as "pending" for previously invited user.
-	MembershipInputData.ForceAddStatus = true;
+	MembershipInputData.ForceSetStatus = true;
 	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(Chat->CurrentUserID, {MembershipInputData}, FPubnubMembershipInclude::FromValue(false), 1);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipResult.Result, "SetMemberships");
 
@@ -131,14 +132,19 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FPubnubChatMembershipData Members
 FPubnubChatOperationResult UPubnubChatChannel::Disconnect()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
 
 	//Remove message related delegates
 	ConnectSubscription->OnPubnubMessageNative.Clear();
+	
+	//Skip if it's not connected
+	if (!IsConnected)
+	{ return FinalResult; }
 
 	//Unsubscribe and return result
-	FPubnubChatOperationResult FinalResult;
 	FPubnubOperationResult UnsubscribeResult = ConnectSubscription->Unsubscribe();
 	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	IsConnected = false;
 	return FinalResult;
 }
 
@@ -279,7 +285,7 @@ FPubnubChatOperationResult UPubnubChatChannel::PinMessage(UPubnubChatMessage* Me
 	UPubnubChatInternalUtilities::AddPinnedMessageToChannelData(ChannelData, Message);
 	
 	//Update Channel data
-	FPubnubChatOperationResult UpdateResult = Update(ChannelData);
+	FPubnubChatOperationResult UpdateResult = Update(FPubnubChatUpdateChannelInputData::FromChatChannelData(ChannelData));
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 	
 	return FinalResult;
@@ -295,7 +301,9 @@ FPubnubChatOperationResult UPubnubChatChannel::UnpinMessage()
 	if (UPubnubChatInternalUtilities::RemovePinnedMessageFromChannelData(ChannelData))
 	{
 		//Update Channel data - only if there was pinned message removed
-		FPubnubChatOperationResult UpdateResult = Update(ChannelData);
+		FPubnubChatUpdateChannelInputData UpdateChannelInputData = FPubnubChatUpdateChannelInputData::FromChatChannelData(ChannelData);
+		UpdateChannelInputData.ForceSetCustom = true; //After removing pinned message Custom field might be empty, so we force to set it
+		FPubnubChatOperationResult UpdateResult = Update(UpdateChannelInputData);
 		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 	}
 	
@@ -530,6 +538,86 @@ FPubnubChatOperationResult UPubnubChatChannel::EmitUserMention(const FString Use
 	return Chat->EmitChatEvent(EPubnubChatEventType::PCET_Mention, UserID, EventPayload);
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::StreamUpdates()
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	//Skip if it's already streaming
+	if (IsStreamingUpdates)
+	{ return FinalResult; }
+	
+	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
+	
+	//Add lister to subscription with provided callback
+	UpdatesSubscription->OnPubnubObjectEventNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+
+		if(!ThisChannel->Chat)
+		{return;}
+		
+		//If this is not ChannelUpdate, just ignore this message
+		if (UPubnubChatInternalUtilities::IsPubnubMessageChannelUpdate(MessageData.Message))
+		{
+			//Check if channel was deleted or updated
+			if (UPubnubChatInternalUtilities::IsPubnubMessageDeleteEvent(MessageData.Message))
+			{
+				//Remove this channel from repository
+				ThisChannel->Chat->ObjectsRepository->RemoveChannelData(ThisChannel->ChannelID);
+				
+				//Call delegates with Deleted type
+				ThisChannel->OnChannelUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisChannel->ChannelID, FPubnubChatChannelData());
+				ThisChannel->OnChannelUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisChannel->ChannelID, FPubnubChatChannelData());
+			}
+			else
+			{
+				//Adjust this channel data based on the update message
+				FPubnubChatChannelData ChatChannelData = ThisChannel->GetChannelData();
+				FPubnubChannelUpdateData ChannelUpdateData = UPubnubJsonUtilities::GetChannelUpdateDataFromMessageContent(MessageData.Message);
+				UPubnubChatInternalUtilities::UpdateChatChannelFromPubnubChannelUpdateData(ChannelUpdateData, ChatChannelData);
+							
+				//Update repository with new channel data
+				ThisChannel->Chat->ObjectsRepository->UpdateChannelData(ThisChannel->ChannelID, ChatChannelData);
+							
+				//Call delegates with new channel data
+				ThisChannel->OnChannelUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisChannel->ChannelID, ChatChannelData);
+				ThisChannel->OnChannelUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisChannel->ChannelID, ChatChannelData);
+			}
+		}
+	});
+	
+	//Subscribe with UpdatesSubscription (not ConnectSubscription) to receive channel metadata updates
+	FPubnubOperationResult SubscribeResult = UpdatesSubscription->Subscribe();
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+	
+	IsStreamingUpdates = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopStreamingUpdates()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Remove message related delegates
+	UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+	
+	//Skip if it's not streaming updates
+	if (!IsStreamingUpdates)
+	{ return FinalResult; }
+
+	//Unsubscribe and return result
+	FPubnubOperationResult UnsubscribeResult = UpdatesSubscription->Unsubscribe();
+	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	IsStreamingUpdates = false;
+	return FinalResult;
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));
@@ -544,7 +632,10 @@ void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat*
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(ChannelEntity, TEXT("Can't init Channel, Failed to create ChannelEntity"));
 
 	ConnectSubscription = ChannelEntity->CreateSubscription();
-	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(ConnectSubscription, TEXT("Can't init Channel, Failed to create Subscription"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(ConnectSubscription, TEXT("Can't init Channel, Failed to create Connect Subscription"));
+	
+	UpdatesSubscription = ChannelEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(UpdatesSubscription, TEXT("Can't init Channel, Failed to create Updates Subscription"));
 	
 	// Register this channel object with the repository
 	if (Chat->ObjectsRepository)
@@ -578,4 +669,21 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 	FinalResult.Total = GetMembersResult.TotalCount;
 	
 	return FinalResult;
+}
+
+void UPubnubChatChannel::ClearAllSubscriptions()
+{
+	if (ConnectSubscription)
+	{
+		ConnectSubscription->OnPubnubMessageNative.Clear();
+		ConnectSubscription->Unsubscribe();
+		ConnectSubscription = nullptr;
+	}
+
+	if (UpdatesSubscription)
+	{
+		UpdatesSubscription->OnPubnubMessageNative.Clear();
+		UpdatesSubscription->Unsubscribe();
+		UpdatesSubscription = nullptr;
+	}
 }

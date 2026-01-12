@@ -11,6 +11,7 @@ FPubnubChannelInputData FPubnubChatChannelData::ToPubnubChannelInputData() const
 	ChannelData.Custom = Custom;
 	ChannelData.Status = Status;
 	ChannelData.Type = Type;
+	ChannelData.ForceSetAllFields();
 	return ChannelData;
 }
 
@@ -24,4 +25,32 @@ FPubnubChatChannelData FPubnubChatChannelData::FromPubnubChannelData(const FPubn
 	ChatChannelData.Type = PubnubChannelData.Type;
 
 	return ChatChannelData;
+}
+
+FPubnubChannelInputData FPubnubChatUpdateChannelInputData::ToPubnubChannelInputData() const
+{
+	FPubnubChannelInputData ChannelData;
+	ChannelData.ChannelName = ChannelName;
+	ChannelData.Description = Description;
+	ChannelData.Custom = Custom;
+	ChannelData.Status = Status;
+	ChannelData.Type = Type;
+	ChannelData.ForceSetChannelName = ForceSetChannelName;
+	ChannelData.ForceSetDescription = ForceSetDescription;
+	ChannelData.ForceSetCustom = ForceSetCustom;
+	ChannelData.ForceSetStatus = ForceSetStatus;
+	ChannelData.ForceSetType = ForceSetType;
+	return ChannelData;
+}
+
+FPubnubChatUpdateChannelInputData FPubnubChatUpdateChannelInputData::FromChatChannelData(const FPubnubChatChannelData& PubnubChannelData)
+{
+	FPubnubChatUpdateChannelInputData UpdateChannelInputData;
+	UpdateChannelInputData.ChannelName = PubnubChannelData.ChannelName;
+	UpdateChannelInputData.Description = PubnubChannelData.Description;
+	UpdateChannelInputData.Custom = PubnubChannelData.Custom;
+	UpdateChannelInputData.Status = PubnubChannelData.Status;
+	UpdateChannelInputData.Type = PubnubChannelData.Type;
+	
+	return UpdateChannelInputData;
 }

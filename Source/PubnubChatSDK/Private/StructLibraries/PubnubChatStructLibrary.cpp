@@ -93,6 +93,7 @@ FPubnubMembershipInputData FPubnubChatMembershipData::ToPubnubMembershipInputDat
 	MembershipInputData.Custom = Custom;
 	MembershipInputData.Status = Status;
 	MembershipInputData.Type = Type;
+	MembershipInputData.ForceSetAllFields();
 
 	return MembershipInputData;
 }
@@ -104,6 +105,7 @@ FPubnubChannelMemberInputData FPubnubChatMembershipData::ToPubnubChannelMemberIn
 	ChannelMemberInputData.Custom = Custom;
 	ChannelMemberInputData.Status = Status;
 	ChannelMemberInputData.Type = Type;
+	ChannelMemberInputData.ForceSetAllFields();
 
 	return ChannelMemberInputData;
 }
@@ -128,4 +130,40 @@ FPubnubChatMembershipData FPubnubChatMembershipData::FromPubnubChannelMemberData
 	ChatMembershipData.Status = PubnubChannelMemberData.Status;
 
 	return ChatMembershipData;
+}
+
+FPubnubMembershipInputData FPubnubChatUpdateMembershipInputData::ToPubnubMembershipInputData(const FString ChannelID) const
+{
+	FPubnubMembershipInputData MembershipInputData;
+	MembershipInputData.Channel = ChannelID;
+	MembershipInputData.Custom = Custom;
+	MembershipInputData.Status = Status;
+	MembershipInputData.Type = Type;
+	MembershipInputData.ForceSetCustom = ForceSetCustom;
+	MembershipInputData.ForceSetStatus = ForceSetStatus;
+	MembershipInputData.ForceSetType = ForceSetType;
+
+	return MembershipInputData;
+}
+
+FPubnubChannelMemberInputData FPubnubChatUpdateMembershipInputData::ToPubnubChannelMemberInputData(const FString UserID) const
+{
+	FPubnubChannelMemberInputData ChannelMemberInputData;
+	ChannelMemberInputData.User = UserID;
+	ChannelMemberInputData.Custom = Custom;
+	ChannelMemberInputData.Status = Status;
+	ChannelMemberInputData.Type = Type;
+	ChannelMemberInputData.ForceSetAllFields();
+
+	return ChannelMemberInputData;
+}
+
+FPubnubChatUpdateMembershipInputData FPubnubChatUpdateMembershipInputData::FromChatMembershipData(const FPubnubChatMembershipData& PubnubMembershipData)
+{
+	FPubnubChatUpdateMembershipInputData UpdateMembershipInputData;
+	UpdateMembershipInputData.Custom = PubnubMembershipData.Custom;
+	UpdateMembershipInputData.Status = PubnubMembershipData.Status;
+	UpdateMembershipInputData.Type = PubnubMembershipData.Type;
+	
+	return UpdateMembershipInputData;
 }

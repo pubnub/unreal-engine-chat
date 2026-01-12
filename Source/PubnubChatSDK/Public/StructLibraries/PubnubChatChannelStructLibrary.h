@@ -32,6 +32,55 @@ struct FPubnubChatChannelData
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatUpdateChannelInputData
+{
+	GENERATED_BODY()
+	
+	//Display name for the user.
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString ChannelName = "";
+	//User's identifier in an external system.
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString Description = "";
+	//JSON object providing custom user data. Only a single level of key-value pairs is allowed. Nested JSON objects or arrays are not supported.
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString Custom = "";
+	//User status. Max. 50 characters.
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString Status = "";
+	//User type. Max. 50 characters.
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Pubnub") FString Type = "";
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetChannelName = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetDescription = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetCustom = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetStatus = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetType = false;
+	
+	/**
+	 * Sets all ForceSet flags to true. Useful for full replacement of Channel Data.
+	 */
+	void ForceSetAllFields()
+	{
+		ForceSetChannelName = true;
+		ForceSetDescription = true;
+		ForceSetCustom = true;
+		ForceSetStatus = true;
+		ForceSetType = true;
+	}
+
+	FPubnubChannelInputData ToPubnubChannelInputData() const;
+	
+	static FPubnubChatUpdateChannelInputData FromChatChannelData(const FPubnubChatChannelData &PubnubChannelData);
+};
+
+
+USTRUCT(BlueprintType)
 struct FPubnubChatChannelResult
 {
 	GENERATED_BODY()

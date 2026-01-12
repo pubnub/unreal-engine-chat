@@ -38,17 +38,17 @@ FPubnubChatUserData UPubnubChatUser::GetUserData() const
 	return FPubnubChatUserData();
 }
 
-FPubnubChatOperationResult UPubnubChatUser::Update(FPubnubChatUserData UserData)
+FPubnubChatOperationResult UPubnubChatUser::Update(FPubnubChatUpdateUserInputData UpdateUserData)
 {
 	FPubnubChatOperationResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	
 	//SetChannelMetadata by PubnubClient
-	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UserData.ToPubnubUserInputData());
+	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, UpdateUserData.ToPubnubUserInputData(), FPubnubGetMetadataInclude::FromValue(true));
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
 	
 	//Update repository with updated channel data
-	Chat->ObjectsRepository->UpdateUserData(UserID, UserData);
+	Chat->ObjectsRepository->UpdateUserData(UserID, FPubnubChatUserData::FromPubnubUserData(SetUserResult.UserData));
 	
 	return FinalResult;
 }

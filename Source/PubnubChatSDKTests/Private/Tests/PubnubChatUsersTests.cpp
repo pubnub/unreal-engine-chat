@@ -807,7 +807,7 @@ bool FPubnubChatUpdateUserNotInitializedTest::RunTest(const FString& Parameters)
 		if(Chat)
 		{
 			const FString TestUserID = SDK_PREFIX + "test_update_user_not_init";
-			FPubnubChatUserData UserData;
+			FPubnubChatUpdateUserInputData UserData;
 			FPubnubChatUserResult UpdateResult = Chat->UpdateUser(TestUserID, UserData);
 			
 			TestTrue("UpdateUser should fail when Chat is not initialized", UpdateResult.Result.Error);
@@ -844,7 +844,7 @@ bool FPubnubChatUpdateUserEmptyUserIDTest::RunTest(const FString& Parameters)
 	if(Chat)
 	{
 		// Try to update user with empty UserID
-		FPubnubChatUserData UserData;
+		FPubnubChatUpdateUserInputData UserData;
 		FPubnubChatUserResult UpdateResult = Chat->UpdateUser(TEXT(""), UserData);
 		
 		TestTrue("UpdateUser should fail with empty UserID", UpdateResult.Result.Error);
@@ -881,8 +881,9 @@ bool FPubnubChatUpdateUserNonExistingUserTest::RunTest(const FString& Parameters
 	if(Chat)
 	{
 		// Try to update user that doesn't exist (without creating it first)
-		FPubnubChatUserData UserData;
+		FPubnubChatUpdateUserInputData UserData;
 		UserData.UserName = TEXT("NonExistingUser");
+		UserData.ForceSetUserName = true;
 		FPubnubChatUserResult UpdateResult = Chat->UpdateUser(NonExistingUserID, UserData);
 		
 		TestTrue("UpdateUser should fail with non-existing user", UpdateResult.Result.Error);
@@ -927,8 +928,9 @@ bool FPubnubChatUpdateUserHappyPathTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Update user with minimal data
-		FPubnubChatUserData UserData;
+		FPubnubChatUpdateUserInputData UserData;
 		UserData.UserName = TEXT("UpdatedUser");
+		UserData.ForceSetUserName = true;
 		
 		FPubnubChatUserResult UpdateResult = Chat->UpdateUser(TargetUserID, UserData);
 		
@@ -985,7 +987,7 @@ bool FPubnubChatUpdateUserFullParametersTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Update user with all parameters
-		FPubnubChatUserData UserData;
+		FPubnubChatUpdateUserInputData UserData;
 		UserData.UserName = TEXT("UpdatedFullUser");
 		UserData.ExternalID = TEXT("updated_external_456");
 		UserData.ProfileUrl = TEXT("https://example.com/updated_profile.jpg");
@@ -993,6 +995,14 @@ bool FPubnubChatUpdateUserFullParametersTest::RunTest(const FString& Parameters)
 		UserData.Custom = TEXT("{\"updated\":\"data\"}");
 		UserData.Status = TEXT("updatedStatus");
 		UserData.Type = TEXT("updatedType");
+		// Set ForceSet flags only for fields we're updating
+		UserData.ForceSetUserName = true;
+		UserData.ForceSetExternalID = true;
+		UserData.ForceSetProfileUrl = true;
+		UserData.ForceSetEmail = true;
+		UserData.ForceSetCustom = true;
+		UserData.ForceSetStatus = true;
+		UserData.ForceSetType = true;
 		
 		FPubnubChatUserResult UpdateResult = Chat->UpdateUser(TargetUserID, UserData);
 		
@@ -1056,23 +1066,29 @@ bool FPubnubChatUpdateUserMultipleTimesTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Update user first time
-		FPubnubChatUserData UserData1;
+		FPubnubChatUpdateUserInputData UserData1;
 		UserData1.UserName = TEXT("FirstUpdate");
 		UserData1.Email = TEXT("first@example.com");
+		UserData1.ForceSetUserName = true;
+		UserData1.ForceSetEmail = true;
 		FPubnubChatUserResult UpdateResult1 = Chat->UpdateUser(TargetUserID, UserData1);
 		TestFalse("First UpdateUser should succeed", UpdateResult1.Result.Error);
 		
 		// Update user second time
-		FPubnubChatUserData UserData2;
+		FPubnubChatUpdateUserInputData UserData2;
 		UserData2.UserName = TEXT("SecondUpdate");
 		UserData2.Email = TEXT("second@example.com");
+		UserData2.ForceSetUserName = true;
+		UserData2.ForceSetEmail = true;
 		FPubnubChatUserResult UpdateResult2 = Chat->UpdateUser(TargetUserID, UserData2);
 		TestFalse("Second UpdateUser should succeed", UpdateResult2.Result.Error);
 		
 		// Update user third time
-		FPubnubChatUserData UserData3;
+		FPubnubChatUpdateUserInputData UserData3;
 		UserData3.UserName = TEXT("ThirdUpdate");
 		UserData3.Email = TEXT("third@example.com");
+		UserData3.ForceSetUserName = true;
+		UserData3.ForceSetEmail = true;
 		FPubnubChatUserResult UpdateResult3 = Chat->UpdateUser(TargetUserID, UserData3);
 		TestFalse("Third UpdateUser should succeed", UpdateResult3.Result.Error);
 		
@@ -1131,9 +1147,11 @@ bool FPubnubChatUpdateUserDataSynchronizationTest::RunTest(const FString& Parame
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Update user
-		FPubnubChatUserData UserData;
+		FPubnubChatUpdateUserInputData UserData;
 		UserData.UserName = TEXT("SyncedUser");
 		UserData.Email = TEXT("synced@example.com");
+		UserData.ForceSetUserName = true;
+		UserData.ForceSetEmail = true;
 		FPubnubChatUserResult UpdateResult = Chat->UpdateUser(TargetUserID, UserData);
 		TestFalse("UpdateUser should succeed", UpdateResult.Result.Error);
 		

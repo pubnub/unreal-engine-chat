@@ -9,6 +9,7 @@
 #include "PubnubStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
+#include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "PubnubChatInternalUtilities.generated.h"
 
 class FJsonObject;
@@ -89,6 +90,16 @@ public:
 	static FPubnubChatMessageAction GetMessageReactionForUserID(const TArray<FPubnubChatMessageAction>& MessageReactions, const FString& Reaction, const FString& UserID);
 	static bool RemoveReactionFromReactionsArray(TArray<FPubnubChatMessageAction>& MessageReactions, const FPubnubChatMessageAction& Reaction);
 	
+	
+	/* STREAM UPDATES */
+	
+	static bool IsPubnubMessageChannelUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageUserUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageMembershipUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageDeleteEvent(const FString& MessageContent);
+	static void UpdateChatChannelFromPubnubChannelUpdateData(const FPubnubChannelUpdateData& PubnubChannelUpdateData, FPubnubChatChannelData& ChannelData);
+	static void UpdateChatUserFromPubnubUserUpdateData(const FPubnubUserUpdateData& PubnubUserUpdateData, FPubnubChatUserData& UserData);
+	static void UpdateChatMembershipFromPubnubMembershipUpdateData(const FPubnubMembershipUpdateData& PubnubMembershipUpdateData, FPubnubChatMembershipData& MembershipData);
 	
 	/* ACCESS MANAGER */
 

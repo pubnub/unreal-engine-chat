@@ -8,6 +8,7 @@
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "Algo/Sort.h"
 
 
@@ -422,6 +423,119 @@ bool UPubnubChatInternalUtilities::RemoveReactionFromReactionsArray(TArray<FPubn
 	return false;
 	
 }
+
+bool UPubnubChatInternalUtilities::IsPubnubMessageChannelUpdate(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject);
+	
+	FString Source;
+	FString Type;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("source"), Source))
+	{ return false; }
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type))
+	{ return false; }
+	
+	//Pubnub Core SDK Message is Channel Update if those 2 fields are exactly matching
+	if (Source == "objects" && Type == "channel")
+	{ return true; }
+	
+	return false;
+}
+
+bool UPubnubChatInternalUtilities::IsPubnubMessageUserUpdate(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject);
+	
+	FString Source;
+	FString Type;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("source"), Source))
+	{ return false; }
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type))
+	{ return false; }
+	
+	//Pubnub Core SDK Message is User Update if those 2 fields are exactly matching
+	if (Source == "objects" && Type == "user")
+	{ return true; }
+	
+	return false;
+}
+
+bool UPubnubChatInternalUtilities::IsPubnubMessageMembershipUpdate(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject);
+	
+	FString Source;
+	FString Type;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("source"), Source))
+	{ return false; }
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type))
+	{ return false; }
+	
+	//Pubnub Core SDK Message is Membership Update if those 2 fields are exactly matching
+	if (Source == "objects" && Type == "membership")
+	{ return true; }
+	
+	return false;
+}
+
+bool UPubnubChatInternalUtilities::IsPubnubMessageDeleteEvent(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject);
+	
+	FString EventType;
+	if (JsonObject->TryGetStringField(ANSI_TO_TCHAR("event"), EventType))
+	{
+		return EventType == "delete";
+	}
+	return false;
+}
+
+void UPubnubChatInternalUtilities::UpdateChatChannelFromPubnubChannelUpdateData(const FPubnubChannelUpdateData& PubnubChannelUpdateData, FPubnubChatChannelData& ChannelData)
+{
+	if (PubnubChannelUpdateData.ChannelNameUpdated)
+	{ ChannelData.ChannelName = PubnubChannelUpdateData.ChannelName; }
+	if (PubnubChannelUpdateData.DescriptionUpdated)
+	{ ChannelData.Description = PubnubChannelUpdateData.Description; }
+	if (PubnubChannelUpdateData.CustomUpdated)
+	{ ChannelData.Custom = PubnubChannelUpdateData.Custom; }
+	if (PubnubChannelUpdateData.StatusUpdated)
+	{ ChannelData.Status = PubnubChannelUpdateData.Status; }
+	if (PubnubChannelUpdateData.TypeUpdated)
+	{ ChannelData.Type = PubnubChannelUpdateData.Type; }
+}
+
+void UPubnubChatInternalUtilities::UpdateChatUserFromPubnubUserUpdateData(const FPubnubUserUpdateData& PubnubUserUpdateData, FPubnubChatUserData& UserData)
+{
+	if (PubnubUserUpdateData.UserNameUpdated)
+	{ UserData.UserName = PubnubUserUpdateData.UserName; }
+	if (PubnubUserUpdateData.ExternalIDUpdated)
+	{ UserData.ExternalID = PubnubUserUpdateData.ExternalID; }
+	if (PubnubUserUpdateData.ProfileUrlUpdated)
+	{ UserData.ProfileUrl = PubnubUserUpdateData.ProfileUrl; }
+	if (PubnubUserUpdateData.EmailUpdated)
+	{ UserData.Email = PubnubUserUpdateData.Email; }
+	if (PubnubUserUpdateData.CustomUpdated)
+	{ UserData.Custom = PubnubUserUpdateData.Custom; }
+	if (PubnubUserUpdateData.StatusUpdated)
+	{ UserData.Status = PubnubUserUpdateData.Status; }
+	if (PubnubUserUpdateData.TypeUpdated)
+	{ UserData.Type = PubnubUserUpdateData.Type; }
+}
+
+void UPubnubChatInternalUtilities::UpdateChatMembershipFromPubnubMembershipUpdateData(const FPubnubMembershipUpdateData& PubnubMembershipUpdateData, FPubnubChatMembershipData& MembershipData)
+{
+	if (PubnubMembershipUpdateData.CustomUpdated)
+	{ MembershipData.Custom = PubnubMembershipUpdateData.Custom; }
+	if (PubnubMembershipUpdateData.StatusUpdated)
+	{ MembershipData.Status = PubnubMembershipUpdateData.Status; }
+	if (PubnubMembershipUpdateData.TypeUpdated)
+	{ MembershipData.Type = PubnubMembershipUpdateData.Type; }
+}
+
 
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
 {

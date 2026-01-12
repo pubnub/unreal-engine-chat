@@ -48,7 +48,7 @@ public:
 	FPubnubChatOperationResult Delete();
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
-	FPubnubChatOperationResult Update(const FPubnubChatMembershipData& MembershipData);
+	FPubnubChatOperationResult Update(const FPubnubChatUpdateMembershipInputData& UpdateMembershipData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult SetLastReadMessageTimetoken(const FString Timetoken);

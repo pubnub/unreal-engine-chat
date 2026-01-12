@@ -17,6 +17,8 @@ class UPubnubChatMessage;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatChannelUpdateReceived, EPubnubChatStreamedUpdateType, UpdateType, FString, ChannelID, FPubnubChatChannelData, ChannelData);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatChannelUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData);
 
 /**
  * 
@@ -36,8 +38,11 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatChannelMessageReceived OnMessageReceived;
-	
 	FOnPubnubChatChannelMessageReceivedNative OnMessageReceivedNative;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatChannelUpdateReceived OnChannelUpdateReceived;
+	FOnPubnubChatChannelUpdateReceivedNative OnChannelUpdateReceivedNative;
 	
 	/* PUBLIC FUNCTIONS */
 	
@@ -48,7 +53,7 @@ public:
 	FString GetChannelID() const { return ChannelID; }
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
-	FPubnubChatOperationResult Update(FPubnubChatChannelData ChannelData);
+	FPubnubChatOperationResult Update(FPubnubChatUpdateChannelInputData UpdateChannelData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Connect();
@@ -122,6 +127,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult EmitUserMention(const FString UserID, const FString Timetoken, const FString Text);
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StreamUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StopStreamingUpdates();
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
@@ -131,12 +142,17 @@ private:
 	FString ChannelID = "";
 	UPROPERTY()
 	UPubnubSubscription* ConnectSubscription = nullptr;
+	UPROPERTY()
+	UPubnubSubscription* UpdatesSubscription = nullptr;
 
 	bool IsInitialized = false;
+	bool IsStreamingUpdates = false;
+	bool IsConnected = false;
 
 	void InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID);
 	
 	FPubnubChatGetRestrictionsResult GetRestrictions(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
 	
+	void ClearAllSubscriptions();
 };
 

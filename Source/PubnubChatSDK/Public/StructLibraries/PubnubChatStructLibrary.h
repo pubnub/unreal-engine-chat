@@ -168,6 +168,45 @@ struct FPubnubChatMembershipData
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatUpdateMembershipInputData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Custom = "";
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Status = "";
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Type = "";
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetCustom = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetStatus = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, AdvancedDisplay, Category = "Pubnub") 
+	bool ForceSetType = false;
+	
+	/**
+	 * Sets all ForceSet flags to true. Useful for full replacement of Membership Data.
+	 */
+	void ForceSetAllFields()
+	{
+		ForceSetCustom = true;
+		ForceSetStatus = true;
+		ForceSetType = true;
+	}
+	
+	FPubnubMembershipInputData ToPubnubMembershipInputData(const FString ChannelID) const;
+	FPubnubChannelMemberInputData ToPubnubChannelMemberInputData(const FString UserID) const;
+	
+	static FPubnubChatUpdateMembershipInputData FromChatMembershipData(const FPubnubChatMembershipData &PubnubMembershipData);
+};
+
+USTRUCT(BlueprintType)
 struct FPubnubChatListenForEventsResult
 {
 	GENERATED_BODY()
