@@ -9,6 +9,8 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatUser.h"
+#include "Entities/PubnubChannelEntity.h"
+#include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
@@ -22,14 +24,9 @@ FString UPubnubChatMessage::GetInternalMessageID() const
 
 void UPubnubChatMessage::BeginDestroy()
 {
-	// Unregister from repository before destruction
-	if (IsInitialized && Chat && Chat->ObjectsRepository && !ChannelID.IsEmpty() && !Timetoken.IsEmpty())
-	{
-		Chat->ObjectsRepository->UnregisterMessage(GetInternalMessageID());
-	}
+	CleanUp();
 	
-	UObject::BeginDestroy();
-	IsInitialized = false;
+	Super::BeginDestroy();
 }
 
 FPubnubChatMessageData UPubnubChatMessage::GetMessageData() const
@@ -322,34 +319,21 @@ FPubnubChatOperationResult UPubnubChatMessage::Report(const FString Reason)
 
 void UPubnubChatMessage::InitMessage(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID, const FString InTimetoken)
 {
-	if(!InPubnubClient)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Message, PubnubClient is invalid"));
-		return;
-	}
-	
-	if(!InChat)
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Message, Chat is invalid"));
-		return;
-	}
-
-	if(InChannelID.IsEmpty())
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Message, ChannelID is empty"));
-		return;
-	}
-
-	if(InTimetoken.IsEmpty())
-	{
-		UE_LOG(PubnubChatLog, Error, TEXT("Can't init Message, Timetoken is empty"));
-		return;
-	}
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Message, PubnubClient is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InChat, TEXT("Can't init Message, Chat is invalid"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(!InChannelID.IsEmpty(), TEXT("Can't init Message, ChannelID is empty"));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(!InTimetoken.IsEmpty(), TEXT("Can't init Message, Timetoken is empty"));
 
 	ChannelID = InChannelID;
 	Timetoken = InTimetoken;
 	PubnubClient = InPubnubClient;
 	Chat = InChat;
+
+	UPubnubChannelEntity* ChannelEntity = PubnubClient->CreateChannelEntity(ChannelID);
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(ChannelEntity, TEXT("Can't init Message, Failed to create ChannelEntity"));
+
+	UpdatesSubscription = ChannelEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(UpdatesSubscription, TEXT("Can't init Message, Failed to create Updates Subscription"));
 	
 	// Register this message object with the repository
 	if (Chat->ObjectsRepository)
@@ -357,6 +341,121 @@ void UPubnubChatMessage::InitMessage(UPubnubClient* InPubnubClient, UPubnubChat*
 		Chat->ObjectsRepository->RegisterMessage(GetInternalMessageID());
 	}
 	
+	//Add delegate to OnChatDestroyed to this object is cleaned up as well
+	Chat->OnChatDestroyed.AddDynamic(this, &UPubnubChatMessage::OnChatDestroyed);
+	
 	IsInitialized = true;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::StreamUpdates()
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	//Skip if it's already streaming
+	if (IsStreamingUpdates)
+	{ return FinalResult; }
+	
+	TWeakObjectPtr<UPubnubChatMessage> ThisWeak = MakeWeakObjectPtr(this);
+	
+	//Add listener to subscription with provided callback
+	UpdatesSubscription->OnPubnubMessageActionNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatMessage* ThisMessage = ThisWeak.Get();
+
+		if(!ThisMessage->Chat)
+		{return;}
+		
+		//If this is not MessageUpdate, just ignore this message
+		if (UPubnubChatInternalUtilities::IsPubnubMessageChatMessageUpdate(MessageData.Message))
+		{
+			FPubnubChatMessageData ChatMessageData = ThisMessage->GetMessageData();
+			
+			//Update Message or skip if added/removed action is not related to that Message
+			if (UPubnubChatInternalUtilities::UpdateChatMessageDataFromPubnubMessage(MessageData, ThisMessage->Timetoken, ChatMessageData))
+			{
+				//Update repository with new user data
+				ThisMessage->Chat->ObjectsRepository->UpdateMessageData(ThisMessage->GetInternalMessageID(), ChatMessageData);
+				
+				//Call delegates with new user data
+				ThisMessage->OnMessageUpdateReceived.Broadcast(ThisMessage->Timetoken, ChatMessageData);
+				ThisMessage->OnMessageUpdateReceivedNative.Broadcast(ThisMessage->Timetoken, ChatMessageData);
+			}
+		}
+	});
+	
+	//Subscribe with UpdatesSubscription to receive user metadata updates
+	FPubnubOperationResult SubscribeResult = UpdatesSubscription->Subscribe();
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+	
+	IsStreamingUpdates = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::StopStreamingUpdates()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Remove message related delegates
+	if (UpdatesSubscription)
+	{
+		UpdatesSubscription->OnPubnubMessageActionNative.Clear();
+	}
+	
+	//Skip if it's not streaming updates
+	if (!IsStreamingUpdates)
+	{ return FinalResult; }
+
+	//Unsubscribe and return result
+	if (UpdatesSubscription)
+	{
+		FPubnubOperationResult UnsubscribeResult = UpdatesSubscription->Unsubscribe();
+		FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	}
+	IsStreamingUpdates = false;
+	return FinalResult;
+}
+
+void UPubnubChatMessage::OnChatDestroyed(FString InUserID)
+{
+	CleanUp();
+}
+
+void UPubnubChatMessage::ClearAllSubscriptions()
+{
+	if (UpdatesSubscription)
+	{
+		UpdatesSubscription->OnPubnubMessageActionNative.Clear();
+		if (IsStreamingUpdates)
+		{
+			UpdatesSubscription->Unsubscribe();
+			IsStreamingUpdates = false;
+		}
+
+		UpdatesSubscription = nullptr;
+	}
+}
+
+void UPubnubChatMessage::CleanUp()
+{
+	//Clean up subscription if message is being destroyed while streaming
+	if (IsInitialized)
+	{
+		ClearAllSubscriptions();
+	}
+	
+	//Unregister from repository before destruction
+	if (IsInitialized && Chat && Chat->ObjectsRepository && !ChannelID.IsEmpty() && !Timetoken.IsEmpty())
+	{
+		Chat->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatMessage::OnChatDestroyed);
+		Chat->ObjectsRepository->UnregisterMessage(GetInternalMessageID());
+	}
+	
+	IsInitialized = false;
 }
 

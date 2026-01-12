@@ -89,6 +89,7 @@ public:
 	static TArray<FPubnubChatMessageAction> FilterMessageActionsOfType(const TArray<FPubnubChatMessageAction>& MessageActions, const EPubnubChatMessageActionType& MessageActionType);
 	static FPubnubChatMessageAction GetMessageReactionForUserID(const TArray<FPubnubChatMessageAction>& MessageReactions, const FString& Reaction, const FString& UserID);
 	static bool RemoveReactionFromReactionsArray(TArray<FPubnubChatMessageAction>& MessageReactions, const FPubnubChatMessageAction& Reaction);
+	static bool IsChatMessageActionEqualPubnubAction(const FPubnubChatMessageAction& ChatAction, const FPubnubMessageActionData& PubnubAction);
 	
 	
 	/* STREAM UPDATES */
@@ -96,10 +97,14 @@ public:
 	static bool IsPubnubMessageChannelUpdate(const FString& MessageContent);
 	static bool IsPubnubMessageUserUpdate(const FString& MessageContent);
 	static bool IsPubnubMessageMembershipUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageChatMessageUpdate(const FString& MessageContent);
 	static bool IsPubnubMessageDeleteEvent(const FString& MessageContent);
 	static void UpdateChatChannelFromPubnubChannelUpdateData(const FPubnubChannelUpdateData& PubnubChannelUpdateData, FPubnubChatChannelData& ChannelData);
 	static void UpdateChatUserFromPubnubUserUpdateData(const FPubnubUserUpdateData& PubnubUserUpdateData, FPubnubChatUserData& UserData);
 	static void UpdateChatMembershipFromPubnubMembershipUpdateData(const FPubnubMembershipUpdateData& PubnubMembershipUpdateData, FPubnubChatMembershipData& MembershipData);
+	//Returns true if data was updated
+	static bool UpdateChatMessageDataFromPubnubMessage(const FPubnubMessageData& MessageData, const FString& ChatMessageTimetoken, FPubnubChatMessageData& ChatMessageData);
+	
 	
 	/* ACCESS MANAGER */
 

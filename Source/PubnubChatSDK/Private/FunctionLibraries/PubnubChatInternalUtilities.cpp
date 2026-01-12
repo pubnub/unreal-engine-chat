@@ -424,6 +424,19 @@ bool UPubnubChatInternalUtilities::RemoveReactionFromReactionsArray(TArray<FPubn
 	
 }
 
+bool UPubnubChatInternalUtilities::IsChatMessageActionEqualPubnubAction(const FPubnubChatMessageAction& ChatAction, const FPubnubMessageActionData& PubnubAction)
+{
+	//Message actions are equal if all those fields are exactly the same
+	if (ChatAction.UserID ==  PubnubAction.UserID 
+		&& ChatAction.Timetoken == PubnubAction.ActionTimetoken 
+		&& UPubnubChatInternalConverters::ChatMessageActionTypeToString(ChatAction.Type) == PubnubAction.Type
+		&& ChatAction.Value == PubnubAction.Value)
+	{
+		return true;
+	}
+	return false;
+}
+
 bool UPubnubChatInternalUtilities::IsPubnubMessageChannelUpdate(const FString& MessageContent)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
@@ -476,6 +489,22 @@ bool UPubnubChatInternalUtilities::IsPubnubMessageMembershipUpdate(const FString
 	
 	//Pubnub Core SDK Message is Membership Update if those 2 fields are exactly matching
 	if (Source == "objects" && Type == "membership")
+	{ return true; }
+	
+	return false;
+}
+
+bool UPubnubChatInternalUtilities::IsPubnubMessageChatMessageUpdate(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject);
+	
+	FString Source;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("source"), Source))
+	{ return false; }
+	
+	//ChatMessage update is actually adding or removing a message action
+	if (Source == "actions")
 	{ return true; }
 	
 	return false;
@@ -534,6 +563,44 @@ void UPubnubChatInternalUtilities::UpdateChatMembershipFromPubnubMembershipUpdat
 	{ MembershipData.Status = PubnubMembershipUpdateData.Status; }
 	if (PubnubMembershipUpdateData.TypeUpdated)
 	{ MembershipData.Type = PubnubMembershipUpdateData.Type; }
+}
+
+bool UPubnubChatInternalUtilities::UpdateChatMessageDataFromPubnubMessage(const FPubnubMessageData& MessageData, const FString& ChatMessageTimetoken, FPubnubChatMessageData& ChatMessageData)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(MessageData.Message, JsonObject);
+	bool IsAddingMessageAction = false;
+	
+	FString Event;
+	if (JsonObject->TryGetStringField(ANSI_TO_TCHAR("event"), Event))
+	{
+		IsAddingMessageAction = Event == "added";
+	}
+	
+	FPubnubMessageActionData ActionData = UPubnubJsonUtilities::GetMessageActionFromMessageData(MessageData);
+	
+	//Make sure that MessageAction was added/removed to the given ChatMessage (by comparing timetokens)
+	if (ChatMessageTimetoken != ActionData.MessageTimetoken)
+	{ return false; }
+	
+	//If the message means that MessageAction was added, simply add new Message Action from MessageData
+	if (IsAddingMessageAction)
+	{
+		ChatMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(ActionData));
+	}
+	//If Message Action was removed, find that Message Action in ChatMessageData and remove it
+	else
+	{
+		for (int i = 0; i < ChatMessageData.MessageActions.Num(); i++)
+		{
+			if (IsChatMessageActionEqualPubnubAction(ChatMessageData.MessageActions[i], ActionData))
+			{
+				ChatMessageData.MessageActions.RemoveAt(i);
+				return true;
+			}
+		}
+	}
+	return true;
 }
 
 

@@ -197,7 +197,7 @@ FPubnubChatOperationResult UPubnubChatMembership::StreamUpdates()
 		}
 	});
 	
-	//Subscribe with UpdatesSubscription to receive user metadata updates
+	//Subscribe with UpdatesSubscription to receive membership metadata updates
 	FPubnubOperationResult SubscribeResult = UpdatesSubscription->Subscribe();
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
 	

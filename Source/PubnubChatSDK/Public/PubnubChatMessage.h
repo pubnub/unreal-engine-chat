@@ -5,11 +5,16 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
+#include "PubnubChatEnumLibrary.h"
 
 #include "PubnubChatMessage.generated.h"
 
 class UPubnubClient;
 class UPubnubChat;
+class UPubnubSubscription;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdateReceived, FString, Timetoken, FPubnubChatMessageData, MessageData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdateReceivedNative, FString Timetoken, const FPubnubChatMessageData& MessageData);
 
 /**
  * 
@@ -23,6 +28,12 @@ class PUBNUBCHATSDK_API UPubnubChatMessage : public UObject
 public:
 
 	virtual void BeginDestroy() override;
+	
+	/* DELEGATES */
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatMessageUpdateReceived OnMessageUpdateReceived;
+	FOnPubnubChatMessageUpdateReceivedNative OnMessageUpdateReceivedNative;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FPubnubChatMessageData GetMessageData() const;
@@ -69,6 +80,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Report(const FString Reason = "");
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
+	FPubnubChatOperationResult StreamUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
+	FPubnubChatOperationResult StopStreamingUpdates();
 
 private:
 	UPROPERTY()
@@ -79,9 +95,11 @@ private:
 	FString Timetoken = "";
 	UPROPERTY()
 	FString ChannelID = "";
-	
+	UPROPERTY()
+	UPubnubSubscription* UpdatesSubscription = nullptr;
 
 	bool IsInitialized = false;
+	bool IsStreamingUpdates = false;
 
 	void InitMessage(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID, const FString InTimetoken);
 
@@ -91,5 +109,10 @@ private:
 	 * @return Composite message identifier
 	 */
 	FString GetInternalMessageID() const;
+	
+	UFUNCTION()
+	void OnChatDestroyed(FString InUserID);
+	void ClearAllSubscriptions();
+	void CleanUp();
 };
 
