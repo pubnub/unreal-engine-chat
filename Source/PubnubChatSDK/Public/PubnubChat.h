@@ -168,6 +168,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
 	FPubnubChatGetUnreadMessagesCountsResult GetUnreadMessagesCounts(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
+	FPubnubChatMarkAllMessagesAsReadResult MarkAllMessagesAsRead(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	
 	/* ACCESS MANAGER */
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat|Access Manager")

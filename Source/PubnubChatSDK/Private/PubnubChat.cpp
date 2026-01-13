@@ -21,6 +21,7 @@
 #include "Entities/PubnubChannelEntity.h"
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
 
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
@@ -689,6 +690,51 @@ FPubnubChatGetUnreadMessagesCountsResult UPubnubChat::GetUnreadMessagesCounts(co
 	
 	FinalResult.Page = GetMembershipsResult.Page;
 	FinalResult.Total = GetMembershipsResult.Total;
+	return FinalResult;
+}
+
+FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FPubnubChatMarkAllMessagesAsReadResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	FPubnubChatMembershipsResult GetMembershipsResult = CurrentUser->GetMemberships(Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result);
+	
+	FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	TArray<FPubnubMembershipInputData> SetMembershipsChannels;
+	
+	//For all Membership add CurrentTimetoken as LRM Timetoken to the Custom field
+	for (auto& Membership : GetMembershipsResult.Memberships)
+	{
+		FPubnubChatMembershipData MembershipData = Membership->GetMembershipData();
+		UPubnubChatInternalUtilities::AddLastReadMessageTimetokenToMembershipData(MembershipData, CurrentTimetoken);
+		SetMembershipsChannels.Add(MembershipData.ToPubnubMembershipInputData(Membership->GetChannelID()));
+	}
+	
+	//Use PubnubClient to update all memberships
+	FPubnubMembershipsResult SetMembershipsResult = PubnubClient->SetMemberships(CurrentUserID, SetMembershipsChannels, FPubnubMembershipInclude::FromValue(true), Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetMembershipsResult.Result, "SetMembershipsResult");
+	
+	//Create new Membership objects and send Receipt event for every Membership
+	for (auto& MembershipData : SetMembershipsResult.MembershipsData)
+	{
+		UPubnubChatChannel* Channel = CreateChannelObject(MembershipData.Channel.ChannelID, MembershipData.Channel);
+		UPubnubChatMembership* NewMembership = CreateMembershipObject(GetCurrentUser(), Channel, MembershipData);
+		FinalResult.Memberships.Add(NewMembership);
+		
+		//Emit Receipt event - we check for error, but not stop execution in case of occuring one, just combine ErrorMessage for all events result
+		FPubnubChatOperationResult EmitResult = EmitChatEvent(EPubnubChatEventType::PCET_Receipt, Channel->GetChannelID(), UPubnubChatInternalUtilities::GetReceiptEventPayload(CurrentTimetoken));
+		if (EmitResult.Error)
+		{
+			FinalResult.Result.Error = true;
+			FinalResult.Result.ErrorMessage += FString::Printf(TEXT(" | %s"), *EmitResult.ErrorMessage);
+		}
+	}
+	
+	FinalResult.Page = GetMembershipsResult.Page;
+	FinalResult.Total = GetMembershipsResult.Total;
+	
 	return FinalResult;
 }
 
