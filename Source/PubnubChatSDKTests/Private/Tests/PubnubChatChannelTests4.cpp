@@ -2790,5 +2790,780 @@ bool FPubnubChatChannelStopStreamingMessageReportsStopsReceivingTest::RunTest(co
 	return true;
 }
 
+// ============================================================================
+// GETMESSAGEREPORTSHISTORY TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageReportsHistoryNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_not_init_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create uninitialized channel object
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		
+		// Try to get message reports history with uninitialized channel
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatEventsResult HistoryResult = UninitializedChannel->GetMessageReportsHistory(StartTimetoken, EndTimetoken);
+		
+		TestTrue("GetMessageReportsHistory should fail with uninitialized channel", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryEmptyStartTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.1Validation.EmptyStartTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageReportsHistoryEmptyStartTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_empty_start_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_reports_history_empty_start";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Try to get message reports history with empty StartTimetoken
+	const FString EmptyStartTimetoken = TEXT("");
+	const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	FPubnubChatEventsResult HistoryResult = CreateResult.Channel->GetMessageReportsHistory(EmptyStartTimetoken, EndTimetoken);
+	
+	TestTrue("GetMessageReportsHistory should fail with empty StartTimetoken", HistoryResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryEmptyEndTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.1Validation.EmptyEndTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageReportsHistoryEmptyEndTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_empty_end_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_reports_history_empty_end";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Try to get message reports history with empty EndTimetoken
+	const FString StartTimetoken = TEXT("0");
+	const FString EmptyEndTimetoken = TEXT("");
+	FPubnubChatEventsResult HistoryResult = CreateResult.Channel->GetMessageReportsHistory(StartTimetoken, EmptyEndTimetoken);
+	
+	TestTrue("GetMessageReportsHistory should fail with empty EndTimetoken", HistoryResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelGetMessageReportsHistoryHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_reports_history_happy";
+	const FString TestMessageText = TEXT("Message to report");
+	const FString TestReason = TEXT("Inappropriate content");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Set up delegate to receive messages
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	// Get start timetoken before sending message
+	const FString StartTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	
+	// Connect channel
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait a bit for subscription to be ready, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Report the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReason]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ReportResult = (*ReceivedMessage)->Report(TestReason);
+		TestFalse("Report should succeed", ReportResult.Error);
+	}, 0.2f));
+	
+	// Wait for report to be stored, then get message reports history
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, StartTimetoken, TestChannelID, InitUserID, TestMessageText, TestReason, Chat]()
+	{
+		// Get message reports history with only required parameters (default Count = 100)
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatEventsResult HistoryResult = CreateResult.Channel->GetMessageReportsHistory(StartTimetoken, EndTimetoken);
+		
+		TestFalse("GetMessageReportsHistory should succeed", HistoryResult.Result.Error);
+		TestTrue("Should have at least one report event", HistoryResult.Events.Num() >= 1);
+		
+		// Verify the report event we created is in the results
+		bool bFoundReportEvent = false;
+		FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+		
+		for(const FPubnubChatEvent& Event : HistoryResult.Events)
+		{
+			if(Event.Type == EPubnubChatEventType::PCET_Report && Event.ChannelID == ModerationChannelID)
+			{
+				bFoundReportEvent = true;
+				TestEqual("Event ChannelID should match moderation channel", Event.ChannelID, ModerationChannelID);
+				TestEqual("Event UserID should match", Event.UserID, InitUserID);
+				TestFalse("Event Timetoken should not be empty", Event.Timetoken.IsEmpty());
+				TestFalse("Event Payload should not be empty", Event.Payload.IsEmpty());
+				
+				// Verify payload contains report data
+				TSharedPtr<FJsonObject> PayloadJson = MakeShareable(new FJsonObject);
+				UPubnubJsonUtilities::StringToJsonObject(Event.Payload, PayloadJson);
+				
+				FString PayloadText;
+				FString PayloadReason;
+				FString PayloadChannelId;
+				FString PayloadUserId;
+				
+				if(PayloadJson->TryGetStringField(ANSI_TO_TCHAR("text"), PayloadText))
+				{
+					TestEqual("Payload text should match reported message", PayloadText, TestMessageText);
+				}
+				if(PayloadJson->TryGetStringField(ANSI_TO_TCHAR("reason"), PayloadReason))
+				{
+					TestEqual("Payload reason should match", PayloadReason, TestReason);
+				}
+				if(PayloadJson->TryGetStringField(ANSI_TO_TCHAR("channelId"), PayloadChannelId))
+				{
+					TestEqual("Payload channelId should match", PayloadChannelId, TestChannelID);
+				}
+				if(PayloadJson->TryGetStringField(ANSI_TO_TCHAR("userId"), PayloadUserId))
+				{
+					TestEqual("Payload userId should match", PayloadUserId, InitUserID);
+				}
+				
+				break;
+			}
+		}
+		TestTrue("Should find the report event in history", bFoundReportEvent);
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.5f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelGetMessageReportsHistoryFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_reports_history_full";
+	const FString TestMessageText1 = TEXT("First message to report");
+	const FString TestMessageText2 = TEXT("Second message to report");
+	const FString TestMessageText3 = TEXT("Third message to report");
+	const FString TestReason1 = TEXT("Reason 1");
+	const FString TestReason2 = TEXT("Reason 2");
+	const FString TestReason3 = TEXT("Reason 3");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<TArray<UPubnubChatMessage*>> ReceivedMessages = MakeShared<TArray<UPubnubChatMessage*>>();
+	
+	// Set up delegate to receive messages
+	auto MessageLambda = [this, ReceivedMessages](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			ReceivedMessages->Add(Message);
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	// Get start timetoken before sending messages
+	const FString StartTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	
+	// Connect channel
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Send first message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText1]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText1);
+		TestFalse("SendText1 should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until first message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([ReceivedMessages]() -> bool {
+		return ReceivedMessages->Num() >= 1;
+	}, MAX_WAIT_TIME));
+	
+	// Report first message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessages, TestReason1]()
+	{
+		if(ReceivedMessages->Num() < 1)
+		{
+			AddError("First message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ReportResult = (*ReceivedMessages)[0]->Report(TestReason1);
+		TestFalse("Report1 should succeed", ReportResult.Error);
+	}, 0.2f));
+	
+	// Send second message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText2]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText2);
+		TestFalse("SendText2 should succeed", SendResult.Error);
+	}, 0.3f));
+	
+	// Wait until second message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([ReceivedMessages]() -> bool {
+		return ReceivedMessages->Num() >= 2;
+	}, MAX_WAIT_TIME));
+	
+	// Report second message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessages, TestReason2]()
+	{
+		if(ReceivedMessages->Num() < 2)
+		{
+			AddError("Second message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ReportResult = (*ReceivedMessages)[1]->Report(TestReason2);
+		TestFalse("Report2 should succeed", ReportResult.Error);
+	}, 0.2f));
+	
+	// Send third message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText3]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText3);
+		TestFalse("SendText3 should succeed", SendResult.Error);
+	}, 0.3f));
+	
+	// Wait until third message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([ReceivedMessages]() -> bool {
+		return ReceivedMessages->Num() >= 3;
+	}, MAX_WAIT_TIME));
+	
+	// Report third message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessages, TestReason3]()
+	{
+		if(ReceivedMessages->Num() < 3)
+		{
+			AddError("Third message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ReportResult = (*ReceivedMessages)[2]->Report(TestReason3);
+		TestFalse("Report3 should succeed", ReportResult.Error);
+	}, 0.2f));
+	
+	// Wait for reports to be stored, then get message reports history with Count parameter
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, StartTimetoken, TestChannelID, InitUserID, ReceivedMessages, TestMessageText1, TestMessageText2, TestMessageText3, TestReason1, TestReason2, TestReason3, Chat]()
+	{
+		// Get message reports history with all parameters including Count
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		const int Count = 10;
+		FPubnubChatEventsResult HistoryResult = CreateResult.Channel->GetMessageReportsHistory(StartTimetoken, EndTimetoken, Count);
+		
+		TestFalse("GetMessageReportsHistory should succeed", HistoryResult.Result.Error);
+		TestTrue("Should have at least 3 report events", HistoryResult.Events.Num() >= 3);
+		TestTrue("Should not exceed Count limit", HistoryResult.Events.Num() <= Count);
+		
+		// Verify all three report events are present
+		FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+		bool bFoundReport1 = false;
+		bool bFoundReport2 = false;
+		bool bFoundReport3 = false;
+		
+		for(const FPubnubChatEvent& Event : HistoryResult.Events)
+		{
+			if(Event.Type == EPubnubChatEventType::PCET_Report && Event.ChannelID == ModerationChannelID)
+			{
+				TSharedPtr<FJsonObject> PayloadJson = MakeShareable(new FJsonObject);
+				UPubnubJsonUtilities::StringToJsonObject(Event.Payload, PayloadJson);
+				
+				FString PayloadText;
+				FString PayloadReason;
+				
+				if(PayloadJson->TryGetStringField(ANSI_TO_TCHAR("text"), PayloadText) && 
+				   PayloadJson->TryGetStringField(ANSI_TO_TCHAR("reason"), PayloadReason))
+				{
+					if(PayloadText == TestMessageText1 && PayloadReason == TestReason1)
+					{
+						bFoundReport1 = true;
+					}
+					else if(PayloadText == TestMessageText2 && PayloadReason == TestReason2)
+					{
+						bFoundReport2 = true;
+					}
+					else if(PayloadText == TestMessageText3 && PayloadReason == TestReason3)
+					{
+						bFoundReport3 = true;
+					}
+				}
+			}
+		}
+		
+		TestTrue("Should find first report event", bFoundReport1);
+		TestTrue("Should find second report event", bFoundReport2);
+		TestTrue("Should find third report event", bFoundReport3);
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.6f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetMessageReportsHistory with empty history (no reports in the specified time range).
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryEmptyHistoryTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.4Advanced.EmptyHistory", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetMessageReportsHistoryEmptyHistoryTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_reports_history_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Use a time range in the past where no reports exist
+	// Use timetoken "0" as start and a very old timetoken as end
+	const FString StartTimetoken = TEXT("0");
+	const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
+	
+	FPubnubChatEventsResult HistoryResult = CreateResult.Channel->GetMessageReportsHistory(StartTimetoken, EndTimetoken);
+	
+	TestFalse("GetMessageReportsHistory should succeed even with empty history", HistoryResult.Result.Error);
+	TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetMessageReportsHistory verifies that returned events are report events (Type = PCET_Report)
+ * and belong to the correct moderation channel.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetMessageReportsHistoryVerifyEventDataTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetMessageReportsHistory.4Advanced.VerifyEventData", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelGetMessageReportsHistoryVerifyEventDataTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_message_reports_history_verify_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_message_reports_history_verify";
+	const FString TestMessageText = TEXT("Message to verify report data");
+	const FString TestReason = TEXT("Verification reason");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<FString> MessageTimetoken = MakeShared<FString>();
+	
+	// Set up delegate to receive messages
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage, MessageTimetoken](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+			*MessageTimetoken = Message->GetMessageTimetoken();
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	// Get start timetoken before sending message
+	const FString StartTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+	
+	// Connect channel
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait a bit for subscription to be ready, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Report the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, TestReason]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ReportResult = (*ReceivedMessage)->Report(TestReason);
+		TestFalse("Report should succeed", ReportResult.Error);
+	}, 0.2f));
+	
+	// Wait for report to be stored, then verify event data
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, StartTimetoken, ModerationChannelID, TestChannelID, InitUserID, TestMessageText, TestReason, MessageTimetoken, Chat]()
+	{
+		// Get message reports history
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatEventsResult HistoryResult = CreateResult.Channel->GetMessageReportsHistory(StartTimetoken, EndTimetoken);
+		
+		TestFalse("GetMessageReportsHistory should succeed", HistoryResult.Result.Error);
+		TestTrue("Should have at least one report event", HistoryResult.Events.Num() >= 1);
+		
+		// Verify all returned events are report events from the correct moderation channel
+		bool bFoundMatchingReport = false;
+		for(const FPubnubChatEvent& Event : HistoryResult.Events)
+		{
+			// All events should be report events
+			TestEqual("Event Type should be PCET_Report", Event.Type, EPubnubChatEventType::PCET_Report);
+			
+			// Events should belong to the moderation channel
+			if(Event.ChannelID == ModerationChannelID)
+			{
+				TestEqual("Event ChannelID should match moderation channel", Event.ChannelID, ModerationChannelID);
+				TestEqual("Event UserID should match", Event.UserID, InitUserID);
+				TestFalse("Event Timetoken should not be empty", Event.Timetoken.IsEmpty());
+				TestFalse("Event Payload should not be empty", Event.Payload.IsEmpty());
+				
+				// Verify payload structure
+				TSharedPtr<FJsonObject> PayloadJson = MakeShareable(new FJsonObject);
+				UPubnubJsonUtilities::StringToJsonObject(Event.Payload, PayloadJson);
+				
+				FString PayloadText;
+				FString PayloadReason;
+				FString PayloadChannelId;
+				FString PayloadUserId;
+				FString PayloadTimetoken;
+				
+				TestTrue("Payload should contain text field", PayloadJson->TryGetStringField(ANSI_TO_TCHAR("text"), PayloadText));
+				TestTrue("Payload should contain reason field", PayloadJson->TryGetStringField(ANSI_TO_TCHAR("reason"), PayloadReason));
+				TestTrue("Payload should contain channelId field", PayloadJson->TryGetStringField(ANSI_TO_TCHAR("channelId"), PayloadChannelId));
+				TestTrue("Payload should contain userId field", PayloadJson->TryGetStringField(ANSI_TO_TCHAR("userId"), PayloadUserId));
+				TestTrue("Payload should contain timetoken field", PayloadJson->TryGetStringField(ANSI_TO_TCHAR("timetoken"), PayloadTimetoken));
+				
+				// Verify payload values match our report
+				if(PayloadText == TestMessageText && PayloadReason == TestReason && 
+				   PayloadChannelId == TestChannelID && PayloadUserId == InitUserID)
+				{
+					bFoundMatchingReport = true;
+					TestEqual("Payload channelId should match", PayloadChannelId, TestChannelID);
+					TestEqual("Payload userId should match", PayloadUserId, InitUserID);
+					TestEqual("Payload text should match", PayloadText, TestMessageText);
+					TestEqual("Payload reason should match", PayloadReason, TestReason);
+					TestEqual("Payload timetoken should match message timetoken", PayloadTimetoken, *MessageTimetoken);
+				}
+			}
+		}
+		
+		TestTrue("Should find matching report event with correct data", bFoundMatchingReport);
+		
+		// Cleanup
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.5f));
+	
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

@@ -873,6 +873,17 @@ FPubnubChatOperationResult UPubnubChatChannel::StopStreamingMessageReports()
 	return FinalResult;
 }
 
+FPubnubChatEventsResult UPubnubChatChannel::GetMessageReportsHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count)
+{
+	FPubnubChatEventsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, StartTimetoken);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, EndTimetoken);
+	
+	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);
+	return Chat->GetEventsHistory(ModerationChannelID, StartTimetoken, EndTimetoken, Count);
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));

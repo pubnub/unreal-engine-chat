@@ -517,9 +517,9 @@ FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType Event
 	return FinalResult;
 }
 
-FPubnubChatGetEventsHistoryResult UPubnubChat::GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count)
+FPubnubChatEventsResult UPubnubChat::GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count)
 {
-	FPubnubChatGetEventsHistoryResult FinalResult;
+	FPubnubChatEventsResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, StartTimetoken);

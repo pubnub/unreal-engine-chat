@@ -3721,7 +3721,7 @@ bool FPubnubChatGetEventsHistoryNotInitializedTest::RunTest(const FString& Param
 			const FString TestChannelID = SDK_PREFIX + "test_get_events_history_not_init";
 			const FString StartTimetoken = TEXT("0");
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
 			
 			TestTrue("GetEventsHistory should fail when Chat is not initialized", HistoryResult.Result.Error);
 			TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
@@ -3758,7 +3758,7 @@ bool FPubnubChatGetEventsHistoryEmptyChannelIDTest::RunTest(const FString& Param
 		// Try to get events history with empty ChannelID
 		const FString StartTimetoken = TEXT("0");
 		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TEXT(""), StartTimetoken, EndTimetoken);
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TEXT(""), StartTimetoken, EndTimetoken);
 		
 		TestTrue("GetEventsHistory should fail with empty ChannelID", HistoryResult.Result.Error);
 		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
@@ -3794,7 +3794,7 @@ bool FPubnubChatGetEventsHistoryEmptyStartTimetokenTest::RunTest(const FString& 
 	{
 		// Try to get events history with empty StartTimetoken
 		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, TEXT(""), EndTimetoken);
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, TEXT(""), EndTimetoken);
 		
 		TestTrue("GetEventsHistory should fail with empty StartTimetoken", HistoryResult.Result.Error);
 		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
@@ -3830,7 +3830,7 @@ bool FPubnubChatGetEventsHistoryEmptyEndTimetokenTest::RunTest(const FString& Pa
 	{
 		// Try to get events history with empty EndTimetoken
 		const FString StartTimetoken = TEXT("0");
-		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, TEXT(""));
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, TEXT(""));
 		
 		TestTrue("GetEventsHistory should fail with empty EndTimetoken", HistoryResult.Result.Error);
 		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
@@ -3882,7 +3882,7 @@ bool FPubnubChatGetEventsHistoryHappyPathTest::RunTest(const FString& Parameters
 		{
 			// Get events history with only required parameters (default Count = 100)
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			TestTrue("Should have at least one event", HistoryResult.Events.Num() >= 1);
@@ -3971,7 +3971,7 @@ bool FPubnubChatGetEventsHistoryFullParametersTest::RunTest(const FString& Param
 			// Get events history with all parameters including Count
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
 			const int Count = 10;
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			TestTrue("Should have at least 3 events", HistoryResult.Events.Num() >= 3);
@@ -4066,7 +4066,7 @@ bool FPubnubChatGetEventsHistoryOnlyPublishEventsTest::RunTest(const FString& Pa
 		{
 			// Get events history
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			
@@ -4135,7 +4135,7 @@ bool FPubnubChatGetEventsHistoryEmptyHistoryTest::RunTest(const FString& Paramet
 		const FString StartTimetoken = TEXT("0");
 		const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
 		
-		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
 		
 		TestFalse("GetEventsHistory should succeed even with empty history", HistoryResult.Result.Error);
 		TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);
@@ -4195,7 +4195,7 @@ bool FPubnubChatGetEventsHistoryCountLimitTest::RunTest(const FString& Parameter
 			// Get events history with Count limit smaller than number of events published
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
 			const int CountLimit = 3;
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, CountLimit);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, CountLimit);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
@@ -4270,7 +4270,7 @@ bool FPubnubChatGetEventsHistoryAllEventTypesTest::RunTest(const FString& Parame
 		{
 			// Get events history
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			TestTrue("Should have at least as many events as published", HistoryResult.Events.Num() >= EventTypes.Num());
@@ -4369,7 +4369,7 @@ bool FPubnubChatGetEventsHistoryIsMoreTrueTest::RunTest(const FString& Parameter
 		{
 			// Get events history with Count matching the number of events we published
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
@@ -4442,7 +4442,7 @@ bool FPubnubChatGetEventsHistoryIsMoreFalseTest::RunTest(const FString& Paramete
 		{
 			// Get events history with Count larger than number of events we published
 			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
-			FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
 			
 			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
 			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
@@ -4495,7 +4495,7 @@ bool FPubnubChatGetEventsHistoryIsMoreEmptyTest::RunTest(const FString& Paramete
 		const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
 		const int Count = 10;
 		
-		FPubnubChatGetEventsHistoryResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
 		
 		TestFalse("GetEventsHistory should succeed even with empty history", HistoryResult.Result.Error);
 		TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);

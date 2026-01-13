@@ -179,6 +179,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult StopStreamingMessageReports();
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatEventsResult GetMessageReportsHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 100);
+	
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;

@@ -243,7 +243,7 @@ struct FPubnubChatEvent
 };
 
 USTRUCT(BlueprintType)
-struct FPubnubChatGetEventsHistoryResult
+struct FPubnubChatEventsResult
 {
 	GENERATED_BODY()
 

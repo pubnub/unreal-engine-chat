@@ -153,7 +153,7 @@ public:
 	FPubnubChatOperationResult EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
-	FPubnubChatGetEventsHistoryResult GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count = 100);
+	FPubnubChatEventsResult GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count = 100);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
 	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback);
