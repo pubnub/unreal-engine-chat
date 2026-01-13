@@ -208,3 +208,23 @@ struct FPubnubChatGetHistoryResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	bool IsMore = false;
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubChatUserIDsArray
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FString> UserIDs;
+	
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatReadReceipts
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TMap<FString, FPubnubChatUserIDsArray> ReadReceipts;
+	
+};

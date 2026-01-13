@@ -311,7 +311,7 @@ FPubnubChatOperationResult UPubnubChatMessage::Report(const FString Reason)
 	
 	FString EventChannel = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(CurrentMessageData.ChannelID);
 	FString EventPayload = UPubnubChatInternalUtilities::GetReportMessageEventPayload(GetCurrentText(), Reason, CurrentMessageData.ChannelID, CurrentMessageData.UserID, Timetoken);
-	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Moderation, EventChannel, EventPayload);
+	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Report, EventChannel, EventPayload);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, EmitEventResult);
 	
 	return FinalResult;

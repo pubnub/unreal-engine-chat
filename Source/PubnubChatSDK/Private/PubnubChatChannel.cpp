@@ -791,6 +791,88 @@ FPubnubChatOperationResult UPubnubChatChannel::StopStreamingTyping()
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::StreamReadReceipts()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Typing is not supported on public channels"));
+
+	
+	//TODO:: Finish this function
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopStreamingReadReceipts()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	if (!IsStreamingReadReceipts)
+	{ return FinalResult; }
+	
+	
+	//TODO:: Finish this function
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StreamMessageReports()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	//Skip if it's already streaming
+	if (IsStreamingMessageReports)
+	{ return FinalResult; }
+	
+	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
+	
+	FOnPubnubChatEventReceivedNative OnEventReceived;
+	OnEventReceived.BindLambda([ThisWeak](const FPubnubChatEvent& Event)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+		
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+		{ return; }
+		
+		ThisChannel->OnMessageReportReceived.Broadcast(Event);
+		ThisChannel->OnMessageReportReceivedNative.Broadcast(Event);
+	});
+		
+	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);
+	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, OnEventReceived);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ListenForEventsResult.Result);
+	
+	MessageReportsCallbackStop = ListenForEventsResult.CallbackStop;
+	IsStreamingMessageReports = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopStreamingMessageReports()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	if (!IsStreamingMessageReports)
+	{ return FinalResult; }
+	
+	if (!MessageReportsCallbackStop)
+	{ return FinalResult; }
+	
+	FPubnubChatOperationResult StopResult = MessageReportsCallbackStop->Stop();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, StopResult);
+	
+	MessageReportsCallbackStop = nullptr;
+	IsStreamingMessageReports = false;
+
+	return FinalResult;
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));
@@ -878,11 +960,17 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 		UpdatesSubscription = nullptr;
 	}
 	
-	// Clean up typing subscription and indicators
 	if (TypingCallbackStop)
 	{
 		TypingCallbackStop->Stop();
 		TypingCallbackStop = nullptr;
+	}
+	
+	// Clean up typing subscription and indicators
+	if (MessageReportsCallbackStop)
+	{
+		MessageReportsCallbackStop->Stop();
+		MessageReportsCallbackStop = nullptr;
 	}
 	
 	// Invalidate all typing indicator timers and clear the map

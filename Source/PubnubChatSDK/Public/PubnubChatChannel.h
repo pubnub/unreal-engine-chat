@@ -23,6 +23,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatChannelUpdateReceive
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatChannelUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingReceived, const TArray<FString>&, TypingUserIDs);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingReceivedNative, const TArray<FString>& TypingUserIDs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceived, FPubnubChatReadReceipts, ReadReceipts);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceivedNative, const FPubnubChatReadReceipts& ReadReceipts);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportReceived, FPubnubChatEvent, ReportEvent);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportReceivedNative, const FPubnubChatEvent& ReportEvent);
+
 
 /**
  * 
@@ -51,6 +56,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatTypingReceived OnTypingReceived;
 	FOnPubnubChatTypingReceivedNative OnTypingReceivedNative;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatReadReceiptReceived OnReadReceiptReceived;
+	FOnPubnubChatReadReceiptReceivedNative OnReadReceiptReceivedNative;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatMessageReportReceived OnMessageReportReceived;
+	FOnPubnubChatMessageReportReceivedNative OnMessageReportReceivedNative;
 	
 	
 	/* PUBLIC FUNCTIONS */
@@ -154,6 +167,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult StopStreamingTyping();
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StreamReadReceipts();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StopStreamingReadReceipts();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StreamMessageReports();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StopStreamingMessageReports();
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
@@ -167,11 +192,15 @@ private:
 	UPubnubSubscription* UpdatesSubscription = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* TypingCallbackStop = nullptr;
+	UPROPERTY()
+	UPubnubChatCallbackStop* MessageReportsCallbackStop = nullptr;
 
 	bool IsInitialized = false;
 	bool IsStreamingUpdates = false;
 	bool IsConnected = false;
 	bool IsStreamingTyping = false;
+	bool IsStreamingReadReceipts = false;
+	bool IsStreamingMessageReports = false;
 	
 	FDateTime LastTypingEventTime = FDateTime();
 	TMap<FString, FTypingIndicatorData> TypingIndicators;

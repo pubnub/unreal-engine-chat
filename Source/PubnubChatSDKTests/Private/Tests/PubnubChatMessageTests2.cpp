@@ -293,7 +293,7 @@ bool FPubnubChatMessageReportFullParametersTest::RunTest(const FString& Paramete
 // ============================================================================
 
 /**
- * Tests Report by verifying that a moderation event is received via ListenForEvents.
+ * Tests Report by verifying that a report event is received via ListenForEvents.
  * Verifies that the event is emitted to the correct moderation channel and contains correct payload data.
  */
 IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageReportEventReceivedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.Report.4Advanced.EventReceived", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
@@ -370,17 +370,17 @@ bool FPubnubChatMessageReportEventReceivedTest::RunTest(const FString& Parameter
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
 	
-	// Listen for moderation events on the moderation channel
+	// Listen for report events on the moderation channel
 	FOnPubnubChatEventReceivedNative EventCallback;
 	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationChannelID](const FPubnubChatEvent& Event)
 	{
 		*bEventReceived = true;
 		*ReceivedEvent = Event;
-		TestEqual("Received event type should be Moderation", Event.Type, EPubnubChatEventType::PCET_Moderation);
+		TestEqual("Received event type should be Report", Event.Type, EPubnubChatEventType::PCET_Report);
 		TestEqual("Received event ChannelID should match moderation channel", Event.ChannelID, ModerationChannelID);
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Moderation, EventCallback);
+	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, EventCallback);
 	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
 	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
 	
@@ -419,11 +419,11 @@ bool FPubnubChatMessageReportEventReceivedTest::RunTest(const FString& Parameter
 	{
 		if(!*bEventReceived)
 		{
-			AddError("Moderation event was not received");
+			AddError("Report event was not received");
 		}
 		else
 		{
-			TestEqual("Received event type should be Moderation", ReceivedEvent->Type, EPubnubChatEventType::PCET_Moderation);
+			TestEqual("Received event type should be Report", ReceivedEvent->Type, EPubnubChatEventType::PCET_Report);
 			TestEqual("Received event ChannelID should match moderation channel", ReceivedEvent->ChannelID, ModerationChannelID);
 			
 			// Parse payload to verify it contains correct data
@@ -587,7 +587,7 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
 	
-	// Listen for moderation events on the moderation channel
+	// Listen for report events on the moderation channel
 	FOnPubnubChatEventReceivedNative EventCallback;
 	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationChannelID](const FPubnubChatEvent& Event)
 	{
@@ -595,7 +595,7 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 		*ReceivedEvent = Event;
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Moderation, EventCallback);
+	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, EventCallback);
 	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
 	
 	// Wait a bit for subscription to be ready, then send message
@@ -633,7 +633,7 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 	{
 		if(!*bEventReceived)
 		{
-			AddError("Moderation event was not received");
+			AddError("Report event was not received");
 		}
 		else
 		{
@@ -750,7 +750,7 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
 	
-	// Listen for moderation events on the moderation channel
+	// Listen for report events on the moderation channel
 	FOnPubnubChatEventReceivedNative EventCallback;
 	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationChannelID](const FPubnubChatEvent& Event)
 	{
@@ -758,7 +758,7 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 		*ReceivedEvent = Event;
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Moderation, EventCallback);
+	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, EventCallback);
 	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
 	
 	// Wait a bit for subscription to be ready, then send message
@@ -820,7 +820,7 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 	{
 		if(!*bEventReceived)
 		{
-			AddError("Moderation event was not received");
+			AddError("Report event was not received");
 		}
 		else
 		{
