@@ -15,6 +15,17 @@ class UPubnubChatMembership;
 class UPubnubChatCallbackStop;
 
 
+/** Structure to store typing indicator data (timer handle and timestamp) */
+struct FTypingIndicatorData
+{
+	FTimerHandle TimerHandle;
+	FDateTime LastTypingTime;
+	
+	FTypingIndicatorData() : LastTypingTime(FDateTime::MinValue()) {}
+	FTypingIndicatorData(const FTimerHandle& InTimerHandle, const FDateTime& InLastTypingTime)
+		: TimerHandle(InTimerHandle), LastTypingTime(InLastTypingTime) {}
+};
+
 
 USTRUCT(BlueprintType)
 struct FPubnubChatConfig
@@ -27,6 +38,7 @@ struct FPubnubChatConfig
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") int StoreUserActivityInterval = 600000;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") bool StoreUserActivityTimestamps = false;
 	
+	void ValidateConfig();
 };
 
 USTRUCT(BlueprintType)

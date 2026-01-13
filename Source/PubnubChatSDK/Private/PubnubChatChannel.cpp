@@ -16,7 +16,8 @@
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
-#include "FunctionLibraries/PubnubTimetokenUtilities.h" 
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "HAL/CriticalSection.h" 
 
 
 void UPubnubChatChannel::BeginDestroy()
@@ -606,6 +607,190 @@ FPubnubChatOperationResult UPubnubChatChannel::StopStreamingUpdates()
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::StartTyping()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Typing is not supported on public channels"));
+
+	FDateTime Now = FDateTime::UtcNow();
+	
+	//Check if StartTyping call is within minimal threshold. If yes, skip the call not to spam events
+	if (LastTypingEventTime != FDateTime())
+	{
+		FDateTime ThresholdTime = Now - FTimespan::FromMilliseconds(Chat->ChatConfig.TypingTimeout - Pubnub_Chat_Typing_Timeout_Margin);
+		if (LastTypingEventTime > ThresholdTime)
+		{ return FinalResult; }
+	}
+	
+	LastTypingEventTime = Now;
+	
+	//Emit Typing Event
+	FString TypingEventPayload = UPubnubChatInternalUtilities::GetTypingEventPayload(true);
+	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, ChannelID, TypingEventPayload);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, EmitEventResult);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopTyping()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Typing is not supported on public channels"));
+
+	//If we never StartedTyping then we can't stop
+	if (LastTypingEventTime == FDateTime())
+	{ return FinalResult; }
+	
+	FDateTime Now = FDateTime::UtcNow();
+	FDateTime ThresholdTime = Now - FTimespan::FromMilliseconds(Chat->ChatConfig.TypingTimeout);
+	
+	//If LastEvent was earlier than the Threshold, don't send event
+	if (LastTypingEventTime < ThresholdTime)
+	{ return FinalResult; }
+	
+	//Clear LastTypingEventTime, so it can be set again by  StartTyping
+	LastTypingEventTime = FDateTime();
+	
+	//Emit Typing Event
+	FString TypingEventPayload = UPubnubChatInternalUtilities::GetTypingEventPayload(false);
+	FPubnubChatOperationResult EmitEventResult = Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, ChannelID, TypingEventPayload);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, EmitEventResult);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StreamTyping()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Typing is not supported on public channels"));
+
+	//Skip if it's already streaming
+	if (IsStreamingTyping)
+	{ return FinalResult; }
+	
+	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
+	
+	FOnPubnubChatEventReceivedNative OnEventReceived;
+	OnEventReceived.BindLambda([ThisWeak](const FPubnubChatEvent& Event)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+		
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+		{ return; }
+		
+		FString UserID = Event.UserID;
+		bool IsTyping = UPubnubChatInternalUtilities::GetIsTypingFromEventPayload(Event.Payload);
+		FDateTime Now = FDateTime::UtcNow();
+		
+		TArray<FString> TypingUsers;
+		
+		//Lock access to typing indicators
+		{
+			FScopeLock Lock(&ThisChannel->TypingIndicatorsCriticalSection);
+			
+			//Remove expired typing indicators immediately
+			UPubnubChatInternalUtilities::RemoveExpiredTypingIndicators(ThisChannel->TypingIndicators, ThisChannel->Chat->ChatConfig.TypingTimeout, Now);
+			
+			if (!IsTyping)
+			{
+				//Stop typing: invalidate the timer and remove UserID from typing indicators
+				if (FTypingIndicatorData* IndicatorData = ThisChannel->TypingIndicators.Find(UserID))
+				{
+					IndicatorData->TimerHandle.Invalidate();
+					ThisChannel->TypingIndicators.Remove(UserID);
+				}
+			}
+			else
+			{
+				//Start typing: if this user has typing indicator, invalidate the old timer
+				if (FTypingIndicatorData* IndicatorData = ThisChannel->TypingIndicators.Find(UserID))
+				{
+					IndicatorData->TimerHandle.Invalidate();
+					ThisChannel->TypingIndicators.Remove(UserID);
+				}
+				
+				//Store timestamp - timer will be set up after lock is released
+				//Create new timer with callback that broadcasts delegates
+				FTimerDelegate TimerDelegate;
+				TimerDelegate.BindLambda([ThisWeak, UserID]()
+				{
+					if(!ThisWeak.IsValid())
+					{return;}
+			
+					UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+			
+					if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+					{ return; }
+					
+					TArray<FString> TypingUsersList;
+					
+					//Lock access to typing indicators (first lock was already released when timer fires)
+					{
+						FScopeLock Lock(&ThisChannel->TypingIndicatorsCriticalSection);
+						
+						// Remove expired user
+						ThisChannel->TypingIndicators.Remove(UserID);
+						
+						//Get current typing users list
+						ThisChannel->TypingIndicators.GenerateKeyArray(TypingUsersList);
+					} //Lock released here
+					
+					//Broadcast updated typing users list (Fix #2: Broadcast delegates when timer expires)
+					ThisChannel->OnTypingReceived.Broadcast(TypingUsersList);
+					ThisChannel->OnTypingReceivedNative.Broadcast(TypingUsersList);
+				});
+				FTimerHandle TimerHandle;
+				float TimerDelay = ThisChannel->Chat->ChatConfig.TypingTimeout + 10.0f; // Add 10 MS to be sure that it will really expire
+				ThisChannel->GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, TimerDelay, false);
+				
+				//Store timer handle and timestamp
+				ThisChannel->TypingIndicators.Add(UserID, FTypingIndicatorData(TimerHandle, Now));
+			}
+			
+			//Get current typing users list
+			ThisChannel->TypingIndicators.GenerateKeyArray(TypingUsers);
+		} //Lock released here
+		
+		//Call delegates with typing users (outside of lock)
+		ThisChannel->OnTypingReceived.Broadcast(TypingUsers);
+		ThisChannel->OnTypingReceivedNative.Broadcast(TypingUsers);
+	});
+	
+	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(ChannelID, EPubnubChatEventType::PCET_Typing, OnEventReceived);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ListenForEventsResult.Result);
+	
+	TypingCallbackStop = ListenForEventsResult.CallbackStop;
+	IsStreamingTyping = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopStreamingTyping()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	if (!IsStreamingTyping)
+	{ return FinalResult; }
+	
+	if (!TypingCallbackStop)
+	{ return FinalResult; }
+	
+	FPubnubChatOperationResult StopResult = TypingCallbackStop->Stop();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, StopResult);
+	
+	TypingCallbackStop = nullptr;
+	IsStreamingTyping = false;
+
+	return FinalResult;
+}
+
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InPubnubClient, TEXT("Can't init Channel, PubnubClient is invalid"));
@@ -692,6 +877,25 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 
 		UpdatesSubscription = nullptr;
 	}
+	
+	// Clean up typing subscription and indicators
+	if (TypingCallbackStop)
+	{
+		TypingCallbackStop->Stop();
+		TypingCallbackStop = nullptr;
+	}
+	
+	// Invalidate all typing indicator timers and clear the map
+	{
+		FScopeLock Lock(&TypingIndicatorsCriticalSection);
+		for (auto& IndicatorPair : TypingIndicators)
+		{
+			IndicatorPair.Value.TimerHandle.Invalidate();
+		}
+		TypingIndicators.Empty();
+	}
+	
+	IsStreamingTyping = false;
 }
 
 void UPubnubChatChannel::CleanUp()

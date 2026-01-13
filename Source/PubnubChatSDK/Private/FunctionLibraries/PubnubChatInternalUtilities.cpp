@@ -303,6 +303,22 @@ FString UPubnubChatInternalUtilities::GetReportMessageEventPayload(const FString
 	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
+FString UPubnubChatInternalUtilities::GetTypingEventPayload(const bool IsTyping)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetBoolField(ANSI_TO_TCHAR("value"), IsTyping);
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}
+
+bool UPubnubChatInternalUtilities::GetIsTypingFromEventPayload(const FString& EventPayload)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(EventPayload, JsonObject);
+	bool IsTyping;
+	JsonObject->TryGetBoolField(ANSI_TO_TCHAR("value"), IsTyping);
+	return IsTyping;
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;
@@ -601,6 +617,25 @@ bool UPubnubChatInternalUtilities::UpdateChatMessageDataFromPubnubMessage(const 
 		}
 	}
 	return true;
+}
+
+void UPubnubChatInternalUtilities::RemoveExpiredTypingIndicators(TMap<FString, FTypingIndicatorData>& TypingIndicators, const int TypingTimeout, FDateTime CurrentTime)
+{
+	TArray<FString> ExpiredUserIDs;
+	for (auto& IndicatorPair : TypingIndicators)
+	{
+		FTimespan TimeSinceTyping = CurrentTime - IndicatorPair.Value.LastTypingTime;
+		if (TimeSinceTyping >= TypingTimeout)
+		{
+			// Invalidate timer before removing
+			IndicatorPair.Value.TimerHandle.Invalidate();
+			ExpiredUserIDs.Add(IndicatorPair.Key);
+		}
+	}
+	for (const FString& ExpiredUserID : ExpiredUserIDs)
+	{
+		TypingIndicators.Remove(ExpiredUserID);
+	}
 }
 
 

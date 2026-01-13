@@ -67,6 +67,8 @@ public:
 	static bool IsThisEventMessage(const FString& MessageContent);
 	static FString GetMentionEventPayload(const FString& ChannelID, const FString& Timetoken, const FString& Text, const FString& ParentChannel = "");
 	static FString GetReportMessageEventPayload(const FString& Text, const FString& Reason, const FString& ChannelID, const FString& UserID, const FString& Timetoken);
+	static FString GetTypingEventPayload(const bool IsTyping);
+	static bool GetIsTypingFromEventPayload(const FString& EventPayload);
 	
 	/* MEMBERSHIP */
 	
@@ -104,6 +106,11 @@ public:
 	static void UpdateChatMembershipFromPubnubMembershipUpdateData(const FPubnubMembershipUpdateData& PubnubMembershipUpdateData, FPubnubChatMembershipData& MembershipData);
 	//Returns true if data was updated
 	static bool UpdateChatMessageDataFromPubnubMessage(const FPubnubMessageData& MessageData, const FString& ChatMessageTimetoken, FPubnubChatMessageData& ChatMessageData);
+	
+	
+	/* TYPING */
+	
+	static void RemoveExpiredTypingIndicators(TMap<FString, FTypingIndicatorData>& TypingIndicators, const int TypingTimeout, FDateTime CurrentTime);
 	
 	
 	/* ACCESS MANAGER */

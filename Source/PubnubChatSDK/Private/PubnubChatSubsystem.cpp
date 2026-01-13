@@ -40,6 +40,9 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FSt
 			return FinalResult;
 		}
 	}
+	
+	//Adjust some Config values that might be not in range
+	Config.ValidateConfig();
 
 	UPubnubChat* NewChat = NewObject<UPubnubChat>(this);
 	NewChat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);

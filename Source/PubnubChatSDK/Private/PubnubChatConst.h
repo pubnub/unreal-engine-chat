@@ -21,3 +21,6 @@ const FString Pubnub_Chat_ForwardMessage_OriginalPublisher_Property_Name = "orig
 const FString Pubnub_Chat_ForwardMessage_OriginalChannelID_Property_Name = "originalChannelId";
 //Some functions can't accept "0" or "" as empty timetoken, so we use this one for such purpose
 const FString Pubnub_Chat_Empty_Timetoken = "17000000000000000";
+//Minimal Typing Indicator Timeout in MS
+constexpr int Pubnub_Chat_Min_Typing_Indicator_Timeout = 1000;
+constexpr int Pubnub_Chat_Typing_Timeout_Margin = 500;

@@ -2,7 +2,15 @@
 
 
 #include "StructLibraries/PubnubChatStructLibrary.h"
+#include "kismet/KismetMathLibrary.h"
+#include "PubnubChatConst.h"
 
+
+void FPubnubChatConfig::ValidateConfig()
+{
+	TypingTimeout = UKismetMathLibrary::Max(TypingTimeout, Pubnub_Chat_Min_Typing_Indicator_Timeout);
+	TypingTimeoutDifference = UKismetMathLibrary::Max(TypingTimeoutDifference, 0);
+}
 
 FPubnubChatOperationResult& FPubnubChatOperationResult::MarkSuccess()
 {
