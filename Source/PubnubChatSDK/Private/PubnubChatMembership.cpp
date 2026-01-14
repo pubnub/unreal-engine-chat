@@ -9,6 +9,7 @@
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatConst.h"
 #include "PubnubChatMessage.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
@@ -222,6 +223,19 @@ FPubnubChatOperationResult UPubnubChatMembership::StopStreamingUpdates()
 	FPubnubOperationResult UnsubscribeResult = UpdatesSubscription->Unsubscribe();
 	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
 	IsStreamingUpdates = false;
+	return FinalResult;
+}
+
+FPubnubChatGetUnreadMessagesCountResult UPubnubChatMembership::GetUnreadMessagesCount()
+{
+	FPubnubChatGetUnreadMessagesCountResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	FString LRMTimetoken = GetLastReadMessageTimetoken().IsEmpty() ? Pubnub_Chat_Empty_Timetoken : GetLastReadMessageTimetoken();
+	FPubnubMessageCountsResult MessageCountsResult = PubnubClient->MessageCounts(GetChannelID(), LRMTimetoken);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, MessageCountsResult.Result, "MessageCounts");
+	
+	FinalResult.Count = MessageCountsResult.MessageCounts;
 	return FinalResult;
 }
 

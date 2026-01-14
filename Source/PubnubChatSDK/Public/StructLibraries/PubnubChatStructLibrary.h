@@ -408,6 +408,19 @@ struct FPubnubChatGetUnreadMessagesCountsResult
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatGetUnreadMessagesCountResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Count = 0;
+};
+
+
+USTRUCT(BlueprintType)
 struct FPubnubChatMarkAllMessagesAsReadResult
 {
 	GENERATED_BODY()

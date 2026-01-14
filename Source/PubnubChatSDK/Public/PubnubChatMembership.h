@@ -74,6 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
+	FPubnubChatGetUnreadMessagesCountResult GetUnreadMessagesCount();
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
