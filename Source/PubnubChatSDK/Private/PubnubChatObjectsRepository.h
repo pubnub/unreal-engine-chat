@@ -59,13 +59,6 @@ public:
 	void UnregisterChannel(const FString& ChannelID);
 
 	/**
-	 * Gets user data from the repository. Creates entry if it doesn't exist.
-	 * @param UserID The unique identifier of the user
-	 * @return Reference to the internal user data
-	 */
-	FPubnubChatInternalUser& GetOrCreateUserData(const FString& UserID);
-
-	/**
 	 * Gets user data from the repository. Returns nullptr if not found.
 	 * @param UserID The unique identifier of the user
 	 * @return Pointer to the internal user data, or nullptr if not found
@@ -85,14 +78,7 @@ public:
 	 * @return True if user was found and removed, false otherwise
 	 */
 	bool RemoveUserData(const FString& UserID);
-
-	/**
-	 * Gets channel data from the repository. Creates entry if it doesn't exist.
-	 * @param ChannelID The unique identifier of the channel
-	 * @return Reference to the internal channel data
-	 */
-	FPubnubChatInternalChannel& GetOrCreateChannelData(const FString& ChannelID);
-
+	
 	/**
 	 * Gets channel data from the repository. Returns nullptr if not found.
 	 * @param ChannelID The unique identifier of the channel
@@ -127,14 +113,7 @@ public:
 	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
 	 */
 	void UnregisterMessage(const FString& MessageID);
-
-	/**
-	 * Gets message data from the repository. Creates entry if it doesn't exist.
-	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
-	 * @return Reference to the internal message data
-	 */
-	FPubnubChatInternalMessage& GetOrCreateMessageData(const FString& MessageID);
-
+	
 	/**
 	 * Gets message data from the repository. Returns nullptr if not found.
 	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
@@ -169,13 +148,6 @@ public:
 	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
 	 */
 	void UnregisterMembership(const FString& MembershipID);
-
-	/**
-	 * Gets membership data from the repository. Creates entry if it doesn't exist.
-	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
-	 * @return Reference to the internal membership data
-	 */
-	FPubnubChatInternalMembership& GetOrCreateMembershipData(const FString& MembershipID);
 
 	/**
 	 * Gets membership data from the repository. Returns nullptr if not found.

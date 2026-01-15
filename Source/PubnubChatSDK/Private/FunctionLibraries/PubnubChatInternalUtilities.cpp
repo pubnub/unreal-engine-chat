@@ -638,6 +638,54 @@ void UPubnubChatInternalUtilities::RemoveExpiredTypingIndicators(TMap<FString, F
 	}
 }
 
+FString UPubnubChatInternalUtilities::GetThreadID(const FString& ChannelID, const FString& Timetoken)
+{
+	return FString::Printf(TEXT("%s_%s_%s"), *Pubnub_Chat_Message_Thread_ID_Prefix, *ChannelID, *Timetoken);
+}
+
+FString UPubnubChatInternalUtilities::GetThreadDescription(const FString& ChannelID, const FString& Timetoken)
+{
+	return FString::Printf(TEXT("Thread on channel %s with message timetoken %s"), *ChannelID, *Timetoken);
+}
+
+bool UPubnubChatInternalUtilities::HasThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions)
+{
+	for (auto& MessageAction : MessageActions)
+	{
+		if (MessageAction.Type == EPubnubChatMessageActionType::PCMAT_ThreadRootId && !MessageAction.Value.IsEmpty())
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+FPubnubChatMessageAction UPubnubChatInternalUtilities::GetThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions)
+{
+	for (auto& MessageAction : MessageActions)
+	{
+		if (MessageAction.Type == EPubnubChatMessageActionType::PCMAT_ThreadRootId && !MessageAction.Value.IsEmpty())
+		{
+			return MessageAction;
+		}
+	}
+	
+	return FPubnubChatMessageAction();
+}
+
+void UPubnubChatInternalUtilities::RemoveThreadRootFromMessageActions(TArray<FPubnubChatMessageAction>& MessageActions)
+{
+	//Scan through actions and remove those with ThreadRootId
+	for (int i = MessageActions.Num() - 1; i >= 0; i--)
+	{
+		if (MessageActions[i].Type == EPubnubChatMessageActionType::PCMAT_ThreadRootId)
+		{
+			MessageActions.RemoveAt(i);
+		}
+	}
+}
+
 
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
 {

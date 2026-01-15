@@ -24,3 +24,5 @@ const FString Pubnub_Chat_Empty_Timetoken = "17000000000000000";
 //Minimal Typing Indicator Timeout in MS
 constexpr int Pubnub_Chat_Min_Typing_Indicator_Timeout = 1000;
 constexpr int Pubnub_Chat_Typing_Timeout_Margin = 500;
+//Prefix for ChannelID that is a Thread
+const FString Pubnub_Chat_Message_Thread_ID_Prefix = "PUBNUB_INTERNAL_THREAD";

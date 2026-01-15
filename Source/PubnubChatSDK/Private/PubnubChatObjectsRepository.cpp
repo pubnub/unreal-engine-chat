@@ -106,19 +106,6 @@ void UPubnubChatObjectsRepository::UnregisterChannel(const FString& ChannelID)
 	}
 }
 
-FPubnubChatInternalUser& UPubnubChatObjectsRepository::GetOrCreateUserData(const FString& UserID)
-{
-	FScopeLock Lock(&UsersCriticalSection);
-	
-	if (!Users.Contains(UserID))
-	{
-		FPubnubChatInternalUser NewUser;
-		NewUser.UserID = UserID;
-		Users.Add(UserID, NewUser);
-	}
-	return Users[UserID];
-}
-
 FPubnubChatInternalUser* UPubnubChatObjectsRepository::GetUserData(const FString& UserID)
 {
 	FScopeLock Lock(&UsersCriticalSection);
@@ -145,19 +132,6 @@ bool UPubnubChatObjectsRepository::RemoveUserData(const FString& UserID)
 {
 	FScopeLock Lock(&UsersCriticalSection);
 	return Users.Remove(UserID) > 0;
-}
-
-FPubnubChatInternalChannel& UPubnubChatObjectsRepository::GetOrCreateChannelData(const FString& ChannelID)
-{
-	FScopeLock Lock(&ChannelsCriticalSection);
-	
-	if (!Channels.Contains(ChannelID))
-	{
-		FPubnubChatInternalChannel NewChannel;
-		NewChannel.ChannelID = ChannelID;
-		Channels.Add(ChannelID, NewChannel);
-	}
-	return Channels[ChannelID];
 }
 
 FPubnubChatInternalChannel* UPubnubChatObjectsRepository::GetChannelData(const FString& ChannelID)
@@ -239,19 +213,6 @@ void UPubnubChatObjectsRepository::UnregisterMessage(const FString& MessageID)
 	}
 }
 
-FPubnubChatInternalMessage& UPubnubChatObjectsRepository::GetOrCreateMessageData(const FString& MessageID)
-{
-	FScopeLock Lock(&MessagesCriticalSection);
-	
-	if (!Messages.Contains(MessageID))
-	{
-		FPubnubChatInternalMessage NewMessage;
-		NewMessage.MessageID = MessageID;
-		Messages.Add(MessageID, NewMessage);
-	}
-	return Messages[MessageID];
-}
-
 FPubnubChatInternalMessage* UPubnubChatObjectsRepository::GetMessageData(const FString& MessageID)
 {
 	FScopeLock Lock(&MessagesCriticalSection);
@@ -329,19 +290,6 @@ void UPubnubChatObjectsRepository::UnregisterMembership(const FString& Membershi
 		Memberships.Remove(MembershipID);
 		MembershipReferenceCounts.Remove(MembershipID);
 	}
-}
-
-FPubnubChatInternalMembership& UPubnubChatObjectsRepository::GetOrCreateMembershipData(const FString& MembershipID)
-{
-	FScopeLock Lock(&MembershipsCriticalSection);
-	
-	if (!Memberships.Contains(MembershipID))
-	{
-		FPubnubChatInternalMembership NewMembership;
-		NewMembership.MembershipID = MembershipID;
-		Memberships.Add(MembershipID, NewMembership);
-	}
-	return Memberships[MembershipID];
 }
 
 FPubnubChatInternalMembership* UPubnubChatObjectsRepository::GetMembershipData(const FString& MembershipID)

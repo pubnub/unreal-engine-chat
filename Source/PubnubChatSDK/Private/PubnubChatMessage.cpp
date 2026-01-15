@@ -8,6 +8,7 @@
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
+#include "PubnubChatThreadChannel.h"
 #include "PubnubChatUser.h"
 #include "Entities/PubnubChannelEntity.h"
 #include "Entities/PubnubSubscription.h"
@@ -104,9 +105,13 @@ FPubnubChatOperationResult UPubnubChatMessage::Delete(bool Soft)
 	FPubnubChatOperationResult FinalResult;
 	FPubnubChatMessageData CurrentMessageData = GetMessageData();
 	
-	//Hard Delete
+	//If Message has thread, also Delete it, but only if Message.Delete succeeded 
+	FPubnubChatThreadChannelResult GetThreadResult = GetThread();
+	
 	if (!Soft)
 	{
+		//Hard Delete - really remove message from the server
+		
 		FPubnubDeleteMessagesSettings DeleteSettings;
 		DeleteSettings.Start = UPubnubTimetokenUtilities::AddIntToTimetoken(Timetoken, 1);
 		DeleteSettings.End = Timetoken;
@@ -115,23 +120,31 @@ FPubnubChatOperationResult UPubnubChatMessage::Delete(bool Soft)
 		
 		//Remove Message data from the repository
 		Chat->ObjectsRepository->RemoveMessageData(GetInternalMessageID());
-		
-		return FinalResult;
+	}
+	else
+	{
+		//Soft delete - just add message action without actually deleting the message
+	
+		//If message is already deleted, don't add new message action
+		if (IsDeleted().IsDeleted)
+		{ return FinalResult; }
+
+		FString ActionType = UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChatMessageActionType::PCMAT_Deleted);
+		FPubnubAddMessageActionResult AddActionResult =  PubnubClient->AddMessageAction(CurrentMessageData.ChannelID, GetMessageTimetoken(), ActionType, Pubnub_Chat_Soft_Deleted_Action_Value);
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, AddActionResult.Result, "AddMessageAction");
+	
+		//Add this new message action to MessageData and update ObjectsRepository
+		CurrentMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(AddActionResult.MessageActionData));
+		Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
 	}
 	
-	//Soft delete - just add message action without actually deleting the message
+	//Now we can Delete thread if it exists
+	if (GetThreadResult.ThreadChannel)
+	{
+		FPubnubChatOperationResult DeleteThreadResult = GetThreadResult.ThreadChannel->Delete(Soft);
+		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteThreadResult);
+	}
 	
-	//If message is already deleted, don't add new message action
-	if (IsDeleted().IsDeleted)
-	{ return FinalResult; }
-
-	FString ActionType = UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChatMessageActionType::PCMAT_Deleted);
-	FPubnubAddMessageActionResult AddActionResult =  PubnubClient->AddMessageAction(CurrentMessageData.ChannelID, GetMessageTimetoken(), ActionType, Pubnub_Chat_Soft_Deleted_Action_Value);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, AddActionResult.Result, "AddMessageAction");
-	
-	//Add this new message action to MessageData and update ObjectsRepository
-	CurrentMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(AddActionResult.MessageActionData));
-	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
 	return FinalResult;
 }
 
@@ -154,6 +167,13 @@ FPubnubChatOperationResult UPubnubChatMessage::Restore()
 	
 	//Update repository with new data
 	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
+	
+	//If Message has thread, also restore it
+	FPubnubChatThreadChannelResult GetThreadResult = GetThread();
+	if (GetThreadResult.ThreadChannel)
+	{
+		GetThreadResult.ThreadChannel->Restore();
+	}
 	
 	return FinalResult;
 }
@@ -347,6 +367,11 @@ void UPubnubChatMessage::InitMessage(UPubnubClient* InPubnubClient, UPubnubChat*
 	IsInitialized = true;
 }
 
+void UPubnubChatMessage::UpdateMessageData(const FPubnubChatMessageData& NewMessageData)
+{
+	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), NewMessageData);
+}
+
 FPubnubChatOperationResult UPubnubChatMessage::StreamUpdates()
 {
 	FPubnubChatOperationResult FinalResult;
@@ -419,6 +444,39 @@ FPubnubChatOperationResult UPubnubChatMessage::StopStreamingUpdates()
 	}
 	IsStreamingUpdates = false;
 	return FinalResult;
+}
+
+FPubnubChatThreadChannelResult UPubnubChatMessage::CreateThread()
+{
+	FPubnubChatThreadChannelResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return Chat->CreateThreadChannel(this);
+}
+
+FPubnubChatThreadChannelResult UPubnubChatMessage::GetThread()
+{
+	FPubnubChatThreadChannelResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	
+	return Chat->GetThreadChannel(this);
+}
+
+FPubnubChatHasThreadResult UPubnubChatMessage::HasThread()
+{
+	FPubnubChatHasThreadResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	FinalResult.HasThread = UPubnubChatInternalUtilities::HasThreadRootMessageAction(GetMessageData().MessageActions);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessage::RemoveThread()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	
+	return Chat->RemoveThreadChannel(this);
 }
 
 void UPubnubChatMessage::OnChatDestroyed(FString InUserID)

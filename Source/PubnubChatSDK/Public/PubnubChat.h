@@ -19,6 +19,7 @@ class UPubnubChatChannel;
 class UPubnubChatMembership;
 class UPubnubChatAccessManager;
 class UPubnubChatObjectsRepository;
+class UPubnubChatThreadChannel;
 enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
 
@@ -46,6 +47,7 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	friend class UPubnubChatChannel;
 	friend class UPubnubChatMessage;
 	friend class UPubnubChatMembership;
+	friend class UPubnubChatThreadChannel;
 	
 public:
 
@@ -171,6 +173,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
 	FPubnubChatMarkAllMessagesAsReadResult MarkAllMessagesAsRead(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	
+	/* THREADS */
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
+	FPubnubChatThreadChannelResult CreateThreadChannel(UPubnubChatMessage* Message);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
+	FPubnubChatThreadChannelResult GetThreadChannel(UPubnubChatMessage* Message);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
+	FPubnubChatOperationResult RemoveThreadChannel(UPubnubChatMessage* Message);
+	
+	
 	/* ACCESS MANAGER */
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat|Access Manager")
@@ -229,5 +244,7 @@ private:
 	UPubnubChatMembership* CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubMembershipData& MembershipData);
 	UPubnubChatMembership* CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChannelMemberData& ChannelMemberData);
 	
+	UPubnubChatThreadChannel* CreateThreadChannelObject(const FString ThreadChannelID, const FPubnubChatChannelData& ThreadChannelData, UPubnubChatMessage* Message, bool IsThreadAlreadyConfirmed);
+	UPubnubChatThreadChannel* CreateThreadChannelObject(const FString ThreadChannelID, const FPubnubChannelData& ChannelData, UPubnubChatMessage* Message, bool IsThreadAlreadyConfirmed);
 };
 

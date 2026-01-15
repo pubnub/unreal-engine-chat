@@ -15,6 +15,7 @@
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatThreadChannel.h"
 #include "PubnubChatConst.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatMembership.h"
@@ -742,6 +743,88 @@ FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const 
 	return FinalResult;
 }
 
+FPubnubChatThreadChannelResult UPubnubChat::CreateThreadChannel(UPubnubChatMessage* Message)
+{
+	FPubnubChatThreadChannelResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, Message);
+	
+	FPubnubChatMessageData MessageData = Message->GetMessageData();
+	
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, !MessageData.ChannelID.StartsWith(Pubnub_Chat_Message_Thread_ID_Prefix), TEXT("This message is already in a Thread - only one level of thread nesting is allowed"));
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, !Message->IsDeleted().IsDeleted, TEXT("Can't create Thread on deleted message"));
+	
+	FString ThreadChannelID = UPubnubChatInternalUtilities::GetThreadID(MessageData.ChannelID, Message->GetMessageTimetoken());
+	
+	//Make sure this message hasn't already got the Thread
+	FPubnubChatChannelResult GetChannelResult = GetChannel(ThreadChannelID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, GetChannelResult.Result.Error, TEXT("Thread for this message already exists"));
+	
+	FPubnubChatChannelData ThreadChannelData;
+	ThreadChannelData.Description = UPubnubChatInternalUtilities::GetThreadID(MessageData.ChannelID, Message->GetMessageTimetoken());
+	
+	//This is just local creation, not pushed to the server. Thread will be created on api during first SendText on that thread
+	FinalResult.ThreadChannel = CreateThreadChannelObject(ThreadChannelID, ThreadChannelData, Message, false);
+	
+	return FinalResult;
+}
+
+FPubnubChatThreadChannelResult UPubnubChat::GetThreadChannel(UPubnubChatMessage* Message)
+{
+	FPubnubChatThreadChannelResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, Message);
+	
+	FPubnubChatMessageData MessageData = Message->GetMessageData();
+	FString ThreadChannelID = UPubnubChatInternalUtilities::GetThreadID(MessageData.ChannelID, Message->GetMessageTimetoken());
+	
+	//GetChannelMetadata from PubnubClient
+	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ThreadChannelID, FPubnubGetMetadataInclude::FromValue(true));
+
+	if (GetChannelResult.Result.Error)
+	{
+		FinalResult.Result.Error = true;
+		FinalResult.Result.ErrorMessage = "Thread on this message doesn't exist";
+		return FinalResult;
+	}
+	
+	//Thread already exists on server (we just retrieved its metadata), so create thread channel object with IsThreadConfirmed = true
+	FinalResult.ThreadChannel = CreateThreadChannelObject(ThreadChannelID, GetChannelResult.ChannelData, Message, true);
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChat::RemoveThreadChannel(UPubnubChatMessage* Message)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Message);
+	
+	FPubnubChatOperationResult FinalResult;
+	
+	//Check if this Message has Thread
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(Message->HasThread().HasThread, TEXT("There is no Thread on this Message to be removed"));
+	
+	//Get ThreadRoot MessageAction
+	FPubnubChatMessageData MessageData = Message->GetMessageData();
+	FPubnubChatMessageAction ThreadRootMessageAction = UPubnubChatInternalUtilities::GetThreadRootMessageAction(MessageData.MessageActions);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!ThreadRootMessageAction.Timetoken.IsEmpty(), TEXT("This Message has invalid ThreadRoot MessageAction - Timetoken is empty"));
+	
+	//Remove ThreadRoot MessageAction using PubnubClient
+	FPubnubOperationResult RemoveActionResult = PubnubClient->RemoveMessageAction(MessageData.ChannelID, Message->GetMessageTimetoken(), ThreadRootMessageAction.Timetoken);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveActionResult, "RemoveMessageAction");
+	
+	//Update MessageData (remove that action) and update repository
+	UPubnubChatInternalUtilities::RemoveThreadRootFromMessageActions(MessageData.MessageActions);
+	Message->UpdateMessageData(MessageData);
+	
+	//Delete ThreadChannel
+	FString ThreadChannelID = UPubnubChatInternalUtilities::GetThreadID(MessageData.ChannelID, Message->GetMessageTimetoken());
+	FPubnubChatChannelResult DeleteChannelResult = DeleteChannel(ThreadChannelID, false);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteChannelResult.Result);
+	
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChat::ReconnectSubscriptions(const FString Timetoken)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -972,4 +1055,28 @@ UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User
 	ObjectsRepository->UpdateMembershipData(NewMembership->GetInternalMembershipID(), FPubnubChatMembershipData::FromPubnubChannelMemberData(ChannelMemberData));
 
 	return NewMembership;
+}
+
+UPubnubChatThreadChannel* UPubnubChat::CreateThreadChannelObject(const FString ThreadChannelID, const FPubnubChatChannelData& ThreadChannelData, UPubnubChatMessage* Message, bool IsThreadAlreadyConfirmed)
+{
+	//Update repository with updated thread channel data (for ObjectsRepository we treat ThreadChannels as regular Channels)
+	ObjectsRepository->UpdateChannelData(ThreadChannelID, ThreadChannelData);
+
+	//Create and return the thread channel object
+	UPubnubChatThreadChannel* NewThreadChannel = NewObject<UPubnubChatThreadChannel>(this);
+	NewThreadChannel->InitThreadChannel(PubnubClient, this, ThreadChannelID, Message, IsThreadAlreadyConfirmed);
+	
+	return NewThreadChannel;
+}
+
+UPubnubChatThreadChannel* UPubnubChat::CreateThreadChannelObject(const FString ThreadChannelID, const FPubnubChannelData& ChannelData, UPubnubChatMessage* Message, bool IsThreadAlreadyConfirmed)
+{
+	//Update repository with updated thread channel data (for ObjectsRepository we treat ThreadChannels as regular Channels)
+	ObjectsRepository->UpdateChannelData(ThreadChannelID, FPubnubChatChannelData::FromPubnubChannelData(ChannelData));
+
+	//Create and return the thread channel object
+	UPubnubChatThreadChannel* NewThreadChannel = NewObject<UPubnubChatThreadChannel>(this);
+	NewThreadChannel->InitThreadChannel(PubnubClient, this, ThreadChannelID, Message, IsThreadAlreadyConfirmed);
+	
+	return NewThreadChannel;
 }

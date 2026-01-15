@@ -113,6 +113,14 @@ public:
 	static void RemoveExpiredTypingIndicators(TMap<FString, FTypingIndicatorData>& TypingIndicators, const int TypingTimeout, FDateTime CurrentTime);
 	
 	
+	/* THREADS */
+	
+	static FString GetThreadID(const FString& ChannelID, const FString& Timetoken);
+	static FString GetThreadDescription(const FString& ChannelID, const FString& Timetoken);
+	static bool HasThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
+	static FPubnubChatMessageAction GetThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
+	static void RemoveThreadRootFromMessageActions(TArray<FPubnubChatMessageAction>& MessageActions);
+	
 	/* ACCESS MANAGER */
 
 	/**

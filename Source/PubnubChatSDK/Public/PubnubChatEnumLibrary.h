@@ -22,7 +22,8 @@ enum class EPubnubChatMessageActionType : uint8
 	PCMAT_Receipt				UMETA(DisplayName="Custom"),
 	PCMAT_Custom				UMETA(DisplayName="Reaction"),
 	PCMAT_Edited				UMETA(DisplayName="Custom"),
-	PCMAT_Deleted				UMETA(DisplayName="Reaction")
+	PCMAT_Deleted				UMETA(DisplayName="Reaction"),
+	PCMAT_ThreadRootId			UMETA(DisplayName="ThreadRootId")
 };
 
 UENUM(BlueprintType)

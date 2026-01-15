@@ -6,6 +6,7 @@
 #include "UObject/Object.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "PubnubChatEnumLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
 
 #include "PubnubChatMessage.generated.h"
 
@@ -19,12 +20,13 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdateReceivedNative, F
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class PUBNUBCHATSDK_API UPubnubChatMessage : public UObject
 {
 	GENERATED_BODY()
 
 	friend class UPubnubChat;
+	friend class UPubnubChatThreadChannel;
 public:
 
 	virtual void BeginDestroy() override;
@@ -85,6 +87,18 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
 	FPubnubChatOperationResult StopStreamingUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
+	FPubnubChatThreadChannelResult CreateThread();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
+	FPubnubChatThreadChannelResult GetThread();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
+	FPubnubChatHasThreadResult HasThread();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
+	FPubnubChatOperationResult RemoveThread();
 
 private:
 	UPROPERTY()
@@ -102,6 +116,7 @@ private:
 	bool IsStreamingUpdates = false;
 
 	void InitMessage(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID, const FString InTimetoken);
+	void UpdateMessageData(const FPubnubChatMessageData& NewMessageData);
 
 	/**
 	 * Gets the internal composite message ID used for repository operations.

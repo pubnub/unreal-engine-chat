@@ -19,7 +19,7 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceivedNative, EP
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class PUBNUBCHATSDK_API UPubnubChatUser : public UObject
 {
 	GENERATED_BODY()

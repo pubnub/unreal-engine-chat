@@ -154,7 +154,8 @@ FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, F
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Message);
-
+	FPubnubChatOperationResult FinalResult;
+	
 	//Validate quoted message if it was added to the params
 	if(SendTextParams.QuotedMessage)
 	{
@@ -175,9 +176,11 @@ FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, F
 
 	//PublishMessage by PubnubClient
 	FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(ChannelID, UPubnubChatInternalUtilities::ChatMessageToPublishString(Message), PublishSettings);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PublishResult.Result, "PublishMessage");
 
-	FPubnubChatOperationResult FinalResult;
-	FinalResult.AddStep("PublishMessage", PublishResult.Result);
+	//Here it's just an empty function, but ThreadChannel uses it to AddMessageAction about it's creation
+	FPubnubChatOperationResult OnSendTextResult = OnSendText();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, OnSendTextResult);
 	
 	return FinalResult;
 }
@@ -938,6 +941,11 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 	FinalResult.Total = GetMembersResult.TotalCount;
 	
 	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::OnSendText()
+{
+	return FPubnubChatOperationResult();
 }
 
 void UPubnubChatChannel::OnChatDestroyed(FString UserID)

@@ -9,6 +9,7 @@
 class UPubnubChatChannel;
 class UPubnubChatCallbackStop;
 class UPubnubChatMembership;
+class UPubnubChatThreadChannel;
 
 
 USTRUCT(BlueprintType)
@@ -227,4 +228,28 @@ struct FPubnubChatReadReceipts
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TMap<FString, FPubnubChatUserIDsArray> ReadReceipts;
 	
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatThreadChannelResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatThreadChannel* ThreadChannel = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatHasThreadResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool HasThread = false;
 };

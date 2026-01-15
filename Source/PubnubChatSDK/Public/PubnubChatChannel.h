@@ -32,13 +32,12 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportReceivedNative, co
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class PUBNUBCHATSDK_API UPubnubChatChannel : public UObject
 {
 	GENERATED_BODY()
 
 	friend class UPubnubChat;
-	friend class UPubnubChannel;
 public:
 
 	virtual void BeginDestroy() override;
@@ -183,7 +182,7 @@ public:
 	FPubnubChatEventsResult GetMessageReportsHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 100);
 	
 	
-private:
+protected:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 	UPROPERTY()
@@ -215,6 +214,9 @@ private:
 	void InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID);
 	
 	FPubnubChatGetRestrictionsResult GetRestrictions(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+	
+	//This function is for ThreadChannel which does additional logic during SentText (SendText as UFUNCTION can't be directly overriden)
+	virtual FPubnubChatOperationResult OnSendText();
 	
 	UFUNCTION()
 	void OnChatDestroyed(FString UserID);

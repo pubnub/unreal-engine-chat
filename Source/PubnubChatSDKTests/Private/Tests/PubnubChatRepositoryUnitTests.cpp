@@ -157,8 +157,11 @@ bool FPubnubChatRepositoryUserDataSharingTest::RunTest(const FString& Parameters
 	Repository->UpdateUserData(TestUserID, InitialData);
 	
 	// Get data reference
-	FPubnubChatInternalUser& DataRef1 = Repository->GetOrCreateUserData(TestUserID);
-	TestEqual("First reference should see initial data", DataRef1.UserData.UserName, InitialData.UserName);
+	FPubnubChatInternalUser* DataRef1 = Repository->GetUserData(TestUserID);
+	TestNotNull("User data has to be valid", DataRef1);
+	if (!DataRef1)
+	{ return false;}
+	TestEqual("First reference should see initial data", DataRef1->UserData.UserName, InitialData.UserName);
 	
 	// Register again (simulating second object)
 	Repository->RegisterUser(TestUserID);
@@ -484,8 +487,11 @@ bool FPubnubChatRepositoryMessageDataSharingTest::RunTest(const FString& Paramet
 	Repository->UpdateMessageData(CompositeMessageID, InitialData);
 	
 	// Get data reference
-	FPubnubChatInternalMessage& DataRef1 = Repository->GetOrCreateMessageData(CompositeMessageID);
-	TestEqual("First reference should see initial data", DataRef1.MessageData.Text, InitialData.Text);
+	FPubnubChatInternalMessage* DataRef1 = Repository->GetMessageData(CompositeMessageID);
+	TestNotNull("Message data has to be valid", DataRef1);
+	if (!DataRef1)
+	{ return false;}
+	TestEqual("First reference should see initial data", DataRef1->MessageData.Text, InitialData.Text);
 	
 	// Register again (simulating second object)
 	Repository->RegisterMessage(CompositeMessageID);

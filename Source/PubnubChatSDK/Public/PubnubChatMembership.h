@@ -21,7 +21,7 @@ DECLARE_MULTICAST_DELEGATE_FourParams(FOnPubnubChatMembershipUpdateReceivedNativ
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class PUBNUBCHATSDK_API UPubnubChatMembership : public UObject
 {
 	GENERATED_BODY()

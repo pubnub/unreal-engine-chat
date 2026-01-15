@@ -41,6 +41,8 @@ FString UPubnubChatInternalConverters::ChatMessageActionTypeToString(EPubnubChat
 		return TEXT("edited");
 	case EPubnubChatMessageActionType::PCMAT_Deleted:
 		return TEXT("deleted");
+	case EPubnubChatMessageActionType::PCMAT_ThreadRootId:
+		return TEXT("threadRootId");
 	default:
 		return TEXT("custom");
 	}
@@ -67,6 +69,10 @@ EPubnubChatMessageActionType UPubnubChatInternalConverters::StringToChatMessageA
 	else if (ActionTypeString.Equals(TEXT("deleted"), ESearchCase::IgnoreCase))
 	{
 		return EPubnubChatMessageActionType::PCMAT_Deleted;
+	}
+	else if (ActionTypeString.Equals(TEXT("threadRootId"), ESearchCase::IgnoreCase))
+	{
+		return EPubnubChatMessageActionType::PCMAT_ThreadRootId;
 	}
 	else
 	{
