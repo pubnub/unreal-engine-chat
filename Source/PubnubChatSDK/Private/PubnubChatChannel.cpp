@@ -334,31 +334,27 @@ FPubnubChatMessageResult UPubnubChatChannel::GetPinnedMessage()
 	if (PinnedMessageTimetoken.IsEmpty() || PinnedMessageChannelID.IsEmpty())
 	{ return FinalResult; }
 	
-	FPubnubChatMessageResult GetMessageResult = GetMessage(PinnedMessageTimetoken);
-	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMessageResult.Result);
-	
-	//If GetMessage succeed, but Message is invalid, it means there is no such message.
-	if (!GetMessageResult.Message)
-	{ return FinalResult; }
-	
-	//If pinned message is from this channel, just return it
+	//If pinned message is from this channel, just return GetMessage result
 	if (PinnedMessageChannelID == ChannelID)
 	{
-		return GetMessageResult;
+		return GetMessage(PinnedMessageTimetoken);
 	}
 	
-	//Pinned message might be also from a thread channel
-	if (UPubnubChatInternalUtilities::IsChannelAThread(PinnedMessageChannelID))
-	{
-		UPubnubChatThreadMessage* ThreadMessage = Chat->CreateThreadMessageObject(GetMessageResult.Message->GetMessageTimetoken(), GetMessageResult.Message->GetMessageData(), ChannelID);
-		FinalResult.Message = ThreadMessage;
-		return FinalResult;
-	}
+	//If we didn't get pinned message above, it has to be from a Thread
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, UPubnubChatInternalUtilities::IsChannelAThread(PinnedMessageChannelID), TEXT("Pinned Message is from incorrect channel."));
 	
-	//Users should never be able to pin incorrect messages, but if logic reached here, something went wrong
-	FinalResult.Result.Error = true;
-	FinalResult.Result.ErrorMessage = TEXT("Pinned Message is from incorrect Channel");
+	//Get Thread Channel
+	FPubnubChatChannelResult GetChannelResult = Chat->GetChannel(PinnedMessageChannelID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, GetChannelResult.Channel, TEXT("Pinned Message is from non-existing Channel."));
 	
+	//Get that message from Thread Channel
+	FPubnubChatMessageResult GetMessageResult = GetChannelResult.Channel->GetMessage(PinnedMessageTimetoken);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMessageResult.Result);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, GetMessageResult.Message, TEXT("Pinned message doesn't exist."));
+
+	//Create ThreadMessage object from regular message, so it has full data if later cast to the ThreadMessage
+	UPubnubChatThreadMessage* ThreadMessage = Chat->CreateThreadMessageObject(GetMessageResult.Message->GetMessageTimetoken(), GetMessageResult.Message->GetMessageData(), ChannelID);
+	FinalResult.Message = ThreadMessage;
 	return FinalResult;
 }
 

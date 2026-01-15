@@ -4,8 +4,10 @@
 #include "PubnubChat.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
+#include "PubnubChatThreadChannel.h"
 #include "PubnubChatMembership.h"
 #include "PubnubChatUser.h"
+#include "PubnubChatCallbackStop.h"
 #include "PubnubClient.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
@@ -5868,6 +5870,469 @@ bool FPubnubChatMessageHasUserReactionMultipleUsersTest::RunTest(const FString& 
 		if(*SecondChat)
 		{
 			CleanUpCurrentChatUser(*SecondChat);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// CREATETHREAD TESTS (Message)
+// ============================================================================
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageCreateThreadHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.CreateThread.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageCreateThreadHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_create_thread_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_create_thread_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	const FString TestMessageText = TEXT("Test message for create thread");
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateChannelResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Create thread using Message->CreateThread()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatThreadChannelResult CreateResult = (*ReceivedMessage)->CreateThread();
+		
+		TestFalse("CreateThread should succeed", CreateResult.Result.Error);
+		TestNotNull("ThreadChannel should be created", CreateResult.ThreadChannel);
+		
+		if(CreateResult.ThreadChannel)
+		{
+			// Verify thread channel properties
+			TestEqual("ParentChannelID should match", CreateResult.ThreadChannel->GetParentChannelID(), (*ReceivedMessage)->GetMessageData().ChannelID);
+			TestEqual("ParentMessage should match", CreateResult.ThreadChannel->GetParentMessage(), *ReceivedMessage);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, ReceivedMessage]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+		}
+		if(Chat && *ReceivedMessage)
+		{
+			// Remove thread if it was created and confirmed
+			FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
+			if(HasThreadResult.HasThread)
+			{
+				Chat->RemoveThreadChannel(*ReceivedMessage);
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// GETTHREAD TESTS (Message)
+// ============================================================================
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageGetThreadHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.GetThread.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageGetThreadHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_get_thread_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_get_thread_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	const FString TestMessageText = TEXT("Test message for get thread");
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateChannelResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Create thread channel
+	TSharedPtr<UPubnubChatThreadChannel*> ThreadChannel = MakeShared<UPubnubChatThreadChannel*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, ReceivedMessage, ThreadChannel]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatThreadChannelResult CreateResult = Chat->CreateThreadChannel(*ReceivedMessage);
+		TestFalse("CreateThreadChannel should succeed", CreateResult.Result.Error);
+		TestNotNull("ThreadChannel should be created", CreateResult.ThreadChannel);
+		
+		*ThreadChannel = CreateResult.ThreadChannel;
+	}, 0.1f));
+	
+	// Send text to thread channel to confirm it on server
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		
+		const FString ThreadMessageText = TEXT("Thread message");
+		FPubnubChatOperationResult SendResult = (*ThreadChannel)->SendText(ThreadMessageText);
+		TestFalse("SendText to thread should succeed", SendResult.Error);
+	}, 0.2f));
+	
+	// Wait a bit for thread confirmation, then get thread using Message->GetThread()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatThreadChannelResult GetResult = (*ReceivedMessage)->GetThread();
+		
+		TestFalse("GetThread should succeed", GetResult.Result.Error);
+		TestNotNull("ThreadChannel should be returned", GetResult.ThreadChannel);
+		
+		if(GetResult.ThreadChannel)
+		{
+			// Verify thread channel properties
+			TestEqual("ParentChannelID should match", GetResult.ThreadChannel->GetParentChannelID(), (*ReceivedMessage)->GetMessageData().ChannelID);
+			TestEqual("ParentMessage should match", GetResult.ThreadChannel->GetParentMessage(), *ReceivedMessage);
+		}
+	}, 1.0f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, ReceivedMessage, ThreadChannel]()
+	{
+		if(*ThreadChannel)
+		{
+			(*ThreadChannel)->Disconnect();
+		}
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+		}
+		if(Chat && *ReceivedMessage)
+		{
+			// Remove thread
+			FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
+			if(HasThreadResult.HasThread)
+			{
+				Chat->RemoveThreadChannel(*ReceivedMessage);
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// REMOVETHREAD TESTS (Message)
+// ============================================================================
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageRemoveThreadHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.RemoveThread.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageRemoveThreadHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_remove_thread_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_remove_thread_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	const FString TestMessageText = TEXT("Test message for remove thread");
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateChannelResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Create thread channel
+	TSharedPtr<UPubnubChatThreadChannel*> ThreadChannel = MakeShared<UPubnubChatThreadChannel*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, ReceivedMessage, ThreadChannel]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatThreadChannelResult CreateResult = Chat->CreateThreadChannel(*ReceivedMessage);
+		TestFalse("CreateThreadChannel should succeed", CreateResult.Result.Error);
+		TestNotNull("ThreadChannel should be created", CreateResult.ThreadChannel);
+		
+		*ThreadChannel = CreateResult.ThreadChannel;
+	}, 0.1f));
+	
+	// Send text to thread channel to confirm it on server
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		
+		const FString ThreadMessageText = TEXT("Thread message");
+		FPubnubChatOperationResult SendResult = (*ThreadChannel)->SendText(ThreadMessageText);
+		TestFalse("SendText to thread should succeed", SendResult.Error);
+	}, 0.2f));
+	
+	// Wait a bit for thread confirmation, then remove thread using Message->RemoveThread()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		// Verify message has thread before removal
+		FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
+		if(!HasThreadResult.HasThread)
+		{
+			AddError("Message should have thread before removal - thread may not be confirmed yet");
+			return;
+		}
+		TestTrue("Message should have thread before removal", HasThreadResult.HasThread);
+		
+		FPubnubChatOperationResult RemoveResult = (*ReceivedMessage)->RemoveThread();
+		
+		TestFalse("RemoveThread should succeed", RemoveResult.Error);
+	}, 1.5f));
+	
+	// Wait a bit for removal to propagate, then verify message no longer has thread
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
+		
+		TestFalse("HasThread should succeed", HasThreadResult.Result.Error);
+		TestFalse("Message should not have thread after removal", HasThreadResult.HasThread);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, ReceivedMessage, ThreadChannel]()
+	{
+		if(*ThreadChannel)
+		{
+			(*ThreadChannel)->Disconnect();
+		}
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+		}
+		if(Chat && *ReceivedMessage)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

@@ -1720,7 +1720,7 @@ bool FPubnubChatRemoveThreadChannelHappyPathTest::RunTest(const FString& Paramet
 // VALIDATION TESTS (Fast Failing Conditions)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasThreadNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Threads.HasThread.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasThreadNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasThread.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatMessageHasThreadNotInitializedTest::RunTest(const FString& Parameters)
 {
@@ -1749,7 +1749,7 @@ bool FPubnubChatMessageHasThreadNotInitializedTest::RunTest(const FString& Param
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasThreadHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Threads.HasThread.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasThreadHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasThread.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatMessageHasThreadHappyPathTest::RunTest(const FString& Parameters)
 {
@@ -1917,7 +1917,7 @@ bool FPubnubChatMessageHasThreadHappyPathTest::RunTest(const FString& Parameters
  * Tests HasThread before and after creating/removing thread.
  * Verifies that HasThread correctly reflects thread state changes.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasThreadStateChangesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Threads.HasThread.4Advanced.StateChanges", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageHasThreadStateChangesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.HasThread.4Advanced.StateChanges", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatMessageHasThreadStateChangesTest::RunTest(const FString& Parameters)
 {

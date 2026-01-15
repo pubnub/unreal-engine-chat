@@ -4,12 +4,15 @@
 #include "PubnubChat.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
+#include "PubnubChatThreadChannel.h"
+#include "PubnubChatThreadMessage.h"
 #include "PubnubChatMembership.h"
 #include "PubnubChatUser.h"
 #include "PubnubChatCallbackStop.h"
 #include "PubnubClient.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -4588,6 +4591,522 @@ bool FPubnubChatChannelUnpinMessageNoPinnedMessageTest::RunTest(const FString& P
 
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// GETPINNEDMESSAGE TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetPinnedMessageNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetPinnedMessage.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetPinnedMessageNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_pinned_not_init_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_pinned_not_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Create uninitialized channel object
+			UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+			
+			// Try to get pinned message with uninitialized channel
+			FPubnubChatMessageResult GetPinnedResult = UninitializedChannel->GetPinnedMessage();
+			TestTrue("GetPinnedMessage should fail with uninitialized channel", GetPinnedResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", GetPinnedResult.Result.ErrorMessage.IsEmpty());
+		}
+		
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetPinnedMessageHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetPinnedMessage.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetPinnedMessageHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_pinned_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_pinned_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	const FString TestMessageText = TEXT("Test message to pin");
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Pin the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult PinResult = CreateResult.Channel->PinMessage(*ReceivedMessage);
+		TestFalse("PinMessage should succeed", PinResult.Error);
+	}, 0.1f));
+	
+	// Get pinned message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatMessageResult GetPinnedResult = CreateResult.Channel->GetPinnedMessage();
+		TestFalse("GetPinnedMessage should succeed", GetPinnedResult.Result.Error);
+		TestNotNull("Pinned message should be returned", GetPinnedResult.Message);
+		
+		if(GetPinnedResult.Message)
+		{
+			// Verify pinned message matches the message we pinned
+			TestEqual("Pinned message timetoken should match", GetPinnedResult.Message->GetMessageTimetoken(), (*ReceivedMessage)->GetMessageTimetoken());
+			
+			// Verify message data
+			FPubnubChatMessageData PinnedMessageData = GetPinnedResult.Message->GetMessageData();
+			FPubnubChatMessageData OriginalMessageData = (*ReceivedMessage)->GetMessageData();
+			
+			TestEqual("Message text should match", PinnedMessageData.Text, OriginalMessageData.Text);
+			TestEqual("Message UserID should match", PinnedMessageData.UserID, OriginalMessageData.UserID);
+			TestEqual("Message ChannelID should match", PinnedMessageData.ChannelID, OriginalMessageData.ChannelID);
+		}
+	}, 0.5f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			// Unpin message before cleanup
+			FPubnubChatOperationResult UnpinResult = CreateResult.Channel->UnpinMessage();
+			TestFalse("UnpinMessage should succeed", UnpinResult.Error);
+			
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+// GetPinnedMessage has no optional parameters, so full parameter test is same as happy path
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetPinnedMessage when no message is pinned.
+ * Verifies that GetPinnedMessage returns empty result when no message is pinned.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetPinnedMessageNoPinnedMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetPinnedMessage.4Advanced.NoPinnedMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetPinnedMessageNoPinnedMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_pinned_no_pin_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_pinned_no_pin";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel (no pinned message)
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Try to get pinned message when there's no pinned message
+	FPubnubChatMessageResult GetPinnedResult = CreateResult.Channel->GetPinnedMessage();
+	TestFalse("GetPinnedMessage should succeed even when no message is pinned", GetPinnedResult.Result.Error);
+	TestNull("Pinned message should be null when no message is pinned", GetPinnedResult.Message);
+	
+	// Cleanup
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetPinnedMessage with a thread message pinned to parent channel.
+ * Verifies that GetPinnedMessage returns a ThreadMessage with correct ParentChannelID and data.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetPinnedMessageThreadMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetPinnedMessage.4Advanced.ThreadMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetPinnedMessageThreadMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_pinned_thread_msg_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_pinned_thread_msg";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	const FString TestMessageText = TEXT("Test message for pinned thread message");
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateChannelResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Create thread channel
+	TSharedPtr<UPubnubChatThreadChannel*> ThreadChannel = MakeShared<UPubnubChatThreadChannel*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, ReceivedMessage, ThreadChannel]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatThreadChannelResult CreateResult = Chat->CreateThreadChannel(*ReceivedMessage);
+		TestFalse("CreateThreadChannel should succeed", CreateResult.Result.Error);
+		TestNotNull("ThreadChannel should be created", CreateResult.ThreadChannel);
+		
+		*ThreadChannel = CreateResult.ThreadChannel;
+	}, 0.1f));
+	
+	// Connect to thread channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		
+		FPubnubChatOperationResult ConnectResult = (*ThreadChannel)->Connect();
+		TestFalse("Connect to thread channel should succeed", ConnectResult.Error);
+	}, 0.2f));
+	
+	// Send text to thread channel to confirm it and create a message
+	const FString ThreadMessageText = TEXT("Thread message to pin");
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel, ThreadMessageText]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		
+		FPubnubChatOperationResult SendResult = (*ThreadChannel)->SendText(ThreadMessageText);
+		TestFalse("SendText to thread should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Get thread message from history
+	TSharedPtr<UPubnubChatThreadMessage*> ThreadMessage = MakeShared<UPubnubChatThreadMessage*>(nullptr);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel, ThreadMessage, ThreadMessageText]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		
+		// Get thread history to get ThreadMessage
+		const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		const FString StartTimetoken = CurrentTimetoken;
+		const FString EndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -100000000);
+		
+		FPubnubChatGetThreadHistoryResult GetHistoryResult = (*ThreadChannel)->GetThreadHistory(StartTimetoken, EndTimetoken);
+		TestFalse("GetThreadHistory should succeed", GetHistoryResult.Result.Error);
+		
+		// Find the thread message we sent
+		for(UPubnubChatThreadMessage* TM : GetHistoryResult.ThreadMessages)
+		{
+			if(TM)
+			{
+				FPubnubChatMessageData MessageData = TM->GetMessageData();
+				if(MessageData.Text.Contains(ThreadMessageText))
+				{
+					*ThreadMessage = TM;
+					break;
+				}
+			}
+		}
+	}, 1.0f));
+	
+	// Pin the thread message to parent channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel, ThreadMessage, CreateChannelResult, TestChannelID]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		
+		if(!*ThreadMessage)
+		{
+			AddError("ThreadMessage was not retrieved");
+			return;
+		}
+		
+		FPubnubChatOperationResult PinResult = (*ThreadChannel)->PinMessageToParentChannel(*ThreadMessage);
+		TestFalse("PinMessageToParentChannel should succeed", PinResult.Error);
+	}, 0.5f));
+	
+	// Get pinned message and verify it's a ThreadMessage with correct data
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, ThreadMessage, TestChannelID]()
+	{
+		if(!*ThreadMessage)
+		{
+			AddError("ThreadMessage was not retrieved");
+			return;
+		}
+		
+		FPubnubChatMessageResult GetPinnedResult = CreateChannelResult.Channel->GetPinnedMessage();
+		TestFalse("GetPinnedMessage should succeed", GetPinnedResult.Result.Error);
+		TestNotNull("Pinned message should be returned", GetPinnedResult.Message);
+		
+		if(GetPinnedResult.Message)
+		{
+			// Cast to ThreadMessage
+			UPubnubChatThreadMessage* PinnedThreadMessage = Cast<UPubnubChatThreadMessage>(GetPinnedResult.Message);
+			TestNotNull("Pinned message should be a ThreadMessage", PinnedThreadMessage);
+			
+			if(PinnedThreadMessage)
+			{
+				// Verify ParentChannelID matches
+				TestEqual("ParentChannelID should match", PinnedThreadMessage->GetParentChannelID(), TestChannelID);
+				
+				// Verify timetoken matches
+				TestEqual("Timetoken should match", PinnedThreadMessage->GetMessageTimetoken(), (*ThreadMessage)->GetMessageTimetoken());
+				
+				// Verify message data
+				FPubnubChatMessageData PinnedMessageData = PinnedThreadMessage->GetMessageData();
+				FPubnubChatMessageData OriginalMessageData = (*ThreadMessage)->GetMessageData();
+				
+				TestEqual("Message text should match", PinnedMessageData.Text, OriginalMessageData.Text);
+				TestEqual("Message UserID should match", PinnedMessageData.UserID, OriginalMessageData.UserID);
+				TestEqual("Message ChannelID should match", PinnedMessageData.ChannelID, OriginalMessageData.ChannelID);
+			}
+		}
+	}, 0.5f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, ReceivedMessage, ThreadChannel]()
+	{
+		if(*ThreadChannel)
+		{
+			(*ThreadChannel)->Disconnect();
+		}
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+		}
+		if(Chat && *ReceivedMessage)
+		{
+			// Unpin message before cleanup
+			FPubnubChatOperationResult UnpinResult = CreateChannelResult.Channel->UnpinMessage();
+			TestFalse("UnpinMessage should succeed", UnpinResult.Error);
+			
+			FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
+			if(HasThreadResult.HasThread)
+			{
+				Chat->RemoveThreadChannel(*ReceivedMessage);
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
 	return true;
 }
 
