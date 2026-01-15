@@ -16,6 +16,7 @@
 #include "PubnubChatUser.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatThreadChannel.h"
+#include "PubnubChatThreadMessage.h"
 #include "PubnubChatConst.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatMembership.h"
@@ -23,7 +24,6 @@
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
-
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
 
@@ -1079,4 +1079,40 @@ UPubnubChatThreadChannel* UPubnubChat::CreateThreadChannelObject(const FString T
 	NewThreadChannel->InitThreadChannel(PubnubClient, this, ThreadChannelID, Message, IsThreadAlreadyConfirmed);
 	
 	return NewThreadChannel;
+}
+
+UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData, const FString ParentChannelID)
+{
+	//Create and init the message object (for ObjectsRepository we treat ThreadMessages as regular Messages)
+	UPubnubChatThreadMessage* NewThreadMessage = NewObject<UPubnubChatThreadMessage>(this);
+	NewThreadMessage->InitThreadMessage(PubnubClient, this, ChatMessageData.ChannelID, Timetoken, ParentChannelID);
+	
+	//Update repository with updated message data
+	ObjectsRepository->UpdateMessageData(NewThreadMessage->GetInternalMessageID(), ChatMessageData);
+
+	return NewThreadMessage;
+}
+
+UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData, const FString ParentChannelID)
+{
+	//Create and init the message object (for ObjectsRepository we treat ThreadMessages as regular Messages)
+	UPubnubChatThreadMessage* NewThreadMessage = NewObject<UPubnubChatThreadMessage>(this);
+	NewThreadMessage->InitThreadMessage(PubnubClient, this, MessageData.Channel, Timetoken, ParentChannelID);
+	
+	//Update repository with updated message data
+	ObjectsRepository->UpdateMessageData(NewThreadMessage->GetInternalMessageID(), FPubnubChatMessageData::FromPubnubMessageData(MessageData));
+
+	return NewThreadMessage;
+}
+
+UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData, const FString ParentChannelID)
+{
+	//Create and init the message object (for ObjectsRepository we treat ThreadMessages as regular Messages)
+	UPubnubChatThreadMessage* NewThreadMessage = NewObject<UPubnubChatThreadMessage>(this);
+	NewThreadMessage->InitThreadMessage(PubnubClient, this, HistoryMessageData.Channel, Timetoken, ParentChannelID);
+	
+	//Update repository with updated message data
+	ObjectsRepository->UpdateMessageData(NewThreadMessage->GetInternalMessageID(), FPubnubChatMessageData::FromPubnubHistoryMessageData(HistoryMessageData));
+
+	return NewThreadMessage;
 }

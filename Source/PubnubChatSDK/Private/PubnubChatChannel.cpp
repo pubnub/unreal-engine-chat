@@ -11,6 +11,7 @@
 #include "PubnubChatObjectsRepository.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
+#include "PubnubChatThreadMessage.h"
 #include "Entities/PubnubChannelEntity.h"
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
@@ -270,7 +271,20 @@ FPubnubChatOperationResult UPubnubChatChannel::PinMessage(UPubnubChatMessage* Me
 	FPubnubChatOperationResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Message);
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((Message->GetMessageData().ChannelID == ChannelID), TEXT("Can't pin Message from another Channel"));
+	
+	//Check if message is from this Channel
+	bool IsMessageFromThisChannel = false;
+	if (Message->GetMessageData().ChannelID == ChannelID)
+	{ IsMessageFromThisChannel = true; }
+	//Or from any Thread Channel that has this Channel as Parent
+	else
+	{
+		UPubnubChatThreadMessage* ThreadMessage = Cast<UPubnubChatThreadMessage>(Message);
+		if (ThreadMessage && ThreadMessage->GetParentChannelID() == ChannelID)
+		{ IsMessageFromThisChannel = true; }
+	}
+	
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(IsMessageFromThisChannel, TEXT("Can't pin Message from another Channel"));
 	
 	//Add pinned message to ChannelData
 	FPubnubChatChannelData ChannelData = GetChannelData();
@@ -316,15 +330,34 @@ FPubnubChatMessageResult UPubnubChatChannel::GetPinnedMessage()
 	JsonObject->TryGetStringField(UPubnubChatInternalUtilities::GetPinnedMessageTimetokenPropertyKey(), PinnedMessageTimetoken);
 	JsonObject->TryGetStringField(UPubnubChatInternalUtilities::GetPinnedMessageChannelIDPropertyKey(), PinnedMessageChannelID);
 	
+	//If there is no pinned message, just return
 	if (PinnedMessageTimetoken.IsEmpty() || PinnedMessageChannelID.IsEmpty())
 	{ return FinalResult; }
 	
+	FPubnubChatMessageResult GetMessageResult = GetMessage(PinnedMessageTimetoken);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMessageResult.Result);
+	
+	//If GetMessage succeed, but Message is invalid, it means there is no such message.
+	if (!GetMessageResult.Message)
+	{ return FinalResult; }
+	
+	//If pinned message is from this channel, just return it
 	if (PinnedMessageChannelID == ChannelID)
 	{
-		return GetMessage(PinnedMessageTimetoken);
+		return GetMessageResult;
 	}
 	
-	//TODO:: Get message from thread here
+	//Pinned message might be also from a thread channel
+	if (UPubnubChatInternalUtilities::IsChannelAThread(PinnedMessageChannelID))
+	{
+		UPubnubChatThreadMessage* ThreadMessage = Chat->CreateThreadMessageObject(GetMessageResult.Message->GetMessageTimetoken(), GetMessageResult.Message->GetMessageData(), ChannelID);
+		FinalResult.Message = ThreadMessage;
+		return FinalResult;
+	}
+	
+	//Users should never be able to pin incorrect messages, but if logic reached here, something went wrong
+	FinalResult.Result.Error = true;
+	FinalResult.Result.ErrorMessage = TEXT("Pinned Message is from incorrect Channel");
 	
 	return FinalResult;
 }

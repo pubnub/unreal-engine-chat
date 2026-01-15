@@ -100,7 +100,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
 	FPubnubChatOperationResult RemoveThread();
 
-private:
+protected:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 	UPROPERTY()

@@ -120,6 +120,7 @@ public:
 	static bool HasThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
 	static FPubnubChatMessageAction GetThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
 	static void RemoveThreadRootFromMessageActions(TArray<FPubnubChatMessageAction>& MessageActions);
+	static bool IsChannelAThread(const FString& ChannelID);
 	
 	/* ACCESS MANAGER */
 

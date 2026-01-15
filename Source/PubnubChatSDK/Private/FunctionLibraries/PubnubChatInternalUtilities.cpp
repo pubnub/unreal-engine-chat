@@ -686,6 +686,11 @@ void UPubnubChatInternalUtilities::RemoveThreadRootFromMessageActions(TArray<FPu
 	}
 }
 
+bool UPubnubChatInternalUtilities::IsChannelAThread(const FString& ChannelID)
+{
+	return ChannelID.StartsWith(*Pubnub_Chat_Message_Thread_ID_Prefix);
+}
+
 
 bool UPubnubChatInternalUtilities::CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr)
 {

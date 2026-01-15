@@ -10,6 +10,8 @@ class UPubnubChatChannel;
 class UPubnubChatCallbackStop;
 class UPubnubChatMembership;
 class UPubnubChatThreadChannel;
+class UPubnubChatMessage;
+class UPubnubChatThreadMessage;
 
 
 USTRUCT(BlueprintType)
@@ -205,6 +207,21 @@ struct FPubnubChatGetHistoryResult
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TArray<UPubnubChatMessage*> Messages;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool IsMore = false;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatGetThreadHistoryResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<UPubnubChatThreadMessage*> ThreadMessages;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	bool IsMore = false;

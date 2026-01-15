@@ -20,6 +20,7 @@ class UPubnubChatMembership;
 class UPubnubChatAccessManager;
 class UPubnubChatObjectsRepository;
 class UPubnubChatThreadChannel;
+class UPubnubChatThreadMessage;
 enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
 
@@ -246,5 +247,10 @@ private:
 	
 	UPubnubChatThreadChannel* CreateThreadChannelObject(const FString ThreadChannelID, const FPubnubChatChannelData& ThreadChannelData, UPubnubChatMessage* Message, bool IsThreadAlreadyConfirmed);
 	UPubnubChatThreadChannel* CreateThreadChannelObject(const FString ThreadChannelID, const FPubnubChannelData& ChannelData, UPubnubChatMessage* Message, bool IsThreadAlreadyConfirmed);
+
+	UPubnubChatThreadMessage* CreateThreadMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData, const FString ParentChannelID);
+	UPubnubChatThreadMessage* CreateThreadMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData, const FString ParentChannelID);
+	UPubnubChatThreadMessage* CreateThreadMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData, const FString ParentChannelID);
+
 };
 

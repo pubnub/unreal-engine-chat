@@ -17,11 +17,20 @@ class PUBNUBCHATSDK_API UPubnubChatThreadChannel : public UPubnubChatChannel
 	friend class UPubnubChat;
 public:
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadChannel")
 	FString GetParentChannelID() const { return ParentChannelID; }
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadChannel")
 	UPubnubChatMessage* GetParentMessage() const { return ParentMessage; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadChannel")
+	FPubnubChatGetThreadHistoryResult GetThreadHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 25);
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
+	FPubnubChatOperationResult PinMessageToParentChannel(UPubnubChatThreadMessage* ThreadMessage);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
+	FPubnubChatOperationResult UnpinMessageFromParentChannel();
 	
 private:
 	
