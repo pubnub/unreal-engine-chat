@@ -510,8 +510,8 @@ bool FPubnubChatUserStreamUpdatesDeleteEventTest::RunTest(const FString& Paramet
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestUserID]()
 	{
 		// Hard delete user (Soft = false) - this should trigger a delete event
-		FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TestUserID, false);
-		TestFalse("DeleteUser should succeed", DeleteResult.Result.Error);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TestUserID, false);
+		TestFalse("DeleteUser should succeed", DeleteResult.Error);
 	}, 0.5f));
 	
 	// Wait until delete event is received

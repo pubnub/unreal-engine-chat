@@ -55,8 +55,8 @@ FPubnubChatOperationResult UPubnubChatUser::Delete(bool Soft)
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 
-	FPubnubChatUserResult DeleteUserResult = Chat->DeleteUser(UserID, Soft);
-	return DeleteUserResult.Result;
+	FPubnubChatOperationResult DeleteUserResult = Chat->DeleteUser(UserID, Soft);
+	return DeleteUserResult;
 }
 
 FPubnubChatOperationResult UPubnubChatUser::Restore()

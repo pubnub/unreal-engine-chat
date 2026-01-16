@@ -218,6 +218,9 @@ protected:
 	//This function is for ThreadChannel which does additional logic during SentText (SendText as UFUNCTION can't be directly overriden)
 	virtual FPubnubChatOperationResult OnSendText();
 	
+	//Add calling OnMessageReceived to ConnectSubscription. Virtual as Thread Channel will override it to use OnThreadMessageReceived
+	virtual void AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak);
+	
 	UFUNCTION()
 	void OnChatDestroyed(FString UserID);
 	void ClearAllSubscriptions();

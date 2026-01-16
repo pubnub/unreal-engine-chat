@@ -69,19 +69,7 @@ FPubnubChatOperationResult UPubnubChatChannel::Connect()
 	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
 	
 	//Add lister to subscription with provided callback
-	ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisWeak](const FPubnubMessageData& MessageData)
-	{
-		if(!ThisWeak.IsValid())
-		{return;}
-		
-		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
-
-		if(!ThisChannel->Chat)
-		{return;}
-		
-		ThisChannel->OnMessageReceived.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
-		ThisChannel->OnMessageReceivedNative.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
-	});
+	AddOnMessageReceivedLambdaToSubscription(ThisWeak);
 	
 	//Subscribe with this channel Subscription
 	FPubnubOperationResult SubscribeResult = ConnectSubscription->Subscribe();
@@ -378,8 +366,8 @@ FPubnubChatOperationResult UPubnubChatChannel::Delete(bool Soft)
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 
-	FPubnubChatChannelResult DeleteChannelResult = Chat->DeleteChannel(ChannelID, Soft);
-	return DeleteChannelResult.Result;
+	FPubnubChatOperationResult DeleteChannelResult = Chat->DeleteChannel(ChannelID, Soft);
+	return DeleteChannelResult;
 }
 
 FPubnubChatOperationResult UPubnubChatChannel::Restore()
@@ -975,6 +963,23 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 FPubnubChatOperationResult UPubnubChatChannel::OnSendText()
 {
 	return FPubnubChatOperationResult();
+}
+
+void UPubnubChatChannel::AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak)
+{
+	ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisChannelWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisChannelWeak.IsValid())
+		{return;}
+			
+		UPubnubChatChannel* ThisChannel = ThisChannelWeak.Get();
+
+		if(!ThisChannel->Chat)
+		{return;}
+			
+		ThisChannel->OnMessageReceived.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
+		ThisChannel->OnMessageReceivedNative.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
+	});
 }
 
 void UPubnubChatChannel::OnChatDestroyed(FString UserID)

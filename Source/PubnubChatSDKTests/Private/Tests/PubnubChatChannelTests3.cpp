@@ -3086,8 +3086,8 @@ bool FPubnubChatChannelStreamUpdatesDeleteTest::RunTest(const FString& Parameter
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
 	{
 		// Hard delete channel (Soft = false) - this should trigger a delete event
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
-		TestFalse("DeleteChannel should succeed", DeleteResult.Result.Error);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+		TestFalse("DeleteChannel should succeed", DeleteResult.Error);
 	}, 0.5f));
 	
 	// Wait until delete event is received

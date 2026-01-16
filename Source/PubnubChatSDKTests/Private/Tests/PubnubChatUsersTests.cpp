@@ -1212,11 +1212,10 @@ bool FPubnubChatDeleteUserNotInitializedTest::RunTest(const FString& Parameters)
 		if(Chat)
 		{
 			const FString TestUserID = SDK_PREFIX + "test_delete_user_not_init";
-			FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TestUserID, false);
+			FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TestUserID, false);
 			
-			TestTrue("DeleteUser should fail when Chat is not initialized", DeleteResult.Result.Error);
-			TestNull("User should not be returned", DeleteResult.User);
-			TestFalse("ErrorMessage should not be empty", DeleteResult.Result.ErrorMessage.IsEmpty());
+			TestTrue("DeleteUser should fail when Chat is not initialized", DeleteResult.Error);
+			TestFalse("ErrorMessage should not be empty", DeleteResult.ErrorMessage.IsEmpty());
 		}
 	}
 
@@ -1248,11 +1247,10 @@ bool FPubnubChatDeleteUserEmptyUserIDTest::RunTest(const FString& Parameters)
 	if(Chat)
 	{
 		// Try to delete user with empty UserID
-		FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TEXT(""), false);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TEXT(""), false);
 		
-		TestTrue("DeleteUser should fail with empty UserID", DeleteResult.Result.Error);
-		TestNull("User should not be returned", DeleteResult.User);
-		TestFalse("ErrorMessage should not be empty", DeleteResult.Result.ErrorMessage.IsEmpty());
+		TestTrue("DeleteUser should fail with empty UserID", DeleteResult.Error);
+		TestFalse("ErrorMessage should not be empty", DeleteResult.ErrorMessage.IsEmpty());
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1292,10 +1290,9 @@ bool FPubnubChatDeleteUserHappyPathTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Delete user with default parameters (hard delete)
-		FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID);
 		
-		TestFalse("DeleteUser should succeed", DeleteResult.Result.Error);
-		// Note: DeleteUser may or may not return a user object depending on implementation
+		TestFalse("DeleteUser should succeed", DeleteResult.Error);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1335,9 +1332,9 @@ bool FPubnubChatDeleteUserHardDeleteTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Hard delete user (Soft = false)
-		FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
 		
-		TestFalse("Hard DeleteUser should succeed", DeleteResult.Result.Error);
+		TestFalse("Hard DeleteUser should succeed", DeleteResult.Error);
 		
 		// Verify user is actually deleted - GetUser should fail
 		FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
@@ -1377,10 +1374,9 @@ bool FPubnubChatDeleteUserSoftDeleteTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
 		// Soft delete user (Soft = true)
-		FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID, true);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, true);
 		
-		TestFalse("Soft DeleteUser should succeed", DeleteResult.Result.Error);
-		TestNotNull("Soft delete should return user object", DeleteResult.User);
+		TestFalse("Soft DeleteUser should succeed", DeleteResult.Error);
 		
 		// Verify user still exists but is marked as deleted
 		FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
@@ -1437,12 +1433,12 @@ bool FPubnubChatDeleteUserHardVsSoftTest::RunTest(const FString& Parameters)
 		TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
 		
 		// Soft delete first user
-		FPubnubChatUserResult SoftDeleteResult = Chat->DeleteUser(SoftDeleteUserID, true);
-		TestFalse("Soft DeleteUser should succeed", SoftDeleteResult.Result.Error);
+		FPubnubChatOperationResult SoftDeleteResult = Chat->DeleteUser(SoftDeleteUserID, true);
+		TestFalse("Soft DeleteUser should succeed", SoftDeleteResult.Error);
 		
 		// Hard delete second user
-		FPubnubChatUserResult HardDeleteResult = Chat->DeleteUser(HardDeleteUserID, false);
-		TestFalse("Hard DeleteUser should succeed", HardDeleteResult.Result.Error);
+		FPubnubChatOperationResult HardDeleteResult = Chat->DeleteUser(HardDeleteUserID, false);
+		TestFalse("Hard DeleteUser should succeed", HardDeleteResult.Error);
 		
 		// Verify soft-deleted user still exists
 		FPubnubChatUserResult GetSoftResult = Chat->GetUser(SoftDeleteUserID);
@@ -1709,8 +1705,8 @@ bool FPubnubChatUserRestoreHardDeletedUserTest::RunTest(const FString& Parameter
 	}
 	
 	// Hard delete the user
-	FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
-	TestFalse("Hard delete should succeed", DeleteResult.Result.Error);
+	FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
+	TestFalse("Hard delete should succeed", DeleteResult.Error);
 	
 	// Try to get the user again (should fail)
 	FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
@@ -2029,8 +2025,8 @@ bool FPubnubChatUserIsDeletedHardDeletedUserTest::RunTest(const FString& Paramet
 	}
 	
 	// Hard delete the user
-	FPubnubChatUserResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
-	TestFalse("Hard delete should succeed", DeleteResult.Result.Error);
+	FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
+	TestFalse("Hard delete should succeed", DeleteResult.Error);
 	
 	// Try to get the user again (should fail)
 	FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);

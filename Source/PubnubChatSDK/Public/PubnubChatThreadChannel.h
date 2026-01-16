@@ -7,6 +7,10 @@
 
 
 class UPubnubChatMessage;
+class UPubnubChatThreadMessage;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatThreadChannelMessageReceived, UPubnubChatThreadMessage*, ThreadMessage);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatThreadChannelMessageReceivedNative, UPubnubChatThreadMessage* ThreadMessage);
 
 
 UCLASS(BlueprintType)
@@ -16,6 +20,12 @@ class PUBNUBCHATSDK_API UPubnubChatThreadChannel : public UPubnubChatChannel
 
 	friend class UPubnubChat;
 public:
+	
+	/* DELEGATES */
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatThreadChannelMessageReceived OnThreadMessageReceived;
+	FOnPubnubChatThreadChannelMessageReceivedNative OnThreadMessageReceivedNative;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadChannel")
 	FString GetParentChannelID() const { return ParentChannelID; }
@@ -34,6 +44,10 @@ public:
 	
 private:
 	
+	// Hide Channel OnMessageReceived delegates as in this class we have OnThreadMessageReceived
+	using UPubnubChatChannel::OnMessageReceived;
+	using UPubnubChatChannel::OnMessageReceivedNative;
+	
 	UPROPERTY()
 	FString ParentChannelID = "";
 	
@@ -44,6 +58,6 @@ private:
 	
 	void InitThreadChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InThreadChannelID, UPubnubChatMessage* InParentMessage, bool InIsThreadConfirmed);
 	
-	
 	virtual FPubnubChatOperationResult OnSendText() override;
+	virtual void AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak) override;
 };

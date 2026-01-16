@@ -324,7 +324,7 @@ bool FPubnubChatCreateThreadChannelMessageInThreadTest::RunTest(const FString& P
 	TSharedPtr<bool> bThreadMessageReceived = MakeShared<bool>(false);
 	TSharedPtr<UPubnubChatMessage*> ThreadMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	
-	auto ThreadMessageLambda = [this, bThreadMessageReceived, ThreadMessage](UPubnubChatMessage* Message)
+	auto ThreadMessageLambda = [this, bThreadMessageReceived, ThreadMessage](UPubnubChatThreadMessage* Message)
 	{
 		if(Message && !*ThreadMessage)
 		{
@@ -343,7 +343,7 @@ bool FPubnubChatCreateThreadChannelMessageInThreadTest::RunTest(const FString& P
 		}
 		
 		// Connect to thread channel to receive messages
-		(*ThreadChannel)->OnMessageReceivedNative.AddLambda(ThreadMessageLambda);
+		(*ThreadChannel)->OnThreadMessageReceivedNative.AddLambda(ThreadMessageLambda);
 		FPubnubChatOperationResult ConnectResult = (*ThreadChannel)->Connect();
 		TestFalse("Connect to thread channel should succeed", ConnectResult.Error);
 	}, 0.2f));

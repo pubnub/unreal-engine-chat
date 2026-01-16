@@ -230,20 +230,13 @@ FPubnubChatOperationResult UPubnubChatMessage::Unpin()
 	FPubnubChatChannelResult ChannelResult = Chat->GetChannel(CurrentMessageData.ChannelID);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ChannelResult.Result);
 	
-	if (!ChannelResult.Channel)
-	{
-		FinalResult.Error = true;
-		FinalResult.ErrorMessage = TEXT("Channel related to this Message doesn't exist.");
-		return FinalResult;
-	}
-	
 	FPubnubChatMessageResult PinnedMessageResult = ChannelResult.Channel->GetPinnedMessage();
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PinnedMessageResult.Result);
 	
 	//Unpin message only if this message is actually pinned to the channel
 	if (PinnedMessageResult.Message && PinnedMessageResult.Message->Timetoken == Timetoken)
 	{
-		FPubnubChatOperationResult PinResult = Chat->UnpinMessageFromChannel(ChannelResult.Channel);
+		FPubnubChatOperationResult PinResult = ChannelResult.Channel->UnpinMessage();
 		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PinResult);
 	}
 	

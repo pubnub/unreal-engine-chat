@@ -3010,8 +3010,8 @@ bool FPubnubChatMessagePinChannelDoesNotExistTest::RunTest(const FString& Parame
 		}
 		
 		// Delete the channel
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
-		TestFalse("DeleteChannel should succeed", DeleteResult.Result.Error);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+		TestFalse("DeleteChannel should succeed", DeleteResult.Error);
 	}, 0.1f));
 	
 	// Wait a bit, then try to pin message from deleted channel
@@ -3471,8 +3471,8 @@ bool FPubnubChatMessageUnpinChannelDoesNotExistTest::RunTest(const FString& Para
 		}
 		
 		// Delete the channel
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
-		TestFalse("DeleteChannel should succeed", DeleteResult.Result.Error);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+		TestFalse("DeleteChannel should succeed", DeleteResult.Error);
 	}, 0.1f));
 	
 	// Wait a bit, then try to unpin message from deleted channel

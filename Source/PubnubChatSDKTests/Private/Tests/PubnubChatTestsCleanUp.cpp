@@ -97,11 +97,11 @@ bool FPubnubChatCleanUpUsersTest::RunTest(const FString& Parameters)
 			if(User)
 			{
 				const FString UserID = User->GetUserID();
-				FPubnubChatUserResult DeleteResult = Chat->DeleteUser(UserID, false);
+				FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(UserID, false);
 				
-				if(DeleteResult.Result.Error)
+				if(DeleteResult.Error)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Failed to delete user %s: %s"), *UserID, *DeleteResult.Result.ErrorMessage);
+					UE_LOG(LogTemp, Warning, TEXT("Failed to delete user %s: %s"), *UserID, *DeleteResult.ErrorMessage);
 				}
 				else
 				{
@@ -244,11 +244,11 @@ bool FPubnubChatCleanUpChannelsTest::RunTest(const FString& Parameters)
 			if(Channel)
 			{
 				const FString ChannelID = Channel->GetChannelID();
-				FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(ChannelID, false);
+				FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(ChannelID, false);
 				
-				if(DeleteResult.Result.Error)
+				if(DeleteResult.Error)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Failed to delete channel %s: %s"), *ChannelID, *DeleteResult.Result.ErrorMessage);
+					UE_LOG(LogTemp, Warning, TEXT("Failed to delete channel %s: %s"), *ChannelID, *DeleteResult.ErrorMessage);
 				}
 				else
 				{

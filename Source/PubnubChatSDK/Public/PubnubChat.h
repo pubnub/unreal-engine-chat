@@ -96,7 +96,7 @@ public:
 	FPubnubChatUserResult UpdateUser(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	FPubnubChatUserResult DeleteUser(const FString UserID, bool Soft = false);
+	FPubnubChatOperationResult DeleteUser(const FString UserID, bool Soft = false);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatGetUserSuggestionsResult GetUserSuggestions(const FString Text, int Limit = 10);
@@ -123,7 +123,7 @@ public:
 	FPubnubChatChannelResult UpdateChannel(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
-	FPubnubChatChannelResult DeleteChannel(const FString ChannelID, bool Soft = false);
+	FPubnubChatOperationResult DeleteChannel(const FString ChannelID, bool Soft = false);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult PinMessageToChannel(UPubnubChatMessage* Message, UPubnubChatChannel* Channel);

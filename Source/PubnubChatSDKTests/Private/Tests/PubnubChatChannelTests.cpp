@@ -3903,11 +3903,10 @@ bool FPubnubChatDeleteChannelNotInitializedTest::RunTest(const FString& Paramete
 		if(Chat)
 		{
 			const FString TestChannelID = SDK_PREFIX + "test_delete_channel_not_init";
-			FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+			FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
 			
-			TestTrue("DeleteChannel should fail when Chat is not initialized", DeleteResult.Result.Error);
-			TestNull("Channel should not be returned", DeleteResult.Channel);
-			TestFalse("ErrorMessage should not be empty", DeleteResult.Result.ErrorMessage.IsEmpty());
+			TestTrue("DeleteChannel should fail when Chat is not initialized", DeleteResult.Error);
+			TestFalse("ErrorMessage should not be empty", DeleteResult.ErrorMessage.IsEmpty());
 		}
 	}
 
@@ -3939,11 +3938,10 @@ bool FPubnubChatDeleteChannelEmptyChannelIDTest::RunTest(const FString& Paramete
 	if(Chat)
 	{
 		// Try to delete channel with empty ChannelID
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TEXT(""), false);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TEXT(""), false);
 		
-		TestTrue("DeleteChannel should fail with empty ChannelID", DeleteResult.Result.Error);
-		TestNull("Channel should not be returned", DeleteResult.Channel);
-		TestFalse("ErrorMessage should not be empty", DeleteResult.Result.ErrorMessage.IsEmpty());
+		TestTrue("DeleteChannel should fail with empty ChannelID", DeleteResult.Error);
+		TestFalse("ErrorMessage should not be empty", DeleteResult.ErrorMessage.IsEmpty());
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -3983,10 +3981,9 @@ bool FPubnubChatDeleteChannelHappyPathTest::RunTest(const FString& Parameters)
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Delete channel with default parameters (hard delete)
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID);
 		
-		TestFalse("DeleteChannel should succeed", DeleteResult.Result.Error);
-		// Note: Hard delete returns empty result (no channel object)
+		TestFalse("DeleteChannel should succeed", DeleteResult.Error);
 		
 		// Verify channel is actually deleted - GetChannel should fail
 		FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
@@ -4030,10 +4027,9 @@ bool FPubnubChatDeleteChannelHardDeleteTest::RunTest(const FString& Parameters)
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Hard delete channel (Soft = false)
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
 		
-		TestFalse("Hard DeleteChannel should succeed", DeleteResult.Result.Error);
-		TestNull("Hard delete should not return channel object", DeleteResult.Channel);
+		TestFalse("Hard DeleteChannel should succeed", DeleteResult.Error);
 		
 		// Verify channel is actually deleted - GetChannel should fail
 		FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
@@ -4073,31 +4069,27 @@ bool FPubnubChatDeleteChannelSoftDeleteTest::RunTest(const FString& Parameters)
 		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
 		
 		// Soft delete channel (Soft = true)
-		FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, true);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, true);
 		
-		TestFalse("Soft DeleteChannel should succeed", DeleteResult.Result.Error);
-		TestNotNull("Soft delete should return channel object", DeleteResult.Channel);
+		TestFalse("Soft DeleteChannel should succeed", DeleteResult.Error);
 		
-		if(DeleteResult.Channel)
+		// Verify channel still exists but is marked as deleted
+		FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
+		TestFalse("GetChannel should succeed after soft delete", GetResult.Result.Error);
+		TestNotNull("GetChannel should return channel after soft delete", GetResult.Channel);
+		
+		if(GetResult.Channel)
 		{
-			// Verify channel still exists but is marked as deleted
-			FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);
-			TestFalse("GetChannel should succeed after soft delete", GetResult.Result.Error);
-			TestNotNull("GetChannel should return channel after soft delete", GetResult.Channel);
-			
-			if(GetResult.Channel)
-			{
-				// Verify deleted property is in Custom field
-				FPubnubChatChannelData ChannelData = GetResult.Channel->GetChannelData();
-				TestTrue("Custom field should contain deleted property", ChannelData.Custom.Contains(TEXT("\"deleted\"")) || ChannelData.Custom.Contains(TEXT("\"deleted\":true")));
-			}
+			// Verify deleted property is in Custom field
+			FPubnubChatChannelData ChannelData = GetResult.Channel->GetChannelData();
+			TestTrue("Custom field should contain deleted property", ChannelData.Custom.Contains(TEXT("\"deleted\"")) || ChannelData.Custom.Contains(TEXT("\"deleted\":true")));
 		}
+	}
 		
-		// Cleanup: Hard delete the soft-deleted channel
-		if(Chat)
-		{
-			Chat->DeleteChannel(TestChannelID, false);
-		}
+	// Cleanup: Hard delete the soft-deleted channel
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -4142,12 +4134,12 @@ bool FPubnubChatDeleteChannelHardVsSoftTest::RunTest(const FString& Parameters)
 		TestFalse("CreateChannel2 should succeed", CreateResult2.Result.Error);
 		
 		// Soft delete first channel
-		FPubnubChatChannelResult SoftDeleteResult = Chat->DeleteChannel(SoftDeleteChannelID, true);
-		TestFalse("Soft DeleteChannel should succeed", SoftDeleteResult.Result.Error);
+		FPubnubChatOperationResult SoftDeleteResult = Chat->DeleteChannel(SoftDeleteChannelID, true);
+		TestFalse("Soft DeleteChannel should succeed", SoftDeleteResult.Error);
 		
 		// Hard delete second channel
-		FPubnubChatChannelResult HardDeleteResult = Chat->DeleteChannel(HardDeleteChannelID, false);
-		TestFalse("Hard DeleteChannel should succeed", HardDeleteResult.Result.Error);
+		FPubnubChatOperationResult HardDeleteResult = Chat->DeleteChannel(HardDeleteChannelID, false);
+		TestFalse("Hard DeleteChannel should succeed", HardDeleteResult.Error);
 		
 		// Verify soft-deleted channel still exists
 		FPubnubChatChannelResult GetSoftResult = Chat->GetChannel(SoftDeleteChannelID);
@@ -4414,8 +4406,8 @@ bool FPubnubChatChannelRestoreHardDeletedChannelTest::RunTest(const FString& Par
 	}
 	
 	// Hard delete the channel
-	FPubnubChatChannelResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
-	TestFalse("Hard delete should succeed", DeleteResult.Result.Error);
+	FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+	TestFalse("Hard delete should succeed", DeleteResult.Error);
 	
 	// Try to get the channel again (should fail)
 	FPubnubChatChannelResult GetResult = Chat->GetChannel(TestChannelID);

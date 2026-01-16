@@ -6,6 +6,7 @@
 #include "PubnubChat.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatObjectsRepository.h"
+#include "Entities/PubnubSubscription.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubClient.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
@@ -112,4 +113,21 @@ FPubnubChatOperationResult UPubnubChatThreadChannel::OnSendText()
 	IsThreadConfirmed = true;
 	
 	return FinalResult;
+}
+
+void UPubnubChatThreadChannel::AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak)
+{
+	ConnectSubscription->OnPubnubMessageNative.AddLambda([ThisChannelWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisChannelWeak.IsValid())
+		{return;}
+				
+		UPubnubChatThreadChannel* ThisThreadChannel = Cast<UPubnubChatThreadChannel>(ThisChannelWeak.Get());
+
+		if(!ThisThreadChannel || !ThisThreadChannel->Chat)
+		{return;}
+				
+		ThisThreadChannel->OnThreadMessageReceived.Broadcast(ThisThreadChannel->Chat->CreateThreadMessageObject(MessageData.Timetoken, MessageData, ThisThreadChannel->ParentChannelID));
+		ThisThreadChannel->OnThreadMessageReceivedNative.Broadcast(ThisThreadChannel->Chat->CreateThreadMessageObject(MessageData.Timetoken, MessageData, ThisThreadChannel->ParentChannelID));
+	});
 }

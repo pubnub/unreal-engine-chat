@@ -125,18 +125,19 @@ FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatU
 	return FinalResult;
 }
 
-FPubnubChatUserResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
+FPubnubChatOperationResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
 {
-	FPubnubChatUserResult FinalResult;
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(UserID);
+
+	FPubnubChatOperationResult FinalResult;
 
 	//If it's not soft, remove user metadata from the server
 	if(!Soft)
 	{
 		//RemoveUserMetadata by PubnubClient
 		FPubnubOperationResult RemoveUserResult = PubnubClient->RemoveUserMetadata(UserID);
-		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, RemoveUserResult, "RemoveUserMetadata");
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveUserResult, "RemoveUserMetadata");
 		
 		//Remove user from repository
 		ObjectsRepository->RemoveUserData(UserID);
@@ -148,7 +149,7 @@ FPubnubChatUserResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
 
 	//GetUserMetadata from PubnubClient to have up to date data
 	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetUserResult.Result, "GetUserMetadata");
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetUserResult.Result, "GetUserMetadata");
 
 	//Add Deleted property to Custom field
 	FPubnubUserInputData NewUserData = FPubnubUserInputData::FromPubnubUserData(GetUserResult.UserData);
@@ -156,10 +157,11 @@ FPubnubChatUserResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
 
 	//SetUserMetadata with updated metadata
 	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, NewUserData);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
 	
-	//Create user object and return final result
-	FinalResult.User = CreateUserObject(UserID, GetUserResult.UserData);
+	//Update User data on the repository
+	ObjectsRepository->UpdateUserData(UserID, FPubnubChatUserData::FromPubnubUserData(SetUserResult.UserData));
+	
 	return FinalResult;
 }
 
@@ -324,18 +326,19 @@ FPubnubChatChannelResult UPubnubChat::UpdateChannel(const FString ChannelID, FPu
 	return FinalResult;
 }
 
-FPubnubChatChannelResult UPubnubChat::DeleteChannel(const FString ChannelID, bool Soft)
+FPubnubChatOperationResult UPubnubChat::DeleteChannel(const FString ChannelID, bool Soft)
 {
-	FPubnubChatChannelResult FinalResult;
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
 
+	FPubnubChatOperationResult FinalResult;
+	
 	//If it's not soft, remove channel metadata from the server
 	if(!Soft)
 	{
 		//RemoveChannelMetadata by PubnubClient
 		FPubnubOperationResult RemoveChannelResult = PubnubClient->RemoveChannelMetadata(ChannelID);
-		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, RemoveChannelResult, "RemoveChannelMetadata");
+		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveChannelResult, "RemoveChannelMetadata");
 		
 		//Remove channel from repository
 		ObjectsRepository->RemoveChannelData(ChannelID);
@@ -347,7 +350,7 @@ FPubnubChatChannelResult UPubnubChat::DeleteChannel(const FString ChannelID, boo
 
 	//GetChannelMetadata from PubnubClient to have up to date data
 	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ChannelID, FPubnubGetMetadataInclude::FromValue(true));
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
 
 	//Add Deleted property to Custom field
 	FPubnubChannelInputData NewChannelData = FPubnubChannelInputData::FromPubnubChannelData(GetChannelResult.ChannelData);
@@ -355,10 +358,11 @@ FPubnubChatChannelResult UPubnubChat::DeleteChannel(const FString ChannelID, boo
 
 	//SetChannelMetadata updated metadata
 	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, NewChannelData);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
 	
-	//Create channel object and return final result
-	FinalResult.Channel = CreateChannelObject(ChannelID, GetChannelResult.ChannelData);
+	//Update ObjectsRepository with updated channel data
+	ObjectsRepository->UpdateChannelData(ChannelID, FPubnubChatChannelData::FromPubnubChannelData(GetChannelResult.ChannelData));
+	
 	return FinalResult;
 }
 
@@ -819,8 +823,8 @@ FPubnubChatOperationResult UPubnubChat::RemoveThreadChannel(UPubnubChatMessage* 
 	
 	//Delete ThreadChannel
 	FString ThreadChannelID = UPubnubChatInternalUtilities::GetThreadID(MessageData.ChannelID, Message->GetMessageTimetoken());
-	FPubnubChatChannelResult DeleteChannelResult = DeleteChannel(ThreadChannelID, false);
-	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteChannelResult.Result);
+	FPubnubChatOperationResult DeleteChannelResult = DeleteChannel(ThreadChannelID, false);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteChannelResult);
 	
 	return FinalResult;
 }
