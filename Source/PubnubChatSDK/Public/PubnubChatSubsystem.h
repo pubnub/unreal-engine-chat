@@ -25,6 +25,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
 	FPubnubChatInitChatResult InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config = FPubnubChatConfig());
 
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
+	FPubnubChatInitChatResult InitChatWithPubnubClient(FString UserID, UPubnubClient* PubnubClient, FPubnubChatConfig Config = FPubnubChatConfig());
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PubnubChat")
 	UPubnubChat* GetChat(FString UserID);
 
@@ -42,5 +45,7 @@ private:
 	void OnChatDestroyed(FString UserID);
 
 	UPubnubClient* CreatePubnubClient(FString PublishKey, FString SubscribeKey, FString UserID);
+
+	FPubnubChatInitChatResult InitChatInternal(FString UserID, FPubnubChatConfig Config, UPubnubClient* PubnubClient);
 
 };

@@ -29,35 +29,27 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FSt
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, SubscribeKey);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
 	
-	// Check if chat with this UserID already exists
-	if(UPubnubChat** ExistingChat = Chats.Find(UserID))
+	// Create PubnubClient
+	UPubnubClient* PubnubClient = CreatePubnubClient(PublishKey, SubscribeKey, UserID);
+	if(!PubnubClient)
 	{
-		if(*ExistingChat)
-		{
-			UE_LOG(PubnubChatLog, Warning, TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID);
-			FinalResult.Result = FPubnubChatOperationResult::CreateError(FString::Printf(TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID));
-			FinalResult.Chat = *ExistingChat;
-			return FinalResult;
-		}
+		FinalResult.Result = FPubnubChatOperationResult::CreateError(TEXT("Failed to create PubnubClient"));
+		return FinalResult;
 	}
+
+	return InitChatInternal(UserID, Config, PubnubClient);
+}
+
+FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatWithPubnubClient(FString UserID, UPubnubClient* PubnubClient, FPubnubChatConfig Config)
+{
+	FPubnubChatInitChatResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, PubnubClient);
 	
-	//Adjust some Config values that might be not in range
-	Config.ValidateConfig();
+	//Make sure PubnubClient has correct UserID
+	PubnubClient->SetUserID(UserID);
 
-	UPubnubChat* NewChat = NewObject<UPubnubChat>(this);
-	NewChat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
-	FPubnubChatInitChatResult InitChatResult = NewChat->InitChat(UserID, Config, CreatePubnubClient(PublishKey, SubscribeKey, UserID));
-
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(FinalResult, InitChatResult);
-
-	FinalResult.Result.Merge(InitChatResult.Result);
-	FinalResult.Result.MarkSuccess();
-	FinalResult.Chat = NewChat;
-
-	// Store the chat in the map
-	Chats.Add(UserID, NewChat);
-
-	return FinalResult;
+	return InitChatInternal(UserID, Config, PubnubClient);
 }
 
 UPubnubChat* UPubnubChatSubsystem::GetChat(FString UserID)
@@ -150,4 +142,40 @@ UPubnubClient* UPubnubChatSubsystem::CreatePubnubClient(FString PublishKey, FStr
 	}
 
 	return PubnubClient;
+}
+
+
+FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatInternal(FString UserID, FPubnubChatConfig Config, UPubnubClient* PubnubClient)
+{
+	FPubnubChatInitChatResult FinalResult;
+	
+	// Check if chat with this UserID already exists
+	if(UPubnubChat** ExistingChat = Chats.Find(UserID))
+	{
+		if(*ExistingChat)
+		{
+			UE_LOG(PubnubChatLog, Warning, TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID);
+			FinalResult.Result = FPubnubChatOperationResult::CreateError(FString::Printf(TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID));
+			FinalResult.Chat = *ExistingChat;
+			return FinalResult;
+		}
+	}
+	
+	//Adjust some Config values that might be not in range
+	Config.ValidateConfig();
+
+	UPubnubChat* NewChat = NewObject<UPubnubChat>(this);
+	NewChat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
+	FPubnubChatInitChatResult InitChatResult = NewChat->InitChat(UserID, Config, PubnubClient);
+
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(FinalResult, InitChatResult);
+
+	FinalResult.Result.Merge(InitChatResult.Result);
+	FinalResult.Result.MarkSuccess();
+	FinalResult.Chat = NewChat;
+
+	// Store the chat in the map
+	Chats.Add(UserID, NewChat);
+
+	return FinalResult;
 }
