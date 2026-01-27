@@ -18,7 +18,9 @@
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
-#include "HAL/CriticalSection.h" 
+#include "HAL/CriticalSection.h"
+#include "HAL/PlatformProcess.h"
+#include <cmath> 
 
 
 void UPubnubChatChannel::BeginDestroy()
@@ -152,7 +154,12 @@ FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, F
 		PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((!SendTextParams.QuotedMessage->GetMessageTimetoken().IsEmpty()), TEXT("Quoted message has empty invalid timetoken"));
 	}
 
-	//TODO:: apply rate limiter here
+	//Calculate if SendText should be delayed by the RateLimiter
+	float DelaySeconds = CalculateSendTextRateLimiterDelay();
+	if (DelaySeconds > 0.0f)
+	{
+		FPlatformProcess::Sleep(DelaySeconds);
+	}
 
 	//Configure settings specified in the params
 	FPubnubPublishSettings PublishSettings;
@@ -163,9 +170,14 @@ FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, F
 		PublishSettings.PublishMethod = EPubnubPublishMethod::PPM_SendViaPOST;
 	}
 
-	//PublishMessage by PubnubClient
-	FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(ChannelID, UPubnubChatInternalUtilities::ChatMessageToPublishString(Message), PublishSettings);
+	FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(ChannelID, UPubnubChatInternalUtilities::ChatMessageToPublishString(Message), PublishSettings);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PublishResult.Result, "PublishMessage");
+
+	//Update RateLimiter state after successful send
+	{
+		FScopeLock Lock(&SendTextRateLimitCriticalSection);
+		LastSendTextTime = FDateTime::UtcNow();
+	}
 
 	//Here it's just an empty function, but ThreadChannel uses it to AddMessageAction about it's creation
 	FPubnubChatOperationResult OnSendTextResult = OnSendText();
@@ -636,7 +648,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StartTyping()
 	FDateTime Now = FDateTime::UtcNow();
 	
 	//Check if StartTyping call is within minimal threshold. If yes, skip the call not to spam events
-	if (LastTypingEventTime != FDateTime())
+	if (LastTypingEventTime != FDateTime::MinValue())
 	{
 		FDateTime ThresholdTime = Now - FTimespan::FromMilliseconds(Chat->ChatConfig.TypingTimeout - Pubnub_Chat_Typing_Timeout_Margin);
 		if (LastTypingEventTime > ThresholdTime)
@@ -1037,6 +1049,53 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 	}
 	
 	IsStreamingTyping = false;
+}
+
+float UPubnubChatChannel::CalculateSendTextRateLimiterDelay()
+{
+	FScopeLock Lock(&SendTextRateLimitCriticalSection);
+
+	FPubnubChatChannelData ChannelData = GetChannelData();
+	if (ChannelData.Type.IsEmpty())
+	{ return 0.0f; }
+	
+	int32* RateLimitMsPtr = Chat->ChatConfig.RateLimiter.RateLimitPerChannel.Find(ChannelData.Type);
+	int32 BaseIntervalMs = RateLimitMsPtr ? *RateLimitMsPtr : 0;
+	
+	if (BaseIntervalMs <= 0)
+	{ return 0.0f; }
+	
+	if (LastSendTextTime == FDateTime::MinValue())
+	{ return 0.0f; }
+	
+	FDateTime CurrentTime = FDateTime::UtcNow();
+	FTimespan Elapsed = CurrentTime - LastSendTextTime;
+	int32 ElapsedMs = static_cast<int32>(Elapsed.GetTotalMilliseconds());
+	
+	//Clamp Exponential factor to a reasonable values
+	float ExponentialFactor = FMath::Clamp(Chat->ChatConfig.RateLimiter.RateLimitFactor, 1.0f, 10.0f);
+	
+	//Calculate required interval with exponential backoff: base * (factor ^ penalty)
+	//Penalty increases on each rate limit hit, causing exponential growth in delay - for now hardcoded 100 as max Penalty
+	int32 RequiredIntervalMs = BaseIntervalMs;
+	if (SendTextRateLimitPenalty > 0)
+	{
+		float PenaltyMultiplier = FMath::Pow(ExponentialFactor, static_cast<float>(FMath::Min(SendTextRateLimitPenalty, 100)));
+		RequiredIntervalMs = static_cast<int32>(BaseIntervalMs * PenaltyMultiplier);
+	}
+	
+	//If enough time has passed since last send, reset penalty and allow immediate send
+	if (ElapsedMs >= RequiredIntervalMs)
+	{
+		SendTextRateLimitPenalty = 0;
+		return 0.0f;
+	}
+	
+	//Calculate remaining delay needed and increase penalty for next rate limit hit
+	int32 RemainingDelayMs = FMath::Min(RequiredIntervalMs - ElapsedMs, Pubnub_Chat_Max_Rate_Limiter_Delay);
+	SendTextRateLimitPenalty++;
+	
+	return static_cast<float>(RemainingDelayMs) / 1000.0f;
 }
 
 void UPubnubChatChannel::CleanUp()

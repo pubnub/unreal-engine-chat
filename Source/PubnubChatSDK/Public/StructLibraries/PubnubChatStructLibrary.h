@@ -26,6 +26,19 @@ struct FTypingIndicatorData
 		: TimerHandle(InTimerHandle), LastTypingTime(InLastTypingTime) {}
 };
 
+USTRUCT(BlueprintType)
+struct FPubnubChatRateLimiterConfig
+{
+	GENERATED_BODY()
+
+	/** Rate limits per channel type (channel type -> milliseconds between sends). Empty map = no rate limiting. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config|RateLimiter")
+	TMap<FString, int> RateLimitPerChannel;
+
+	/** Exponential factor for rate limit backoff. Each rate limit hit multiplies delay by this factor. Should be between 1.0 and 10.0. */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config|RateLimiter")
+	float RateLimitFactor = 1.2f;
+};
 
 USTRUCT(BlueprintType)
 struct FPubnubChatConfig
@@ -37,6 +50,7 @@ struct FPubnubChatConfig
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") int TypingTimeoutDifference = 1000;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") int StoreUserActivityInterval = 600000;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") bool StoreUserActivityTimestamps = false;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") FPubnubChatRateLimiterConfig RateLimiter;
 	
 	void ValidateConfig();
 };

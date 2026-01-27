@@ -9,6 +9,7 @@
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "HAL/PlatformTime.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -1980,6 +1981,118 @@ bool FPubnubChatChannelSendTextMultipleMessagesTest::RunTest(const FString& Para
 		}
 	}
 
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests SendText rate limiting with exponential backoff.
+ * Verifies that messages are delayed appropriately when rate limit is hit.
+ * Test scenario:
+ * - Rate limit: 1 second (1000ms) for public channels
+ * - Rate limit factor: 2.0 (exponential backoff)
+ * - First message: should send immediately
+ * - Second message: should be delayed by at least 1 second
+ * - Third message: should be delayed by at least 2 seconds (exponential backoff)
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelSendTextRateLimiterTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.SendText.4Advanced.RateLimiter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelSendTextRateLimiterTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_sendtext_ratelimiter_init";
+	const FString TestChannelID = SDK_PREFIX + "test_sendtext_ratelimiter";
+	
+	// Configure rate limiter: 1 second base interval, factor 2.0
+	FPubnubChatConfig ChatConfig;
+	ChatConfig.RateLimiter.RateLimitPerChannel.Add(TEXT("public"), 1000); // 1 second = 1000ms
+	ChatConfig.RateLimiter.RateLimitFactor = 2.0f;
+	
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create public channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	const FString Message1 = TEXT("First message - no rate limit");
+	const FString Message2 = TEXT("Second message - rate limited");
+	const FString Message3 = TEXT("Third message - exponential backoff");
+	
+	// First message: should send immediately (no previous send)
+	double StartTime1 = FPlatformTime::Seconds();
+	FPubnubChatOperationResult SendResult1 = CreateResult.Channel->SendText(Message1);
+	double EndTime1 = FPlatformTime::Seconds();
+	double ElapsedTime1 = EndTime1 - StartTime1;
+	
+	TestFalse("First SendText should succeed", SendResult1.Error);
+	// First message should complete quickly (less than 0.1 seconds, accounting for network overhead)
+	TestTrue(FString::Printf(TEXT("First message should send quickly (took %.3f seconds)"), ElapsedTime1), ElapsedTime1 < 0.5f);
+	
+	// Second message: should be rate limited (1 second delay)
+	double StartTime2 = FPlatformTime::Seconds();
+	FPubnubChatOperationResult SendResult2 = CreateResult.Channel->SendText(Message2);
+	double EndTime2 = FPlatformTime::Seconds();
+	double ElapsedTime2 = EndTime2 - StartTime2;
+	
+	TestFalse("Second SendText should succeed", SendResult2.Error);
+	// Second message should take at least 1 second (rate limit), but allow some margin for timing precision
+	TestTrue(FString::Printf(TEXT("Second message should be delayed by at least 1 second (took %.3f seconds)"), ElapsedTime2), 
+		ElapsedTime2 >= 0.95f); // Allow 50ms margin for timing precision
+	TestTrue(FString::Printf(TEXT("Second message should not take too long (took %.3f seconds)"), ElapsedTime2), 
+		ElapsedTime2 < 2.0f); // Should complete within reasonable time
+	
+	// Third message: should be rate limited with exponential backoff (2 seconds delay = 1s * 2^1)
+	double StartTime3 = FPlatformTime::Seconds();
+	FPubnubChatOperationResult SendResult3 = CreateResult.Channel->SendText(Message3);
+	double EndTime3 = FPlatformTime::Seconds();
+	double ElapsedTime3 = EndTime3 - StartTime3;
+	
+	TestFalse("Third SendText should succeed", SendResult3.Error);
+	// Third message should take at least 2 seconds (exponential backoff: 1s * 2.0^1 = 2s)
+	TestTrue(FString::Printf(TEXT("Third message should be delayed by at least 2 seconds due to exponential backoff (took %.3f seconds)"), ElapsedTime3), 
+		ElapsedTime3 >= 1.95f); // Allow 50ms margin for timing precision
+	TestTrue(FString::Printf(TEXT("Third message should not take too long (took %.3f seconds)"), ElapsedTime3), 
+		ElapsedTime3 < 3.5f); // Should complete within reasonable time
+	
+	// Verify all messages were sent successfully
+	TestFalse("First message PublishMessage step should succeed", SendResult1.Error);
+	TestFalse("Second message PublishMessage step should succeed", SendResult2.Error);
+	TestFalse("Third message PublishMessage step should succeed", SendResult3.Error);
+	
+	// Cleanup: Delete channel
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID, false);
+	}
+	
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;

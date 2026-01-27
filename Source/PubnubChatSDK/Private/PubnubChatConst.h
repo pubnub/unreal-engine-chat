@@ -26,3 +26,5 @@ constexpr int Pubnub_Chat_Min_Typing_Indicator_Timeout = 1000;
 constexpr int Pubnub_Chat_Typing_Timeout_Margin = 500;
 //Prefix for ChannelID that is a Thread
 const FString Pubnub_Chat_Message_Thread_ID_Prefix = "PUBNUB_INTERNAL_THREAD";
+//Maximum SendText delay calculated by rate limiter
+constexpr int Pubnub_Chat_Max_Rate_Limiter_Delay = 10000;

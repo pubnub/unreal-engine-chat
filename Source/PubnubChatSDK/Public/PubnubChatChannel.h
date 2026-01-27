@@ -205,11 +205,22 @@ protected:
 	bool IsStreamingReadReceipts = false;
 	bool IsStreamingMessageReports = false;
 	
-	FDateTime LastTypingEventTime = FDateTime();
+	FDateTime LastTypingEventTime = FDateTime::MinValue();
 	TMap<FString, FTypingIndicatorData> TypingIndicators;
 	
 	/** Critical section for thread-safe access to typing indicators */
 	mutable FCriticalSection TypingIndicatorsCriticalSection;
+
+	/** Rate limiting state for SendText operations */
+	FDateTime LastSendTextTime = FDateTime::MinValue();
+	int32 SendTextRateLimitPenalty = 0;
+	mutable FCriticalSection SendTextRateLimitCriticalSection;
+
+	/**
+	 * Calculates delay needed before sending text based on rate limiting with exponential backoff.
+	 * @return Delay in seconds (0.0 = can send immediately)
+	 */
+	float CalculateSendTextRateLimiterDelay();
 
 	void InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID);
 	
