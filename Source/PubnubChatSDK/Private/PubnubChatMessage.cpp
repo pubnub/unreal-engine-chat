@@ -414,6 +414,18 @@ FPubnubChatOperationResult UPubnubChatMessage::StreamUpdates()
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatMessage::StreamUpdatesOn(const TArray<UPubnubChatMessage*>& Messages)
+{
+	FPubnubChatOperationResult FinalResult;
+	for (auto& Message : Messages)
+	{
+		FPubnubChatOperationResult StreamUpdatesResult = Message->StreamUpdates();
+		FinalResult.Merge(StreamUpdatesResult);
+	}
+	
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChatMessage::StopStreamingUpdates()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();

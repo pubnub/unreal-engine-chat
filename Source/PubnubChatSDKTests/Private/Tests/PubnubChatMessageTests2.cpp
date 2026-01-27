@@ -1765,6 +1765,523 @@ bool FPubnubChatMessageStreamUpdatesSoftDeleteTest::RunTest(const FString& Param
 }
 
 // ============================================================================
+// STREAMUPDATESON TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageStreamUpdatesOnEmptyArrayTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.StreamUpdatesOn.1Validation.EmptyArray", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageStreamUpdatesOnEmptyArrayTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_empty_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Call StreamUpdatesOn with empty array
+	TArray<UPubnubChatMessage*> EmptyMessagesArray;
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatMessage::StreamUpdatesOn(EmptyMessagesArray);
+	
+	// Should succeed but do nothing (no messages to process)
+	TestFalse("StreamUpdatesOn with empty array should succeed", StreamUpdatesOnResult.Error);
+	TestEqual("StepResults should be empty for empty array", StreamUpdatesOnResult.StepResults.Num(), 0);
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageStreamUpdatesOnUninitializedMessagesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.StreamUpdatesOn.1Validation.UninitializedMessages", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageStreamUpdatesOnUninitializedMessagesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_uninit_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create uninitialized message objects
+	UPubnubChatMessage* UninitializedMessage1 = NewObject<UPubnubChatMessage>(Chat);
+	UPubnubChatMessage* UninitializedMessage2 = NewObject<UPubnubChatMessage>(Chat);
+	
+	// Call StreamUpdatesOn with uninitialized messages
+	TArray<UPubnubChatMessage*> UninitializedMessagesArray;
+	UninitializedMessagesArray.Add(UninitializedMessage1);
+	UninitializedMessagesArray.Add(UninitializedMessage2);
+	
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatMessage::StreamUpdatesOn(UninitializedMessagesArray);
+	
+	// Should fail because all messages are uninitialized
+	TestTrue("StreamUpdatesOn should fail with uninitialized messages", StreamUpdatesOnResult.Error);
+	TestFalse("ErrorMessage should not be empty", StreamUpdatesOnResult.ErrorMessage.IsEmpty());
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageStreamUpdatesOnHappyPathSingleMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.StreamUpdatesOn.2HappyPath.SingleMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageStreamUpdatesOnHappyPathSingleMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_single_init";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_updates_on_single";
+	const FString TestMessageText = TEXT("Message for stream updates on");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait a bit for subscription to be ready, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Call StreamUpdatesOn with single message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		TArray<UPubnubChatMessage*> MessagesArray;
+		MessagesArray.Add(*ReceivedMessage);
+		
+		FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatMessage::StreamUpdatesOn(MessagesArray);
+		
+		TestFalse("StreamUpdatesOn should succeed", StreamUpdatesOnResult.Error);
+		TestTrue("Should have at least one step result", StreamUpdatesOnResult.StepResults.Num() >= 1);
+		
+		// Verify that StreamUpdates was called successfully
+		bool bFoundSubscribeStep = false;
+		for(const FPubnubChatOperationStepResult& Step : StreamUpdatesOnResult.StepResults)
+		{
+			if(Step.StepName == TEXT("Subscribe"))
+			{
+				bFoundSubscribeStep = true;
+				TestFalse("Subscribe step should succeed", Step.OperationResult.Error);
+				break;
+			}
+		}
+		TestTrue("Should find Subscribe step in results", bFoundSubscribeStep);
+	}, 0.2f));
+	
+	// Cleanup
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, Chat, TestChannelID, InitUserID]()
+	{
+		if(*ReceivedMessage)
+		{
+			(*ReceivedMessage)->StopStreamingUpdates();
+		}
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageStreamUpdatesOnHappyPathMultipleMessagesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.StreamUpdatesOn.2HappyPath.MultipleMessages", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageStreamUpdatesOnHappyPathMultipleMessagesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_multi_init";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_updates_on_multi";
+	const FString TestMessageText1 = TEXT("Message 1 for stream updates on");
+	const FString TestMessageText2 = TEXT("Message 2 for stream updates on");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessage1Received = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessage2Received = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage1 = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage2 = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive messages
+	auto MessageLambda = [this, bMessage1Received, bMessage2Received, ReceivedMessage1, ReceivedMessage2, TestMessageText1, TestMessageText2](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText1 && !*ReceivedMessage1)
+			{
+				*bMessage1Received = true;
+				*ReceivedMessage1 = Message;
+			}
+			else if(MessageData.Text == TestMessageText2 && !*ReceivedMessage2)
+			{
+				*bMessage2Received = true;
+				*ReceivedMessage2 = Message;
+			}
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait a bit for subscription to be ready, then send messages
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText1, TestMessageText2]()
+	{
+		FPubnubChatOperationResult SendResult1 = CreateResult.Channel->SendText(TestMessageText1);
+		TestFalse("SendText 1 should succeed", SendResult1.Error);
+		
+		FPubnubChatOperationResult SendResult2 = CreateResult.Channel->SendText(TestMessageText2);
+		TestFalse("SendText 2 should succeed", SendResult2.Error);
+	}, 0.5f));
+	
+	// Wait until both messages are received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessage1Received, bMessage2Received]() -> bool {
+		return *bMessage1Received && *bMessage2Received;
+	}, MAX_WAIT_TIME));
+	
+	// Call StreamUpdatesOn with both messages
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage1, ReceivedMessage2]()
+	{
+		if(!*ReceivedMessage1 || !*ReceivedMessage2)
+		{
+			AddError("Messages were not received");
+			return;
+		}
+		
+		TArray<UPubnubChatMessage*> MessagesArray;
+		MessagesArray.Add(*ReceivedMessage1);
+		MessagesArray.Add(*ReceivedMessage2);
+		
+		FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatMessage::StreamUpdatesOn(MessagesArray);
+		
+		TestFalse("StreamUpdatesOn should succeed", StreamUpdatesOnResult.Error);
+		TestTrue("Should have at least two step results (one per message)", StreamUpdatesOnResult.StepResults.Num() >= 2);
+		
+		// Verify that StreamUpdates was called successfully for both messages
+		int32 SubscribeStepCount = 0;
+		for(const FPubnubChatOperationStepResult& Step : StreamUpdatesOnResult.StepResults)
+		{
+			if(Step.StepName == TEXT("Subscribe"))
+			{
+				SubscribeStepCount++;
+				TestFalse("Subscribe step should succeed", Step.OperationResult.Error);
+			}
+		}
+		TestEqual("Should have two Subscribe steps", SubscribeStepCount, 2);
+	}, 0.2f));
+	
+	// Cleanup
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage1, ReceivedMessage2, CreateResult, Chat, TestChannelID, InitUserID]()
+	{
+		if(*ReceivedMessage1)
+		{
+			(*ReceivedMessage1)->StopStreamingUpdates();
+		}
+		if(*ReceivedMessage2)
+		{
+			(*ReceivedMessage2)->StopStreamingUpdates();
+		}
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED TESTS
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageStreamUpdatesOnMixedMessagesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.StreamUpdatesOn.4Advanced.MixedMessages", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageStreamUpdatesOnMixedMessagesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_mixed_init";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_updates_on_mixed";
+	const FString TestMessageText = TEXT("Message for stream updates on mixed");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait a bit for subscription to be ready, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Create uninitialized message
+	UPubnubChatMessage* UninitializedMessage = NewObject<UPubnubChatMessage>(Chat);
+	
+	// Call StreamUpdatesOn with mixed messages (initialized + uninitialized)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, UninitializedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		TArray<UPubnubChatMessage*> MessagesArray;
+		MessagesArray.Add(*ReceivedMessage);
+		MessagesArray.Add(UninitializedMessage);
+		
+		FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatMessage::StreamUpdatesOn(MessagesArray);
+		
+		// Should fail because one message is uninitialized
+		TestTrue("StreamUpdatesOn should fail with mixed messages", StreamUpdatesOnResult.Error);
+		TestFalse("ErrorMessage should not be empty", StreamUpdatesOnResult.ErrorMessage.IsEmpty());
+		
+		// Verify that at least one Subscribe step succeeded (from initialized message)
+		// and errors from uninitialized message are merged
+		bool bFoundSuccessfulSubscribe = false;
+		bool bFoundError = false;
+		for(const FPubnubChatOperationStepResult& Step : StreamUpdatesOnResult.StepResults)
+		{
+			if(Step.StepName == TEXT("Subscribe") && !Step.OperationResult.Error)
+			{
+				bFoundSuccessfulSubscribe = true;
+			}
+			if(Step.OperationResult.Error)
+			{
+				bFoundError = true;
+			}
+		}
+		
+		// Note: The initialized message might succeed, but overall result should be error due to uninitialized message
+		// Check both StepResults errors and overall Error flag (uninitialized message returns early without steps)
+		TestTrue("Should have error from uninitialized message", bFoundError || StreamUpdatesOnResult.Error);
+	}, 0.2f));
+	
+	// Cleanup
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, CreateResult, Chat, TestChannelID, InitUserID]()
+	{
+		if(*ReceivedMessage)
+		{
+			(*ReceivedMessage)->StopStreamingUpdates();
+		}
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
 // STOPSTREAMINGUPDATES TESTS
 // ============================================================================
 

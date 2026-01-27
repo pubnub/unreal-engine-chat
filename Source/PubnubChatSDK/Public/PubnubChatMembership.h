@@ -72,6 +72,9 @@ public:
 	FPubnubChatOperationResult StreamUpdates();
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
+	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatMembership*>& Memberships);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")

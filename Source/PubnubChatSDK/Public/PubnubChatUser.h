@@ -1,4 +1,4 @@
-﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -73,6 +73,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatOperationResult StreamUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatUser*>& Users);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatOperationResult StopStreamingUpdates();

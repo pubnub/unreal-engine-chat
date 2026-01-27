@@ -620,6 +620,18 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamUpdates()
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::StreamUpdatesOn(const TArray<UPubnubChatChannel*>& Channels)
+{
+	FPubnubChatOperationResult FinalResult;
+	for (auto& Channel : Channels)
+	{
+		FPubnubChatOperationResult StreamUpdatesResult = Channel->StreamUpdates();
+		FinalResult.Merge(StreamUpdatesResult);
+	}
+	
+	return FinalResult;
+}
+
 FPubnubChatOperationResult UPubnubChatChannel::StopStreamingUpdates()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();

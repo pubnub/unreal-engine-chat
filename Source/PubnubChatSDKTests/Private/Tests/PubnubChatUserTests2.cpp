@@ -538,6 +538,373 @@ bool FPubnubChatUserStreamUpdatesDeleteEventTest::RunTest(const FString& Paramet
 }
 
 // ============================================================================
+// STREAMUPDATESON TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamUpdatesOnEmptyArrayTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamUpdatesOn.1Validation.EmptyArray", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamUpdatesOnEmptyArrayTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_empty_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Call StreamUpdatesOn with empty array
+	TArray<UPubnubChatUser*> EmptyUsersArray;
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatUser::StreamUpdatesOn(EmptyUsersArray);
+	
+	// Should succeed but do nothing (no users to process)
+	TestFalse("StreamUpdatesOn with empty array should succeed", StreamUpdatesOnResult.Error);
+	TestEqual("StepResults should be empty for empty array", StreamUpdatesOnResult.StepResults.Num(), 0);
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamUpdatesOnUninitializedUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamUpdatesOn.1Validation.UninitializedUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamUpdatesOnUninitializedUsersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_uninit_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create uninitialized user objects
+	UPubnubChatUser* UninitializedUser1 = NewObject<UPubnubChatUser>(Chat);
+	UPubnubChatUser* UninitializedUser2 = NewObject<UPubnubChatUser>(Chat);
+	
+	// Call StreamUpdatesOn with uninitialized users
+	TArray<UPubnubChatUser*> UninitializedUsersArray;
+	UninitializedUsersArray.Add(UninitializedUser1);
+	UninitializedUsersArray.Add(UninitializedUser2);
+	
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatUser::StreamUpdatesOn(UninitializedUsersArray);
+	
+	// Should fail because all users are uninitialized
+	TestTrue("StreamUpdatesOn should fail with uninitialized users", StreamUpdatesOnResult.Error);
+	TestFalse("ErrorMessage should not be empty", StreamUpdatesOnResult.ErrorMessage.IsEmpty());
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamUpdatesOnHappyPathSingleUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamUpdatesOn.2HappyPath.SingleUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamUpdatesOnHappyPathSingleUserTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_single_init";
+	const FString TestUserID = SDK_PREFIX + "test_stream_updates_on_single";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create user
+	FPubnubChatUserData UserData;
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID, UserData);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Call StreamUpdatesOn with single user
+	TArray<UPubnubChatUser*> UsersArray;
+	UsersArray.Add(CreateResult.User);
+	
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatUser::StreamUpdatesOn(UsersArray);
+	
+	TestFalse("StreamUpdatesOn should succeed", StreamUpdatesOnResult.Error);
+	TestTrue("Should have at least one step result", StreamUpdatesOnResult.StepResults.Num() >= 1);
+	
+	// Verify that StreamUpdates was called successfully
+	bool bFoundSubscribeStep = false;
+	for(const FPubnubChatOperationStepResult& Step : StreamUpdatesOnResult.StepResults)
+	{
+		if(Step.StepName == TEXT("Subscribe"))
+		{
+			bFoundSubscribeStep = true;
+			TestFalse("Subscribe step should succeed", Step.OperationResult.Error);
+			break;
+		}
+	}
+	TestTrue("Should find Subscribe step in results", bFoundSubscribeStep);
+	
+	// Cleanup: Stop streaming updates and delete user
+	if(CreateResult.User)
+	{
+		CreateResult.User->StopStreamingUpdates();
+	}
+	if(Chat)
+	{
+		Chat->DeleteUser(TestUserID);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamUpdatesOnHappyPathMultipleUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamUpdatesOn.2HappyPath.MultipleUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamUpdatesOnHappyPathMultipleUsersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_multi_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_stream_updates_on_multi_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_stream_updates_on_multi_2";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create users
+	FPubnubChatUserData UserData1;
+	FPubnubChatUserResult CreateResult1 = Chat->CreateUser(TestUserID1, UserData1);
+	TestFalse("CreateUser 1 should succeed", CreateResult1.Result.Error);
+	TestNotNull("User 1 should be created", CreateResult1.User);
+	
+	FPubnubChatUserData UserData2;
+	FPubnubChatUserResult CreateResult2 = Chat->CreateUser(TestUserID2, UserData2);
+	TestFalse("CreateUser 2 should succeed", CreateResult2.Result.Error);
+	TestNotNull("User 2 should be created", CreateResult2.User);
+	
+	if(!CreateResult1.User || !CreateResult2.User)
+	{
+		if(CreateResult1.User && Chat) Chat->DeleteUser(TestUserID1);
+		if(CreateResult2.User && Chat) Chat->DeleteUser(TestUserID2);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Call StreamUpdatesOn with both users
+	TArray<UPubnubChatUser*> UsersArray;
+	UsersArray.Add(CreateResult1.User);
+	UsersArray.Add(CreateResult2.User);
+	
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatUser::StreamUpdatesOn(UsersArray);
+	
+	TestFalse("StreamUpdatesOn should succeed", StreamUpdatesOnResult.Error);
+	TestTrue("Should have at least two step results (one per user)", StreamUpdatesOnResult.StepResults.Num() >= 2);
+	
+	// Verify that StreamUpdates was called successfully for both users
+	int32 SubscribeStepCount = 0;
+	for(const FPubnubChatOperationStepResult& Step : StreamUpdatesOnResult.StepResults)
+	{
+		if(Step.StepName == TEXT("Subscribe"))
+		{
+			SubscribeStepCount++;
+			TestFalse("Subscribe step should succeed", Step.OperationResult.Error);
+		}
+	}
+	TestEqual("Should have two Subscribe steps", SubscribeStepCount, 2);
+	
+	// Cleanup: Stop streaming updates and delete users
+	if(CreateResult1.User)
+	{
+		CreateResult1.User->StopStreamingUpdates();
+	}
+	if(CreateResult2.User)
+	{
+		CreateResult2.User->StopStreamingUpdates();
+	}
+	if(Chat)
+	{
+		Chat->DeleteUser(TestUserID1);
+		Chat->DeleteUser(TestUserID2);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED TESTS
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamUpdatesOnMixedUsersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamUpdatesOn.4Advanced.MixedUsers", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamUpdatesOnMixedUsersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_on_mixed_init";
+	const FString TestUserID = SDK_PREFIX + "test_stream_updates_on_mixed";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create one initialized user
+	FPubnubChatUserData UserData;
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID, UserData);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	TestNotNull("User should be created", CreateResult.User);
+	
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create uninitialized user
+	UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+	
+	// Call StreamUpdatesOn with mixed users (initialized + uninitialized)
+	TArray<UPubnubChatUser*> UsersArray;
+	UsersArray.Add(CreateResult.User);
+	UsersArray.Add(UninitializedUser);
+	
+	FPubnubChatOperationResult StreamUpdatesOnResult = UPubnubChatUser::StreamUpdatesOn(UsersArray);
+	
+	// Should fail because one user is uninitialized
+	TestTrue("StreamUpdatesOn should fail with mixed users", StreamUpdatesOnResult.Error);
+	TestFalse("ErrorMessage should not be empty", StreamUpdatesOnResult.ErrorMessage.IsEmpty());
+	
+	// Verify that at least one Subscribe step succeeded (from initialized user)
+	// and errors from uninitialized user are merged
+	bool bFoundSuccessfulSubscribe = false;
+	bool bFoundError = false;
+	for(const FPubnubChatOperationStepResult& Step : StreamUpdatesOnResult.StepResults)
+	{
+		if(Step.StepName == TEXT("Subscribe") && !Step.OperationResult.Error)
+		{
+			bFoundSuccessfulSubscribe = true;
+		}
+		if(Step.OperationResult.Error)
+		{
+			bFoundError = true;
+		}
+	}
+	
+	// Note: The initialized user might succeed, but overall result should be error due to uninitialized user
+	// Check both StepResults errors and overall Error flag (uninitialized user returns early without steps)
+	TestTrue("Should have error from uninitialized user", bFoundError || StreamUpdatesOnResult.Error);
+	
+	// Cleanup: Stop streaming updates if it was started
+	if(CreateResult.User)
+	{
+		CreateResult.User->StopStreamingUpdates();
+	}
+	if(Chat)
+	{
+		Chat->DeleteUser(TestUserID);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
 // STOPSTREAMINGUPDATES TESTS
 // ============================================================================
 

@@ -152,6 +152,9 @@ public:
 	FPubnubChatOperationResult StreamUpdates();
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatChannel*>& Channels);
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")

@@ -1,4 +1,4 @@
-﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
@@ -228,6 +228,18 @@ FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
 	
 	IsStreamingUpdates = true;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatUser::StreamUpdatesOn(const TArray<UPubnubChatUser*>& Users)
+{
+	FPubnubChatOperationResult FinalResult;
+	for (auto& User : Users)
+	{
+		FPubnubChatOperationResult StreamUpdatesResult = User->StreamUpdates();
+		FinalResult.Merge(StreamUpdatesResult);
+	}
 	
 	return FinalResult;
 }
