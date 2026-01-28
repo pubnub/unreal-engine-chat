@@ -49,37 +49,37 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FString GetType() { return "text"; }
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult EditText(const FString NewText);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Delete(bool Soft = false);
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Restore();
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FPubnubChatIsDeletedResult IsDeleted();
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Pin();
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Unpin();
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult ToggleReaction(const FString Reaction);
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatGetReactionsResult GetReactions();
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatHasReactionResult HasUserReaction(const FString Reaction);
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Forward(UPubnubChatChannel* Channel);
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult Report(const FString Reason = "");
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")

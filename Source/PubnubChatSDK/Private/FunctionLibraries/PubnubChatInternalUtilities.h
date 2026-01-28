@@ -134,6 +134,28 @@ public:
 	 */
 	static bool CheckPatternPermission(const TSharedPtr<FJsonObject>& PatternsObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr);
 
+	/* USER ACTIVITY TIMESTAMP */
+
+	/**
+	 * Gets the property key name for lastActiveTimestamp in custom JSON.
+	 */
+	static FString GetLastActiveTimestampPropertyKey();
+
+	/**
+	 * Gets the lastActiveTimestamp value from custom JSON string.
+	 * @param CurrentCustom The custom JSON string
+	 * @return The timestamp string if found, empty string otherwise
+	 */
+	static FString GetLastActiveTimestampFromCustom(const FString& CurrentCustom);
+
+	/**
+	 * Adds or updates the lastActiveTimestamp in custom JSON string.
+	 * @param CurrentCustom The current custom JSON string
+	 * @param Timestamp The timestamp string to set (milliseconds since epoch as string)
+	 * @return Updated custom JSON string with lastActiveTimestamp
+	 */
+	static FString AddLastActiveTimestampToCustom(const FString& CurrentCustom, const FString& Timestamp);
+
 	/* HASHING */
 
 	/**

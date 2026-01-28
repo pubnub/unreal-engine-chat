@@ -222,11 +222,19 @@ private:
 	UPROPERTY()
 	TArray<UPubnubSubscription*> ListenForEventsSubscriptions;
 	
+	//Timer handles for user activity timestamp management
+	FTimerHandle LastSavedActivityIntervalTimerHandle;
+	FTimerHandle RunWithDelayTimerHandle;
+	
 	UFUNCTION()
 	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);
 
 	FPubnubChatInitChatResult InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
 	FPubnubChatUserResult GetUserForInit(const FString InUserID);
+	
+	void StoreUserActivityTimestamp();
+	void SaveTimestamp();
+	void RunSaveTimestampInterval();
 	
 	
 	/* CREATORS FOR CHAT OBJECTS */

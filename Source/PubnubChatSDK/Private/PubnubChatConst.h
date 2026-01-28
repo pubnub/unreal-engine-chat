@@ -28,3 +28,7 @@ constexpr int Pubnub_Chat_Typing_Timeout_Margin = 500;
 const FString Pubnub_Chat_Message_Thread_ID_Prefix = "PUBNUB_INTERNAL_THREAD";
 //Maximum SendText delay calculated by rate limiter
 constexpr int Pubnub_Chat_Max_Rate_Limiter_Delay = 10000;
+//Last Active Timestamp field name in Json
+const FString Pubnub_Chat_LastActiveTimestamp_Property_Name = "lastActiveTimestamp";
+//Minimum StoreUserActivityInterval in milliseconds (1 minute)
+constexpr int Pubnub_Chat_Min_StoreUserActivityInterval = 60000;

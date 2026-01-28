@@ -93,4 +93,3 @@ struct FPubnubChatHasReactionResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	bool HasReaction = false;
 };
-

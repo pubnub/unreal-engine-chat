@@ -33,7 +33,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadChannel")
 	UPubnubChatMessage* GetParentMessage() const { return ParentMessage; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadChannel")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
 	FPubnubChatGetThreadHistoryResult GetThreadHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 25);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")

@@ -847,3 +847,42 @@ void UPubnubChatInternalUtilities::SortMessageActionsByTimetoken(TArray<FPubnubC
 		return TimetokenA < TimetokenB;
 	});
 }
+
+FString UPubnubChatInternalUtilities::GetLastActiveTimestampPropertyKey()
+{
+	return Pubnub_Chat_LastActiveTimestamp_Property_Name;
+}
+
+FString UPubnubChatInternalUtilities::GetLastActiveTimestampFromCustom(const FString& CurrentCustom)
+{
+	if (CurrentCustom.IsEmpty())
+	{
+		return FString();
+	}
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject))
+	{
+		return FString();
+	}
+
+	FString Timestamp;
+	if (JsonObject->TryGetStringField(GetLastActiveTimestampPropertyKey(), Timestamp))
+	{
+		return Timestamp;
+	}
+
+	return FString();
+}
+
+FString UPubnubChatInternalUtilities::AddLastActiveTimestampToCustom(const FString& CurrentCustom, const FString& Timestamp)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!CurrentCustom.IsEmpty())
+	{
+		UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
+	}
+	
+	JsonObject->SetStringField(GetLastActiveTimestampPropertyKey(), Timestamp);
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
+}

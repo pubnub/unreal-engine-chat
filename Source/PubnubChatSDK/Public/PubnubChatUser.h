@@ -41,17 +41,20 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FString GetUserID() const { return UserID; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Update(FPubnubChatUpdateUserInputData UpdateUserData);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Delete(bool Soft = false);
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Restore();
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatIsDeletedResult IsDeleted();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	bool IsActive() const;
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatWherePresentResult WherePresent();

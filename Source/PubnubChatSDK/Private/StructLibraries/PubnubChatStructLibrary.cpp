@@ -10,6 +10,7 @@ void FPubnubChatConfig::ValidateConfig()
 {
 	TypingTimeout = UKismetMathLibrary::Max(TypingTimeout, Pubnub_Chat_Min_Typing_Indicator_Timeout);
 	TypingTimeoutDifference = UKismetMathLibrary::Max(TypingTimeoutDifference, 0);
+	StoreUserActivityInterval = UKismetMathLibrary::Max(StoreUserActivityInterval, Pubnub_Chat_Min_StoreUserActivityInterval);
 }
 
 FPubnubChatOperationResult& FPubnubChatOperationResult::MarkSuccess()

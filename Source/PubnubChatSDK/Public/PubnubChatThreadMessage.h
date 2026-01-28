@@ -20,10 +20,10 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|ThreadMessage")
 	FString GetParentChannelID() const { return ParentChannelID; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult PinMessageToParentChannel();
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult UnpinMessageFromParentChannel();
 	
 private:

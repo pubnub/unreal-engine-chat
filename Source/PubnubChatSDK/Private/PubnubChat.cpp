@@ -24,12 +24,23 @@
 #include "Entities/PubnubSubscription.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/GameInstance.h"
+#include "Misc/DateTime.h"
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
 
 
 void UPubnubChat::DestroyChat()
 {
+	// Clear timers for user activity timestamp
+	UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
+	if (GameInstance)
+	{
+		FTimerManager& TimerManager = GameInstance->GetTimerManager();
+		TimerManager.ClearTimer(LastSavedActivityIntervalTimerHandle);
+		TimerManager.ClearTimer(RunWithDelayTimerHandle);
+	}
 	
 	PubnubClient->OnPubnubSubscriptionStatusChanged.RemoveDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
 
@@ -915,6 +926,12 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 	IsInitialized = true;
 	FinalResult.Chat = this;
 
+	// Start storing user activity timestamps if enabled
+	if (ChatConfig.StoreUserActivityTimestamps)
+	{
+		StoreUserActivityTimestamp();
+	}
+
 	return FinalResult;
 }
 
@@ -1119,4 +1136,129 @@ UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString T
 	ObjectsRepository->UpdateMessageData(NewThreadMessage->GetInternalMessageID(), FPubnubChatMessageData::FromPubnubHistoryMessageData(HistoryMessageData));
 
 	return NewThreadMessage;
+}
+
+void UPubnubChat::StoreUserActivityTimestamp()
+{
+	if (!IsInitialized || !CurrentUser)
+	{ return; }
+
+	// Clear any existing timers
+	UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
+	if (!GameInstance)
+	{ return; }
+
+	FTimerManager& TimerManager = GameInstance->GetTimerManager();
+	TimerManager.ClearTimer(LastSavedActivityIntervalTimerHandle);
+	TimerManager.ClearTimer(RunWithDelayTimerHandle);
+
+	// Get current user data
+	FPubnubChatUserData UserData = CurrentUser->GetUserData();
+	FString LastActiveTimestamp = UPubnubChatInternalUtilities::GetLastActiveTimestampFromCustom(UserData.Custom);
+
+	if (LastActiveTimestamp.IsEmpty())
+	{
+		// No timestamp exists, start the interval immediately
+		RunSaveTimestampInterval();
+		return;
+	}
+
+	// Calculate elapsed time since last check
+	if (!LastActiveTimestamp.IsNumeric())
+	{
+		// Invalid timestamp format, start interval immediately
+		RunSaveTimestampInterval();
+		return;
+	}
+
+	int64 LastTimestampValue = 0;
+	LexFromString(LastTimestampValue, *LastActiveTimestamp);
+
+	// Get current timetoken (17-digit format in 100ns units)
+	FString CurrentTimetokenString = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	int64 CurrentTimetoken = 0;
+	if (!CurrentTimetokenString.IsNumeric())
+	{
+		// Fallback to immediate save if timetoken generation fails
+		RunSaveTimestampInterval();
+		return;
+	}
+	LexFromString(CurrentTimetoken, *CurrentTimetokenString);
+
+	// Calculate elapsed time in timetoken units (100ns), then convert to milliseconds
+	// 1 millisecond = 10,000 timetoken units (100ns units)
+	int64 ElapsedTimeTimetokenUnits = CurrentTimetoken - LastTimestampValue;
+	int64 ElapsedTimeMs = ElapsedTimeTimetokenUnits / 10000LL;
+
+	if (ElapsedTimeMs >= ChatConfig.StoreUserActivityInterval)
+	{
+		// Enough time has passed, start interval immediately
+		RunSaveTimestampInterval();
+		return;
+	}
+
+	// Schedule timer for remaining time
+	int64 RemainingTimeMs = ChatConfig.StoreUserActivityInterval - ElapsedTimeMs;
+	float RemainingTimeSeconds = RemainingTimeMs / 1000.0f;
+
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr(this);
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindLambda([WeakThis]()
+	{
+		if (WeakThis.IsValid())
+		{
+			WeakThis->RunSaveTimestampInterval();
+		}
+	});
+
+	TimerManager.SetTimer(RunWithDelayTimerHandle, TimerDelegate, RemainingTimeSeconds, false);
+}
+
+void UPubnubChat::SaveTimestamp()
+{
+	if (!IsInitialized || !CurrentUser)
+	{ return; }
+
+	// Get current timetoken in 17-digit format (100ns units) - standard PubNub format
+	FString TimestampString = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+
+	// Get current user data
+	FPubnubChatUserData UserData = CurrentUser->GetUserData();
+
+	// Add timestamp to custom data
+	FString UpdatedCustom = UPubnubChatInternalUtilities::AddLastActiveTimestampToCustom(UserData.Custom, TimestampString);
+
+	// Update user with new custom data
+	FPubnubChatUpdateUserInputData UpdateUserData;
+	UpdateUserData.Custom = UpdatedCustom;
+	UpdateUserData.ForceSetCustom = true;
+
+	// Update user asynchronously (don't wait for result)
+	CurrentUser->Update(UpdateUserData);
+}
+
+void UPubnubChat::RunSaveTimestampInterval()
+{
+	// Save timestamp immediately
+	SaveTimestamp();
+
+	// Schedule periodic timer
+	UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
+	if (!GameInstance)
+	{ return; }
+
+	FTimerManager& TimerManager = GameInstance->GetTimerManager();
+	float IntervalSeconds = ChatConfig.StoreUserActivityInterval / 1000.0f;
+
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr(this);
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindLambda([WeakThis]()
+	{
+		if (WeakThis.IsValid())
+		{
+			WeakThis->SaveTimestamp();
+		}
+	});
+
+	TimerManager.SetTimer(LastSavedActivityIntervalTimerHandle, TimerDelegate, IntervalSeconds, true);
 }

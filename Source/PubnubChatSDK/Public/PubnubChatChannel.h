@@ -73,7 +73,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
 	FString GetChannelID() const { return ChannelID; }
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Update(FPubnubChatUpdateChannelInputData UpdateChannelData);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")

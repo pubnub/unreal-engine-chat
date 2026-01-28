@@ -12,6 +12,7 @@
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "PubnubChatConst.h"
 
 
@@ -92,6 +93,46 @@ FPubnubChatIsDeletedResult UPubnubChatUser::IsDeleted()
 	FinalResult.IsDeleted = UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(GetUserResult.UserData.Custom);
 	
 	return FinalResult;
+}
+
+bool UPubnubChatUser::IsActive() const
+{
+	if (!IsInitialized || !Chat)
+	{ return false; }
+
+	// Get user data to check lastActiveTimestamp
+	FPubnubChatUserData UserData = GetUserData();
+	FString LastActiveTimestamp = UPubnubChatInternalUtilities::GetLastActiveTimestampFromCustom(UserData.Custom);
+
+	// If no timestamp exists, user is not active
+	if (LastActiveTimestamp.IsEmpty())
+	{ return false; }
+
+	// Validate timestamp is numeric
+	if (!LastActiveTimestamp.IsNumeric())
+	{ return false; }
+
+	// Parse timestamp (stored as timetoken in 100ns units)
+	int64 LastTimestampTimetoken = 0;
+	LexFromString(LastTimestampTimetoken, *LastActiveTimestamp);
+
+	// Get current timetoken (17-digit format in 100ns units)
+	FString CurrentTimetokenString = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	if (!CurrentTimetokenString.IsNumeric())
+	{
+		return false;
+	}
+
+	int64 CurrentTimetoken = 0;
+	LexFromString(CurrentTimetoken, *CurrentTimetokenString);
+
+	// Calculate elapsed time in timetoken units (100ns), then convert to milliseconds
+	// 1 millisecond = 10,000 timetoken units (100ns units)
+	int64 ElapsedTimeTimetokenUnits = CurrentTimetoken - LastTimestampTimetoken;
+	int64 ElapsedTimeMs = ElapsedTimeTimetokenUnits / 10000LL;
+
+	// User is active if elapsed time is within the activity interval
+	return ElapsedTimeMs <= Chat->ChatConfig.StoreUserActivityInterval;
 }
 
 FPubnubChatWherePresentResult UPubnubChatUser::WherePresent()
