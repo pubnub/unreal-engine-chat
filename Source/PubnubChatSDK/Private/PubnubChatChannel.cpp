@@ -22,6 +22,8 @@
 #include "HAL/PlatformProcess.h"
 #include <cmath> 
 
+#include "PubnubChatMessageDraft.h"
+
 
 void UPubnubChatChannel::BeginDestroy()
 {
@@ -926,6 +928,16 @@ FPubnubChatEventsResult UPubnubChatChannel::GetMessageReportsHistory(const FStri
 	
 	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);
 	return Chat->GetEventsHistory(ModerationChannelID, StartTimetoken, EndTimetoken, Count);
+}
+
+UPubnubChatMessageDraft* UPubnubChatChannel::CreateMessageDraft(FPubnubChatMessageDraftConfig MessageDraftConfig)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(nullptr);
+	
+	UPubnubChatMessageDraft* MessageDraft = NewObject<UPubnubChatMessageDraft>(this);
+	MessageDraft->InitMessageDraft(this, MessageDraftConfig);
+	
+	return MessageDraft;
 }
 
 void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InChannelID)

@@ -16,6 +16,7 @@ class UPubnubChat;
 class UPubnubChatUser;
 class UPubnubChatMessage;
 class UPubnubChatCallbackStop;
+class UPubnubChatMessageDraft;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
@@ -184,6 +185,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatEventsResult GetMessageReportsHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 100);
 	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	UPubnubChatMessageDraft* CreateMessageDraft(FPubnubChatMessageDraftConfig MessageDraftConfig = FPubnubChatMessageDraftConfig());
 	
 protected:
 	UPROPERTY()

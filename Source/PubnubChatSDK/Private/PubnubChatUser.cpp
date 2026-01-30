@@ -135,6 +135,15 @@ bool UPubnubChatUser::IsActive() const
 	return ElapsedTimeMs <= Chat->ChatConfig.StoreUserActivityInterval;
 }
 
+FString UPubnubChatUser::GetLastActiveTimestamp() const
+{
+	if (!IsInitialized || !Chat)
+	{ return ""; }
+	
+	FPubnubChatUserData UserData = GetUserData();
+	return UPubnubChatInternalUtilities::GetLastActiveTimestampFromCustom(UserData.Custom);
+}
+
 FPubnubChatWherePresentResult UPubnubChatUser::WherePresent()
 {
 	FPubnubChatWherePresentResult FinalResult;

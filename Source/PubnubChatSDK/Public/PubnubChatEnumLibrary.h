@@ -74,3 +74,19 @@ enum class EPubnubChatStreamedUpdateType : uint8
 	PCSUT_Updated			UMETA(DisplayName="Updated"),
 	PCSUT_Deleted			UMETA(DisplayName="Deleted"),
 };
+
+UENUM(BlueprintType)
+enum class EPubnubChatMessageDraftSuggestionSource : uint8
+{
+	PCMDSS_Channel			UMETA(DisplayName="Channel"),
+	PCMDSS_Global			UMETA(DisplayName="Global"),
+};
+
+UENUM(BlueprintType)
+enum class EPubnubChatMentionTargetType : uint8
+{
+	PCMTT_None				UMETA(DisplayName="None"),
+	PCMTT_User				UMETA(DisplayName="User"),
+	PCMTT_Channel			UMETA(DisplayName="Channel"),
+	PCMTT_Url				UMETA(DisplayName="Url")
+};

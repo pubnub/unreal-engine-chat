@@ -56,6 +56,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	bool IsActive() const;
 	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
+	FString GetLastActiveTimestamp() const;
+	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatWherePresentResult WherePresent();
 	

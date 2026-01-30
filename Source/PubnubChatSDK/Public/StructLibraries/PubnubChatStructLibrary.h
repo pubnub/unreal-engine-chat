@@ -56,6 +56,18 @@ struct FPubnubChatConfig
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatMessageDraftConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") EPubnubChatMessageDraftSuggestionSource UserSuggestionSource = EPubnubChatMessageDraftSuggestionSource::PCMDSS_Global;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") bool IsTypingIndicatorTriggered = false;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int UserLimit = 10;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int ChannelLimit = 10;
+};
+
+
+USTRUCT(BlueprintType)
 struct FPubnubChatConnectionStatusData
 {
 	GENERATED_BODY()

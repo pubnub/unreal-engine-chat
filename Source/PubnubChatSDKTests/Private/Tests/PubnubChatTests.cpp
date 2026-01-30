@@ -15,6 +15,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
+#include "PubnubChatMembership.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 

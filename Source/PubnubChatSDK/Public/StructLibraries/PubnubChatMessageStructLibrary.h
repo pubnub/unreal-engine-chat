@@ -93,3 +93,65 @@ struct FPubnubChatHasReactionResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	bool HasReaction = false;
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubChatMentionTarget
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	EPubnubChatMentionTargetType MentionTargetType = EPubnubChatMentionTargetType::PCMTT_None;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Target = "";
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatMessageElement
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatMentionTarget MentionTarget;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Text = "";
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Start = 0;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Length = 0;
+	
+	int GetEndPosition() { return Start + Length; }
+	void InsertText(int Position, const FString& InText)
+	{
+		Text.InsertAt(Position, InText);
+		Length += InText.Len();
+	};
+	void InsertTextAtTheEnd(const FString& InText)
+	{
+		Text.Append(InText);
+		Length += InText.Len();
+	};
+	void RemoveText(int Position, int InLength)
+	{
+		Text.RemoveAt(Position, InLength);
+		Length -= InLength;
+	};
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatSuggestedMention
+{
+	GENERATED_BODY()
+
+	//The offset where the mention starts
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Offset = 0;
+	//The original text at the [offset] in the message draft text
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ReplaceFrom = "";
+	//The suggested replacement for the [replaceFrom] text, e.g. the user's full name
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ReplaceTo = "";
+	//The target of the mention, such as a user, channel or URL
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FPubnubChatMentionTarget Target;
+};
