@@ -1927,4 +1927,1518 @@ bool FPubnubChatMessageDraftStructureInvariantTest::RunTest(const FString& Param
 	return true;
 }
 
+// ============================================================================
+// INSERT SUGGESTED MENTION TESTS
+// ============================================================================
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionBasicUserTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.BasicUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionBasicUserTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text with a potential mention
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@john");
+	SuggestedMention.ReplaceTo = TEXT("John Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestFalse("InsertSuggestedMention should succeed", Result.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have mention replaced", CurrentText, TEXT("Hello John Doe"));
+	
+	// Verify message elements
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have 2 elements", Elements.Num(), 2);
+	
+	if (Elements.Num() == 2)
+	{
+		TestEqual("First element should be text", Elements[0].Text, TEXT("Hello "));
+		TestEqual("First element should have no mention", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+		
+		TestEqual("Second element should be mention text", Elements[1].Text, TEXT("John Doe"));
+		TestEqual("Second element should be user mention", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Second element should have correct user ID", Elements[1].MentionTarget.Target, TEXT("user123"));
+	}
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionBasicChannelTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.BasicChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionBasicChannelTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text with a potential channel mention
+	Draft->InsertText(0, TEXT("Join #general"));
+	
+	// Create suggested mention
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 5;
+	SuggestedMention.ReplaceFrom = TEXT("#general");
+	SuggestedMention.ReplaceTo = TEXT("General Discussion");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+	SuggestedMention.Target.Target = TEXT("channel456");
+	
+	// Insert suggested mention
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestFalse("InsertSuggestedMention should succeed", Result.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have channel mention replaced", CurrentText, TEXT("Join General Discussion"));
+	
+	// Verify message elements
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have 2 elements", Elements.Num(), 2);
+	
+	if (Elements.Num() == 2)
+	{
+		TestEqual("First element should be text", Elements[0].Text, TEXT("Join "));
+		TestEqual("Second element should be channel mention", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_Channel);
+		TestEqual("Second element should have correct channel ID", Elements[1].MentionTarget.Target, TEXT("channel456"));
+	}
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionAtStartTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.AtStart", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionAtStartTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text starting with mention
+	Draft->InsertText(0, TEXT("@alice Hello"));
+	
+	// Create suggested mention
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 0;
+	SuggestedMention.ReplaceFrom = TEXT("@alice");
+	SuggestedMention.ReplaceTo = TEXT("Alice Smith");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user789");
+	
+	// Insert suggested mention
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestFalse("InsertSuggestedMention should succeed", Result.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have mention at start", CurrentText, TEXT("Alice Smith Hello"));
+	
+	// Verify message elements
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have 2 elements", Elements.Num(), 2);
+	
+	if (Elements.Num() == 2)
+	{
+		TestEqual("First element should be mention", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Second element should be text", Elements[1].Text, TEXT(" Hello"));
+	}
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionInMiddleTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.InMiddle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionInMiddleTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text with mention in middle
+	Draft->InsertText(0, TEXT("Hello @bob world"));
+	
+	// Create suggested mention
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@bob");
+	SuggestedMention.ReplaceTo = TEXT("Bob Johnson");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user456");
+	
+	// Insert suggested mention
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestFalse("InsertSuggestedMention should succeed", Result.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have mention in middle", CurrentText, TEXT("Hello Bob Johnson world"));
+	
+	// Verify message elements
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have 3 elements", Elements.Num(), 3);
+	
+	if (Elements.Num() == 3)
+	{
+		TestEqual("First element should be text", Elements[0].Text, TEXT("Hello "));
+		TestEqual("Second element should be mention", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Third element should be text", Elements[2].Text, TEXT(" world"));
+	}
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionAtEndTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.AtEnd", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionAtEndTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text ending with mention
+	Draft->InsertText(0, TEXT("Hello @charlie"));
+	
+	// Create suggested mention
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@charlie");
+	SuggestedMention.ReplaceTo = TEXT("Charlie Brown");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user999");
+	
+	// Insert suggested mention
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestFalse("InsertSuggestedMention should succeed", Result.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have mention at end", CurrentText, TEXT("Hello Charlie Brown"));
+	
+	// Verify message elements
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have 2 elements", Elements.Num(), 2);
+	
+	if (Elements.Num() == 2)
+	{
+		TestEqual("First element should be text", Elements[0].Text, TEXT("Hello "));
+		TestEqual("Second element should be mention", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+	}
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionNegativeOffsetTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.NegativeOffset", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionNegativeOffsetTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention with negative offset
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = -1;
+	SuggestedMention.ReplaceFrom = TEXT("@john");
+	SuggestedMention.ReplaceTo = TEXT("John Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention should fail
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail with negative offset", Result.Error);
+	TestTrue("Error message should mention offset", Result.ErrorMessage.Contains(TEXT("Offset")));
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionOffsetTooBigTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.OffsetTooBig", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionOffsetTooBigTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention with offset beyond text
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 100;
+	SuggestedMention.ReplaceFrom = TEXT("@john");
+	SuggestedMention.ReplaceTo = TEXT("John Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention should fail
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail with offset too big", Result.Error);
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionTextMismatchTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.TextMismatch", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionTextMismatchTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention with ReplaceFrom that doesn't match actual text
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@jane"); // Doesn't match "@john"
+	SuggestedMention.ReplaceTo = TEXT("Jane Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention should fail
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail with text mismatch", Result.Error);
+	TestTrue("Error message should mention invalid", Result.ErrorMessage.Contains(TEXT("invalid")) || Result.ErrorMessage.Contains(TEXT("expected")));
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionEmptyReplaceFromTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.EmptyReplaceFrom", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionEmptyReplaceFromTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention with empty ReplaceFrom
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT(""); // Empty
+	SuggestedMention.ReplaceTo = TEXT("John Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention should fail
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail with empty ReplaceFrom", Result.Error);
+	TestTrue("Error message should mention ReplaceFrom", Result.ErrorMessage.Contains(TEXT("ReplaceFrom")));
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionEmptyReplaceToTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.EmptyReplaceTo", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionEmptyReplaceToTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention with empty ReplaceTo
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@john");
+	SuggestedMention.ReplaceTo = TEXT(""); // Empty
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention should fail
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail with empty ReplaceTo", Result.Error);
+	TestTrue("Error message should mention ReplaceTo", Result.ErrorMessage.Contains(TEXT("ReplaceTo")));
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionInvalidTargetTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.InvalidTarget", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionInvalidTargetTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	Draft->InsertText(0, TEXT("Hello @john"));
+	
+	// Create suggested mention with invalid target (None)
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@john");
+	SuggestedMention.ReplaceTo = TEXT("John Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_None; // Invalid
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// Insert suggested mention should fail
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail with invalid target", Result.Error);
+	TestTrue("Error message should mention target", Result.ErrorMessage.Contains(TEXT("Target")) || Result.ErrorMessage.Contains(TEXT("mention target")));
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionMultipleMentionsTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.MultipleMentions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionMultipleMentionsTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text with multiple potential mentions
+	Draft->InsertText(0, TEXT("@alice and @bob"));
+	
+	// Insert first suggested mention
+	FPubnubChatSuggestedMention SuggestedMention1;
+	SuggestedMention1.Offset = 0;
+	SuggestedMention1.ReplaceFrom = TEXT("@alice");
+	SuggestedMention1.ReplaceTo = TEXT("Alice");
+	SuggestedMention1.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention1.Target.Target = TEXT("user1");
+	
+	FPubnubChatOperationResult Result1 = Draft->InsertSuggestedMention(SuggestedMention1);
+	TestFalse("First InsertSuggestedMention should succeed", Result1.Error);
+	
+	// Insert second suggested mention (offset needs to be adjusted after first insertion)
+	// After first insertion: "Alice and @bob" - @bob is now at offset 10
+	FPubnubChatSuggestedMention SuggestedMention2;
+	SuggestedMention2.Offset = 10;
+	SuggestedMention2.ReplaceFrom = TEXT("@bob");
+	SuggestedMention2.ReplaceTo = TEXT("Bob");
+	SuggestedMention2.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention2.Target.Target = TEXT("user2");
+	
+	FPubnubChatOperationResult Result2 = Draft->InsertSuggestedMention(SuggestedMention2);
+	TestFalse("Second InsertSuggestedMention should succeed", Result2.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have both mentions", CurrentText, TEXT("Alice and Bob"));
+	
+	// Verify message elements
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have 3 elements", Elements.Num(), 3);
+	
+	if (Elements.Num() == 3)
+	{
+		TestEqual("First element should be mention", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("First element should have user1", Elements[0].MentionTarget.Target, TEXT("user1"));
+		TestEqual("Second element should be text", Elements[1].Text, TEXT(" and "));
+		TestEqual("Third element should be mention", Elements[2].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Third element should have user2", Elements[2].MentionTarget.Target, TEXT("user2"));
+	}
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionWithExistingMentionsTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.WithExistingMentions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionWithExistingMentionsTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Insert text and add an existing mention
+	Draft->InsertText(0, TEXT("Hello @john world"));
+	
+	FPubnubChatMentionTarget ExistingMentionTarget;
+	ExistingMentionTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	ExistingMentionTarget.Target = TEXT("user_existing");
+	Draft->AddMention(6, 5, ExistingMentionTarget);
+	
+	// Now try to insert a suggested mention for @john (which is already a mention)
+	// This should fail because we can't replace an existing mention
+	FPubnubChatSuggestedMention SuggestedMention;
+	SuggestedMention.Offset = 6;
+	SuggestedMention.ReplaceFrom = TEXT("@john");
+	SuggestedMention.ReplaceTo = TEXT("John Doe");
+	SuggestedMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	SuggestedMention.Target.Target = TEXT("user123");
+	
+	// This should fail because RemoveText will fail (can't remove text from mention)
+	FPubnubChatOperationResult Result = Draft->InsertSuggestedMention(SuggestedMention);
+	TestTrue("InsertSuggestedMention should fail when trying to replace existing mention", Result.Error);
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertSuggestedMentionComplexScenarioTest, "PubnubChat.Unit.MessageDraft.InsertSuggestedMention.ComplexScenario", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertSuggestedMentionComplexScenarioTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+	
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	
+	if (!Draft)
+	{
+		return false;
+	}
+	
+	// Setup: Complex text with multiple potential mentions
+	Draft->InsertText(0, TEXT("Hey @alice, check out #general channel"));
+	
+	// Insert user mention
+	FPubnubChatSuggestedMention UserMention;
+	UserMention.Offset = 4;
+	UserMention.ReplaceFrom = TEXT("@alice");
+	UserMention.ReplaceTo = TEXT("Alice");
+	UserMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserMention.Target.Target = TEXT("user_alice");
+	
+	FPubnubChatOperationResult Result1 = Draft->InsertSuggestedMention(UserMention);
+	TestFalse("User mention insertion should succeed", Result1.Error);
+	
+	// After insertion: "Hey Alice, check out #general channel"
+	// Original: "Hey @alice, check out #general channel"
+	// "@alice" (6 chars) at offset 4 was replaced with "Alice" (5 chars)
+	// "#general" was originally at offset 22, now shifted by (5-6) = -1
+	// So "#general" is now at offset 21
+	FString CurrentTextAfterFirst = Draft->GetCurrentText();
+	int32 GeneralOffset = CurrentTextAfterFirst.Find(TEXT("#general"));
+	TestTrue("Should find #general in text", GeneralOffset >= 0);
+	
+	FPubnubChatSuggestedMention ChannelMention;
+	ChannelMention.Offset = GeneralOffset;
+	ChannelMention.ReplaceFrom = TEXT("#general");
+	ChannelMention.ReplaceTo = TEXT("General Discussion");
+	ChannelMention.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+	ChannelMention.Target.Target = TEXT("channel_general");
+	
+	FPubnubChatOperationResult Result2 = Draft->InsertSuggestedMention(ChannelMention);
+	TestFalse("Channel mention insertion should succeed", Result2.Error);
+	
+	// Verify final text
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should have both mentions", CurrentText, TEXT("Hey Alice, check out General Discussion channel"));
+	
+	// Verify structure
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestTrue("Elements should be properly structured", VerifyMessageElementsStructure(Elements, CurrentText));
+	
+	// Verify we have user and channel mentions
+	bool bFoundUserMention = false;
+	bool bFoundChannelMention = false;
+	for (const FPubnubChatMessageElement& Element : Elements)
+	{
+		if (Element.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_User && Element.MentionTarget.Target == TEXT("user_alice"))
+		{
+			bFoundUserMention = true;
+		}
+		if (Element.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_Channel && Element.MentionTarget.Target == TEXT("channel_general"))
+		{
+			bFoundChannelMention = true;
+		}
+	}
+	
+	TestTrue("Should have user mention", bFoundUserMention);
+	TestTrue("Should have channel mention", bFoundChannelMention);
+	
+	return true;
+}
+
+// ============================================================================
+// INTEGRATION TESTS - CreateMessageDraft and Send
+// ============================================================================
+
+#include "PubnubChatSubsystem.h"
+#include "PubnubChat.h"
+#include "PubnubChatChannel.h"
+#include "PubnubChatMessage.h"
+#include "Tests/PubnubChatTestsUtils.h"
+#include "Tests/PubnubChatTestHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "HAL/PlatformTime.h"
+
+using namespace PubnubChatTests;
+using namespace PubnubChatTestHelpers;
+
+// ============================================================================
+// CREATEMESSAGEDRAFT TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateMessageDraftNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.CreateMessageDraft.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatCreateMessageDraftNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create uninitialized channel
+	UPubnubChatChannel* Channel = NewObject<UPubnubChatChannel>();
+	TestNotNull("Channel should be created", Channel);
+	
+	if(Channel)
+	{
+		// Try to create message draft on uninitialized channel
+		FPubnubChatMessageDraftConfig Config;
+		UPubnubChatMessageDraft* Draft = Channel->CreateMessageDraft(Config);
+		
+		TestNull("CreateMessageDraft should return nullptr when channel is not initialized", Draft);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateMessageDraftHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.CreateMessageDraft.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatCreateMessageDraftHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_create_draft_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_create_draft_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Create message draft with default config
+			FPubnubChatMessageDraftConfig Config; // Default config
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("CreateMessageDraft should succeed", Draft);
+			
+			if(Draft)
+			{
+				// Verify draft is properly initialized
+				FString CurrentText = Draft->GetCurrentText();
+				TestEqual("Draft should start empty", CurrentText, TEXT(""));
+				
+				TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+				TestEqual("Draft should have no elements initially", Elements.Num(), 0);
+				
+				// Verify draft can be used
+				FPubnubChatOperationResult InsertResult = Draft->InsertText(0, TEXT("Test"));
+				TestFalse("InsertText should succeed", InsertResult.Error);
+				
+				CurrentText = Draft->GetCurrentText();
+				TestEqual("Draft text should be updated", CurrentText, TEXT("Test"));
+			}
+			
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateMessageDraftFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.CreateMessageDraft.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatCreateMessageDraftFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_create_draft_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_create_draft_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Create message draft with all config parameters
+			FPubnubChatMessageDraftConfig Config;
+			Config.UserSuggestionSource = EPubnubChatMessageDraftSuggestionSource::PCMDSS_Channel;
+			Config.IsTypingIndicatorTriggered = true;
+			Config.UserLimit = 20;
+			Config.ChannelLimit = 15;
+			
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("CreateMessageDraft should succeed with all parameters", Draft);
+			
+			if(Draft)
+			{
+				// Verify draft is properly initialized
+				FString CurrentText = Draft->GetCurrentText();
+				TestEqual("Draft should start empty", CurrentText, TEXT(""));
+				
+				// Verify draft can be used
+				FPubnubChatOperationResult InsertResult = Draft->InsertText(0, TEXT("Test"));
+				TestFalse("InsertText should succeed", InsertResult.Error);
+				
+				CurrentText = Draft->GetCurrentText();
+				TestEqual("Draft text should be updated", CurrentText, TEXT("Test"));
+			}
+			
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED TESTS
+// ============================================================================
+
+/**
+ * Tests CreateMessageDraft with multiple drafts: Multiple drafts created from same channel.
+ * Verifies that drafts are independent and can be used simultaneously.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateMessageDraftMultipleDraftsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.CreateMessageDraft.4Advanced.MultipleDrafts", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatCreateMessageDraftMultipleDraftsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_create_draft_multi_init";
+	const FString TestChannelID = SDK_PREFIX + "test_create_draft_multi";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Create multiple drafts
+			FPubnubChatMessageDraftConfig Config1;
+			UPubnubChatMessageDraft* Draft1 = CreateResult.Channel->CreateMessageDraft(Config1);
+			
+			FPubnubChatMessageDraftConfig Config2;
+			UPubnubChatMessageDraft* Draft2 = CreateResult.Channel->CreateMessageDraft(Config2);
+			
+			TestNotNull("First draft should be created", Draft1);
+			TestNotNull("Second draft should be created", Draft2);
+			TestNotEqual("Drafts should be different objects", Draft1, Draft2);
+			
+			if(Draft1 && Draft2)
+			{
+				// Verify drafts are independent
+				Draft1->InsertText(0, TEXT("Draft1"));
+				Draft2->InsertText(0, TEXT("Draft2"));
+				
+				TestEqual("Draft1 text should be independent", Draft1->GetCurrentText(), TEXT("Draft1"));
+				TestEqual("Draft2 text should be independent", Draft2->GetCurrentText(), TEXT("Draft2"));
+			}
+			
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// SEND TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendInvalidChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.1Validation.InvalidChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftSendInvalidChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create draft without channel (not initialized)
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>();
+	TestNotNull("Draft should be created", Draft);
+	
+	if(Draft)
+	{
+		// Add some text
+		Draft->InsertText(0, TEXT("Test"));
+		
+		// Try to send without valid channel
+		FPubnubChatSendTextParams SendParams;
+		FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+		
+		TestTrue("Send should fail when channel is invalid", SendResult.Error);
+		TestFalse("ErrorMessage should not be empty", SendResult.ErrorMessage.IsEmpty());
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendEmptyDraftTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.1Validation.EmptyDraft", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftSendEmptyDraftTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_send_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_send_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Create empty draft
+			FPubnubChatMessageDraftConfig Config;
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("Draft should be created", Draft);
+			
+			if(Draft)
+			{
+				// Try to send empty draft
+				FPubnubChatSendTextParams SendParams;
+				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+				
+				TestTrue("Send should fail when draft is empty", SendResult.Error);
+				TestFalse("ErrorMessage should not be empty", SendResult.ErrorMessage.IsEmpty());
+			}
+			
+			// Cleanup: Delete created channel
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_send_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_send_happy";
+	const FString TestMessageText = TEXT("Hello World");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Connect channel
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
+			
+			// Create draft and add text
+			FPubnubChatMessageDraftConfig Config;
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("Draft should be created", Draft);
+			
+			if(Draft)
+			{
+				FPubnubChatOperationResult InsertResult = Draft->InsertText(0, TestMessageText);
+				TestFalse("InsertText should succeed", InsertResult.Error);
+				
+				// Set up message receiver using TSharedPtr to keep pointer alive
+				TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+				TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+				auto MessageLambda = [bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+				{
+					if(Message && !*ReceivedMessage)
+					{
+						*bMessageReceived = true;
+						*ReceivedMessage = Message;
+					}
+				};
+				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+				
+				// Send message with default params
+				FPubnubChatSendTextParams SendParams; // Default params
+				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+				
+				TestFalse("Send should succeed", SendResult.Error);
+				
+				// Wait for message to be received
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+					return *bMessageReceived;
+				}, MAX_WAIT_TIME));
+				
+				// Verify message was received correctly
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceived, ReceivedMessage, TestMessageText, TestChannelID]()
+				{
+					TestTrue("Message should have been received", *bMessageReceived);
+					
+					if(*ReceivedMessage && IsValid(*ReceivedMessage))
+					{
+						TestEqual("Received message text should match", (*ReceivedMessage)->GetCurrentText(), TestMessageText);
+						FPubnubChatMessageData MessageData = (*ReceivedMessage)->GetMessageData();
+						TestEqual("Received message channel ID should match", MessageData.ChannelID, TestChannelID);
+					}
+				}, 0.1f));
+			}
+			
+			// Cleanup: Delete created channel
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
+			{
+				if(Chat)
+				{
+					Chat->DeleteChannel(TestChannelID, false);
+				}
+				CleanUpCurrentChatUser(Chat);
+				CleanUp();
+			}, 0.2f));
+			
+			return true;
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_send_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_send_full";
+	const FString TestMessageText = TEXT("Test message with all params");
+	const FString TestMeta = TEXT("{\"key\":\"value\"}");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Connect channel
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
+			
+			// Create draft and add text
+			FPubnubChatMessageDraftConfig Config;
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("Draft should be created", Draft);
+			
+			if(Draft)
+			{
+				FPubnubChatOperationResult InsertResult = Draft->InsertText(0, TestMessageText);
+				TestFalse("InsertText should succeed", InsertResult.Error);
+				
+				// Set up message receiver using TSharedPtr to keep pointer alive
+				TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+				TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+				auto MessageLambda = [bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+				{
+					if(Message && !*ReceivedMessage)
+					{
+						*bMessageReceived = true;
+						*ReceivedMessage = Message;
+					}
+				};
+				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+				
+				// Send message with all parameters
+				FPubnubChatSendTextParams SendParams;
+				SendParams.StoreInHistory = true;
+				SendParams.SendByPost = false;
+				SendParams.Meta = TestMeta;
+				SendParams.QuotedMessage = nullptr; // No quoted message for this test
+				
+				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+				
+				TestFalse("Send should succeed with all parameters", SendResult.Error);
+				
+				// Wait for message to be received
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+					return *bMessageReceived;
+				}, MAX_WAIT_TIME));
+				
+				// Verify message was received correctly
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceived, ReceivedMessage, TestMessageText, TestChannelID]()
+				{
+					TestTrue("Message should have been received", *bMessageReceived);
+					
+					if(*ReceivedMessage && IsValid(*ReceivedMessage))
+					{
+						TestEqual("Received message text should match", (*ReceivedMessage)->GetCurrentText(), TestMessageText);
+						FPubnubChatMessageData MessageData = (*ReceivedMessage)->GetMessageData();
+						TestEqual("Received message channel ID should match", MessageData.ChannelID, TestChannelID);
+					}
+				}, 0.1f));
+			}
+			
+			// Cleanup: Delete created channel
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
+			{
+				if(Chat)
+				{
+					Chat->DeleteChannel(TestChannelID, false);
+				}
+				CleanUpCurrentChatUser(Chat);
+				CleanUp();
+			}, 0.2f));
+			
+			return true;
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED TESTS
+// ============================================================================
+
+/**
+ * Tests Send with mentions: Message draft with user and channel mentions.
+ * Verifies that mentions are properly rendered as markdown links and message is sent correctly.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendWithMentionsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.4Advanced.WithMentions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendWithMentionsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_send_mentions_init";
+	const FString TestChannelID = SDK_PREFIX + "test_send_mentions";
+	const FString TestUserID = SDK_PREFIX + "test_send_mentions_user";
+	const FString TestMentionChannelID = SDK_PREFIX + "test_send_mentions_channel";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create test user for mention
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("TestUser");
+		FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TestUserID, UserData);
+		TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+		
+		// Create mention channel
+		FPubnubChatChannelData MentionChannelData;
+		FPubnubChatChannelResult CreateMentionChannelResult = Chat->CreatePublicConversation(TestMentionChannelID, MentionChannelData);
+		TestFalse("CreateMentionChannel should succeed", CreateMentionChannelResult.Result.Error);
+		
+		// Create main channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Connect channel
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
+			
+			// Create draft with mentions
+			FPubnubChatMessageDraftConfig Config;
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("Draft should be created", Draft);
+			
+			if(Draft)
+			{
+				// Build message: "Hello @user, check #channel"
+				// First insert all text
+				Draft->InsertText(0, TEXT("Hello user, check channel"));
+				
+				// Add user mention to "user" (starts at position 6, length 4)
+				FPubnubChatMentionTarget UserMentionTarget;
+				UserMentionTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+				UserMentionTarget.Target = TestUserID;
+				FPubnubChatOperationResult AddUserMentionResult = Draft->AddMention(6, 4, UserMentionTarget);
+				TestFalse("AddMention for user should succeed", AddUserMentionResult.Error);
+				
+				// Add channel mention to "channel" (starts at position 18, length 7)
+				FPubnubChatMentionTarget ChannelMentionTarget;
+				ChannelMentionTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+				ChannelMentionTarget.Target = TestMentionChannelID;
+				FPubnubChatOperationResult AddChannelMentionResult = Draft->AddMention(18, 7, ChannelMentionTarget);
+				TestFalse("AddMention for channel should succeed", AddChannelMentionResult.Error);
+				
+				// Verify draft text
+				FString DraftText = Draft->GetCurrentText();
+				TestEqual("Draft text should be correct", DraftText, TEXT("Hello user, check channel"));
+				
+				// Verify markdown rendering (before sending)
+				// Note: GetDraftTextToSend is private, so we'll verify through the sent message
+				
+				// Set up message receiver using TSharedPtr to keep pointer alive
+				TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+				TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+				auto MessageLambda = [bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+				{
+					if(Message && !*ReceivedMessage)
+					{
+						*bMessageReceived = true;
+						*ReceivedMessage = Message;
+					}
+				};
+				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+				
+				// Send message
+				FPubnubChatSendTextParams SendParams;
+				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+				
+				TestFalse("Send should succeed", SendResult.Error);
+				
+				// Wait for message to be received
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+					return *bMessageReceived;
+				}, MAX_WAIT_TIME));
+				
+				// Verify message was received and contains markdown links
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceived, ReceivedMessage, TestChannelID, TestUserID, TestMentionChannelID]()
+				{
+					TestTrue("Message should have been received", *bMessageReceived);
+					
+					if(*ReceivedMessage && IsValid(*ReceivedMessage))
+					{
+						FString ReceivedText = (*ReceivedMessage)->GetCurrentText();
+						FPubnubChatMessageData MessageData = (*ReceivedMessage)->GetMessageData();
+						TestEqual("Received message channel ID should match", MessageData.ChannelID, TestChannelID);
+						
+						// Verify markdown format: should contain [text](pn-user://userid) and [text](pn-channel://channelid)
+						TestTrue("Message should contain user mention markdown", ReceivedText.Contains(TEXT("pn-user://")));
+						TestTrue("Message should contain channel mention markdown", ReceivedText.Contains(TEXT("pn-channel://")));
+						TestTrue("Message should contain user ID", ReceivedText.Contains(TestUserID));
+						TestTrue("Message should contain channel ID", ReceivedText.Contains(TestMentionChannelID));
+					}
+				}, 0.1f));
+			}
+			
+			// Cleanup: Delete created channels and user
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TestMentionChannelID, TestUserID]()
+			{
+				if(Chat)
+				{
+					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteChannel(TestMentionChannelID, false);
+					Chat->DeleteUser(TestUserID);
+				}
+				CleanUpCurrentChatUser(Chat);
+				CleanUp();
+			}, 0.2f));
+			
+			return true;
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests Send with complex message: Multiple text inserts, mentions, and text removal.
+ * Verifies that complex draft operations result in correct message being sent.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendComplexMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.4Advanced.ComplexMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendComplexMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_send_complex_init";
+	const FString TestChannelID = SDK_PREFIX + "test_send_complex";
+	const FString TestUserID = SDK_PREFIX + "test_send_complex_user";
+	const FString ExpectedFinalText = TEXT("Hello World!");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Create test user for mention
+		FPubnubChatUserData UserData;
+		UserData.UserName = TEXT("TestUser");
+		FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TestUserID, UserData);
+		TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+		
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Connect channel
+			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+			TestFalse("Connect should succeed", ConnectResult.Error);
+			
+			// Create draft and perform complex operations
+			FPubnubChatMessageDraftConfig Config;
+			UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+			
+			TestNotNull("Draft should be created", Draft);
+			
+			if(Draft)
+			{
+				// Complex sequence: Insert, add mention, insert more, remove mention, insert more
+				Draft->InsertText(0, TEXT("Hello"));
+				Draft->InsertText(5, TEXT(" Universe"));
+				
+				// Verify text before mention
+				FString TextBeforeMention = Draft->GetCurrentText();
+				TestEqual("Text before mention should be correct", TextBeforeMention, TEXT("Hello Universe"));
+				
+				// Add mention to "Universe" (starts at position 6, length 8)
+				FPubnubChatMentionTarget MentionTarget;
+				MentionTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+				MentionTarget.Target = TestUserID;
+				FPubnubChatOperationResult AddMentionResult = Draft->AddMention(6, 8, MentionTarget);
+				TestFalse("AddMention should succeed", AddMentionResult.Error);
+				
+				// Remove mention (removes "Universe" text too)
+				FPubnubChatOperationResult RemoveMentionResult = Draft->RemoveMention(6);
+				TestFalse("RemoveMention should succeed", RemoveMentionResult.Error);
+				
+				// Verify text after removing mention
+				FString TextAfterRemove = Draft->GetCurrentText();
+				TestEqual("Text after removing mention should be 'Hello '", TextAfterRemove, TEXT("Hello "));
+				
+				// Insert "World" at position 6 (after "Hello ")
+				FPubnubChatOperationResult InsertWorldResult = Draft->InsertText(6, TEXT("World"));
+				TestFalse("InsertText 'World' should succeed", InsertWorldResult.Error);
+				
+				// Verify text after inserting World
+				FString TextAfterWorld = Draft->GetCurrentText();
+				TestEqual("Text after inserting World should be 'Hello World'", TextAfterWorld, TEXT("Hello World"));
+				
+				// Insert "!" at position 11 (end of "Hello World")
+				FPubnubChatOperationResult InsertExclamationResult = Draft->InsertText(11, TEXT("!"));
+				TestFalse("InsertText '!' should succeed", InsertExclamationResult.Error);
+				
+				// Verify final text
+				FString FinalText = Draft->GetCurrentText();
+				TestEqual("Final draft text should match", FinalText, ExpectedFinalText);
+				
+				// Set up message receiver using TSharedPtr to keep pointer alive
+				TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+				TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+				auto MessageLambda = [bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+				{
+					if(Message && !*ReceivedMessage)
+					{
+						*bMessageReceived = true;
+						*ReceivedMessage = Message;
+					}
+				};
+				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+				
+				// Send message
+				FPubnubChatSendTextParams SendParams;
+				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+				
+				TestFalse("Send should succeed", SendResult.Error);
+				
+				// Wait for message to be received
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+					return *bMessageReceived;
+				}, MAX_WAIT_TIME));
+				
+				// Verify message was received correctly
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceived, ReceivedMessage, ExpectedFinalText, TestChannelID]()
+				{
+					TestTrue("Message should have been received", *bMessageReceived);
+					
+					if(*ReceivedMessage && IsValid(*ReceivedMessage))
+					{
+						TestEqual("Received message text should match expected", (*ReceivedMessage)->GetCurrentText(), ExpectedFinalText);
+						FPubnubChatMessageData MessageData = (*ReceivedMessage)->GetMessageData();
+						TestEqual("Received message channel ID should match", MessageData.ChannelID, TestChannelID);
+					}
+				}, 0.1f));
+			}
+			
+			// Cleanup: Delete created channel and user
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TestUserID]()
+			{
+				if(Chat)
+				{
+					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteUser(TestUserID);
+				}
+				CleanUpCurrentChatUser(Chat);
+				CleanUp();
+			}, 0.2f));
+			
+			return true;
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

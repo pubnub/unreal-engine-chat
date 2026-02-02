@@ -39,6 +39,7 @@ class PUBNUBCHATSDK_API UPubnubChatChannel : public UObject
 	GENERATED_BODY()
 
 	friend class UPubnubChat;
+	friend class UPubnubChatMessageDraft;
 public:
 
 	virtual void BeginDestroy() override;

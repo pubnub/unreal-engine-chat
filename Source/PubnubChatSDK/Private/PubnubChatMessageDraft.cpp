@@ -4,7 +4,14 @@
 #include "PubnubChatChannel.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
+#include "PubnubChat.h"
+#include "PubnubChatMembership.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "PubnubChatUser.h"
+
+// Schema constants for markdown link rendering
+static const FString SCHEMA_USER = TEXT("pn-user://");
+static const FString SCHEMA_CHANNEL = TEXT("pn-channel://");
 
 FString UPubnubChatMessageDraft::GetCurrentText() const
 {
@@ -319,6 +326,140 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::RemoveMention(int Position)
 	return FinalResult;
 }
 
+FPubnubChatOperationResult UPubnubChatMessageDraft::InsertSuggestedMention(const FPubnubChatSuggestedMention SuggestedMention)
+{
+	FPubnubChatOperationResult FinalResult;
+	
+	// Validate input
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((SuggestedMention.Offset >= 0), TEXT("Offset cannot be negative"));
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!SuggestedMention.ReplaceFrom.IsEmpty(), TEXT("ReplaceFrom cannot be empty"));
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!SuggestedMention.ReplaceTo.IsEmpty(), TEXT("ReplaceTo cannot be empty"));
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((SuggestedMention.Target.MentionTargetType != EPubnubChatMentionTargetType::PCMTT_None), TEXT("Target must be a valid mention target (User or Channel)"));
+	
+	// Get current text to validate
+	FString CurrentText = GetCurrentText();
+	
+	// Validate that the text at Offset matches ReplaceFrom (similar to KMP validation)
+	int32 ReplaceFromLength = SuggestedMention.ReplaceFrom.Len();
+	int32 TextEnd = SuggestedMention.Offset + ReplaceFromLength;
+	
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((TextEnd <= CurrentText.Len()), TEXT("ReplaceFrom extends beyond current text"));
+	
+	FString TextAtOffset = CurrentText.Mid(SuggestedMention.Offset, ReplaceFromLength);
+	if (TextAtOffset != SuggestedMention.ReplaceFrom)
+	{
+		FinalResult.Error = true;
+		FinalResult.ErrorMessage = FString::Printf(TEXT("Mention suggestion invalid: expected '%s' at offset %d, but found '%s'"), 
+			*SuggestedMention.ReplaceFrom, SuggestedMention.Offset, *TextAtOffset);
+		return FinalResult;
+	}
+	
+	// Suppress delegate and typing indicator calls during batch operations
+	bSuppressDelegateAndTyping = true;
+	
+	// Step 1: Remove the ReplaceFrom text
+	FPubnubChatOperationResult RemoveResult = RemoveText(SuggestedMention.Offset, ReplaceFromLength);
+	if (RemoveResult.Error)
+	{
+		bSuppressDelegateAndTyping = false;
+		return RemoveResult;
+	}
+	
+	// Step 2: Insert the ReplaceTo text at the same position
+	FPubnubChatOperationResult InsertResult = InsertText(SuggestedMention.Offset, SuggestedMention.ReplaceTo);
+	if (InsertResult.Error)
+	{
+		bSuppressDelegateAndTyping = false;
+		return InsertResult;
+	}
+	
+	// Step 3: Add the mention at the position where ReplaceTo was inserted
+	FPubnubChatOperationResult AddMentionResult = AddMention(SuggestedMention.Offset, SuggestedMention.ReplaceTo.Len(), SuggestedMention.Target);
+	if (AddMentionResult.Error)
+	{
+		bSuppressDelegateAndTyping = false;
+		return AddMentionResult;
+	}
+	
+	// Re-enable delegate and typing indicator calls
+	bSuppressDelegateAndTyping = false;
+	
+	// Now fire delegate and typing indicator once at the end (similar to KMP's fireMessageElementsChanged)
+	TriggerTypingIndicator();
+	FireMessageDraftChangedDelegate();
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessageDraft::Send(FPubnubChatSendTextParams SendTextParams)
+{
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(Channel, TEXT("Channel for this MessageDraft is invalid."));
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!GetCurrentText().IsEmpty(), TEXT("Can't send empty message draft."));
+	
+	FString DraftMessage = GetDraftTextToSend();
+	return Channel->SendText(DraftMessage);
+}
+
+FString UPubnubChatMessageDraft::GetDraftTextToSend()
+{
+	FString FinalText;
+	
+	for (const FPubnubChatMessageElement& Element : MessageElements)
+	{
+		// If element has no mention target, just append the text
+		if (Element.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_None)
+		{
+			FinalText.Append(Element.Text);
+		}
+		else
+		{
+			// Element has a mention target - create markdown link
+			FString EscapedText = EscapeLinkText(Element.Text);
+			FString LinkUrl;
+			
+			switch (Element.MentionTarget.MentionTargetType)
+			{
+				case EPubnubChatMentionTargetType::PCMTT_User:
+					LinkUrl = SCHEMA_USER + EscapeLinkUrl(Element.MentionTarget.Target);
+					break;
+				case EPubnubChatMentionTargetType::PCMTT_Channel:
+					LinkUrl = SCHEMA_CHANNEL + EscapeLinkUrl(Element.MentionTarget.Target);
+					break;
+				case EPubnubChatMentionTargetType::PCMTT_Url:
+					LinkUrl = EscapeLinkUrl(Element.MentionTarget.Target);
+					break;
+				default:
+					// Unknown type, just append text
+					FinalText.Append(Element.Text);
+					continue;
+			}
+			
+			// Format: [text](url)
+			FinalText.Append(FString::Printf(TEXT("[%s](%s)"), *EscapedText, *LinkUrl));
+		}
+	}
+	
+	return FinalText;
+}
+
+FString UPubnubChatMessageDraft::EscapeLinkText(const FString& Text)
+{
+	// Escape backslashes first (so we don't double-escape)
+	FString Escaped = Text.Replace(TEXT("\\"), TEXT("\\\\"));
+	// Escape closing brackets
+	Escaped = Escaped.Replace(TEXT("]"), TEXT("\\]"));
+	return Escaped;
+}
+
+FString UPubnubChatMessageDraft::EscapeLinkUrl(const FString& Url)
+{
+	// Escape backslashes first (so we don't double-escape)
+	FString Escaped = Url.Replace(TEXT("\\"), TEXT("\\\\"));
+	// Escape closing parentheses
+	Escaped = Escaped.Replace(TEXT(")"), TEXT("\\)"));
+	return Escaped;
+}
+
 void UPubnubChatMessageDraft::InitMessageDraft(UPubnubChatChannel* InChannel, const FPubnubChatMessageDraftConfig& InMessageDraftConfig)
 {
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(InChannel, TEXT("Can't create MessageDraft on invalid channel"));
@@ -329,16 +470,406 @@ void UPubnubChatMessageDraft::InitMessageDraft(UPubnubChatChannel* InChannel, co
 
 void UPubnubChatMessageDraft::FireMessageDraftChangedDelegate()
 {
-	TArray<FPubnubChatSuggestedMention> SuggestedMentions;
+	// Skip if suppressed (e.g., during batch operations)
+	if (bSuppressDelegateAndTyping)
+	{
+		return;
+	}
 	
+	// Always fire basic update
 	OnMessageDraftUpdated.Broadcast(MessageElements);
 	OnMessageDraftUpdatedNative.Broadcast(MessageElements);
+	
+	// Only get suggestions if there are listeners AND potential mentions exist
+	TArray<FPubnubChatSuggestedMention> SuggestedMentions;
+	if (HasListenersForSuggestions())
+	{
+		SuggestedMentions = GetSuggestedMentions();
+	}
+	
 	OnMessageDraftUpdatedWithSuggestions.Broadcast(MessageElements, SuggestedMentions);
 	OnMessageDraftUpdatedWithSuggestionsNative.Broadcast(MessageElements, SuggestedMentions);
 }
 
+bool UPubnubChatMessageDraft::HasListenersForSuggestions() const
+{
+	// Check if there are any listeners registered for suggestions
+	return OnMessageDraftUpdatedWithSuggestions.IsBound() || 
+		   OnMessageDraftUpdatedWithSuggestionsNative.IsBound();
+}
+
+TArray<FPubnubChatSuggestedMention> UPubnubChatMessageDraft::GetSuggestedMentions()
+{
+	TArray<FPubnubChatSuggestedMention> SuggestedMentions;
+	
+	if (!Channel || !Channel->Chat)
+	{
+		return SuggestedMentions;
+	}
+	
+	FString CurrentText = GetCurrentText();
+	if (CurrentText.IsEmpty())
+	{
+		return SuggestedMentions;
+	}
+	
+	// Find potential user mentions (@username)
+	TArray<FMentionMatch> UserMatches = FindUserMentionMatches(CurrentText);
+	
+	// Find potential channel mentions (#channelname)
+	TArray<FMentionMatch> ChannelMatches = FindChannelMentionMatches(CurrentText);
+	
+	// Filter out matches that are already actual mentions
+	TArray<FMentionMatch> UserMatchesNeeded;
+	for (const FMentionMatch& Match : UserMatches)
+	{
+		bool bIsAlreadyMention = false;
+		for (const FPubnubChatMessageElement& Element : MessageElements)
+		{
+			if (Element.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_User)
+			{
+				// Check if this match position overlaps with an existing user mention
+				int32 ElementEnd = Element.Start + Element.Length;
+				if (Match.Offset >= Element.Start && Match.Offset < ElementEnd)
+				{
+					bIsAlreadyMention = true;
+					break;
+				}
+			}
+		}
+		if (!bIsAlreadyMention)
+		{
+			UserMatchesNeeded.Add(Match);
+		}
+	}
+	
+	TArray<FMentionMatch> ChannelMatchesNeeded;
+	for (const FMentionMatch& Match : ChannelMatches)
+	{
+		bool bIsAlreadyMention = false;
+		for (const FPubnubChatMessageElement& Element : MessageElements)
+		{
+			if (Element.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_Channel)
+			{
+				// Check if this match position overlaps with an existing channel mention
+				int32 ElementEnd = Element.Start + Element.Length;
+				if (Match.Offset >= Element.Start && Match.Offset < ElementEnd)
+				{
+					bIsAlreadyMention = true;
+					break;
+				}
+			}
+		}
+		if (!bIsAlreadyMention)
+		{
+			ChannelMatchesNeeded.Add(Match);
+		}
+	}
+	
+	// Resolve user suggestions
+	TArray<FPubnubChatSuggestedMention> UserSuggestions = ResolveUserSuggestions(UserMatchesNeeded);
+	SuggestedMentions.Append(UserSuggestions);
+	
+	// Resolve channel suggestions
+	TArray<FPubnubChatSuggestedMention> ChannelSuggestions = ResolveChannelSuggestions(ChannelMatchesNeeded);
+	SuggestedMentions.Append(ChannelSuggestions);
+	
+	return SuggestedMentions;
+}
+
+TArray<UPubnubChatMessageDraft::FMentionMatch> UPubnubChatMessageDraft::FindUserMentionMatches(const FString& Text) const
+{
+	TArray<FMentionMatch> Matches;
+	
+	// Regex pattern: @ followed by alphanumeric characters and underscores
+	// Pattern: @[a-zA-Z0-9_]+
+	FString Pattern = TEXT("@[a-zA-Z0-9_]+");
+	FRegexPattern RegexPattern(Pattern);
+	FRegexMatcher Matcher(RegexPattern, Text);
+	
+	while (Matcher.FindNext())
+	{
+		int32 MatchStart = Matcher.GetMatchBeginning();
+		int32 MatchEnd = Matcher.GetMatchEnding();
+		FString MatchText = Text.Mid(MatchStart, MatchEnd - MatchStart);
+		
+		// Only include if the mention text (after @) is at least 3 characters
+		// This matches KMP behavior: filter { matchResult -> matchResult.value.length > 3 }
+		if (MatchText.Len() > 3) // @ + at least 3 characters
+		{
+			FMentionMatch Match;
+			Match.Offset = MatchStart;
+			Match.Text = MatchText;
+			Match.bIsUserMention = true;
+			Matches.Add(Match);
+		}
+	}
+	
+	return Matches;
+}
+
+TArray<UPubnubChatMessageDraft::FMentionMatch> UPubnubChatMessageDraft::FindChannelMentionMatches(const FString& Text) const
+{
+	TArray<FMentionMatch> Matches;
+	
+	// Regex pattern: # followed by alphanumeric characters and underscores
+	// Pattern: #[a-zA-Z0-9_]+
+	FString Pattern = TEXT("#[a-zA-Z0-9_]+");
+	FRegexPattern RegexPattern(Pattern);
+	FRegexMatcher Matcher(RegexPattern, Text);
+	
+	while (Matcher.FindNext())
+	{
+		int32 MatchStart = Matcher.GetMatchBeginning();
+		int32 MatchEnd = Matcher.GetMatchEnding();
+		FString MatchText = Text.Mid(MatchStart, MatchEnd - MatchStart);
+		
+		// Only include if the mention text (after #) is at least 3 characters
+		if (MatchText.Len() > 3) // # + at least 3 characters
+		{
+			FMentionMatch Match;
+			Match.Offset = MatchStart;
+			Match.Text = MatchText;
+			Match.bIsUserMention = false;
+			Matches.Add(Match);
+		}
+	}
+	
+	return Matches;
+}
+
+TArray<FPubnubChatSuggestedMention> UPubnubChatMessageDraft::ResolveUserSuggestions(const TArray<FMentionMatch>& Matches)
+{
+	TArray<FPubnubChatSuggestedMention> Suggestions;
+	
+	if (!Channel || !Channel->Chat || Matches.IsEmpty())
+	{
+		return Suggestions;
+	}
+	
+	// Group matches by search text for caching
+	TMap<FString, TArray<FMentionMatch>> MatchesBySearchText;
+	for (const FMentionMatch& Match : Matches)
+	{
+		// Extract search text (remove @ prefix)
+		FString SearchText = Match.Text.Mid(1); // Remove '@'
+		MatchesBySearchText.FindOrAdd(SearchText).Add(Match);
+	}
+	
+	// Process each unique search text
+	for (const auto& Pair : MatchesBySearchText)
+	{
+		const FString& SearchText = Pair.Key;
+		const TArray<FMentionMatch>& MatchesForText = Pair.Value;
+		
+		// Check cache first
+		FString CacheKey = FString::Printf(TEXT("user:%s"), *SearchText);
+		TArray<FPubnubChatSuggestedMention>* CachedSuggestions = SuggestionsCache.Find(CacheKey);
+		
+		if (CachedSuggestions)
+		{
+			// Use cached suggestions - create suggestions for each match position
+			for (const FMentionMatch& Match : MatchesForText)
+			{
+				for (const FPubnubChatSuggestedMention& CachedSuggestion : *CachedSuggestions)
+				{
+					// Create a new suggestion for each match position (offset may differ)
+					FPubnubChatSuggestedMention Suggestion;
+					Suggestion.Offset = Match.Offset;
+					Suggestion.ReplaceFrom = Match.Text;
+					Suggestion.ReplaceTo = CachedSuggestion.ReplaceTo;
+					Suggestion.Target = CachedSuggestion.Target;
+					Suggestions.Add(Suggestion);
+				}
+			}
+		}
+		else
+		{
+			// Query API for suggestions
+			TArray<UPubnubChatUser*> SuggestedUsers;
+			
+			if (MessageDraftConfig.UserSuggestionSource == EPubnubChatMessageDraftSuggestionSource::PCMDSS_Channel)
+			{
+				// Get user suggestions from channel members
+				FString Filter = FString::Printf(TEXT(R"(uuid.name LIKE "%s*")"), *SearchText);
+				FPubnubChatMembershipsResult GetMembersResult = Channel->GetMembers(MessageDraftConfig.UserLimit, Filter);
+				
+				if (!GetMembersResult.Result.Error)
+				{
+					for (UPubnubChatMembership* Membership : GetMembersResult.Memberships)
+					{
+						if (UPubnubChatUser* User = Membership->GetUser())
+						{
+							SuggestedUsers.Add(User);
+						}
+					}
+				}
+			}
+			else
+			{
+				// Get user suggestions globally
+				FPubnubChatGetUserSuggestionsResult GetUserSuggestionsResult = Channel->Chat->GetUserSuggestions(SearchText, MessageDraftConfig.UserLimit);
+				
+				if (!GetUserSuggestionsResult.Result.Error)
+				{
+					SuggestedUsers = GetUserSuggestionsResult.Users;
+				}
+			}
+			
+			// Create base suggestions (without offset) for caching
+			// We'll use the first match's ReplaceFrom for the cache, but create suggestions for all matches
+			TArray<FPubnubChatSuggestedMention> BaseSuggestionsForCache;
+			
+			for (UPubnubChatUser* User : SuggestedUsers)
+			{
+				if (!User)
+				{
+					continue;
+				}
+				
+				FPubnubChatSuggestedMention BaseSuggestion;
+				BaseSuggestion.Offset = 0; // Offset doesn't matter for cache
+				BaseSuggestion.ReplaceFrom = MatchesForText[0].Text; // Use first match's text for cache
+				
+				// Use user name if available, otherwise user ID
+				FString UserName = User->GetUserData().UserName;
+				BaseSuggestion.ReplaceTo = !UserName.IsEmpty() ? UserName : User->GetUserID();
+				
+				BaseSuggestion.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+				BaseSuggestion.Target.Target = User->GetUserID();
+				
+				BaseSuggestionsForCache.Add(BaseSuggestion);
+				
+				// Create suggestions for each match position
+				for (const FMentionMatch& Match : MatchesForText)
+				{
+					FPubnubChatSuggestedMention Suggestion;
+					Suggestion.Offset = Match.Offset;
+					Suggestion.ReplaceFrom = Match.Text;
+					Suggestion.ReplaceTo = BaseSuggestion.ReplaceTo;
+					Suggestion.Target = BaseSuggestion.Target;
+					Suggestions.Add(Suggestion);
+				}
+			}
+			
+			// Cache the base suggestions (without specific offsets)
+			if (!BaseSuggestionsForCache.IsEmpty())
+			{
+				SuggestionsCache.Add(CacheKey, BaseSuggestionsForCache);
+			}
+		}
+	}
+	
+	return Suggestions;
+}
+
+TArray<FPubnubChatSuggestedMention> UPubnubChatMessageDraft::ResolveChannelSuggestions(const TArray<FMentionMatch>& Matches)
+{
+	TArray<FPubnubChatSuggestedMention> Suggestions;
+	
+	if (!Channel || !Channel->Chat || Matches.IsEmpty())
+	{
+		return Suggestions;
+	}
+	
+	// Group matches by search text for caching
+	TMap<FString, TArray<FMentionMatch>> MatchesBySearchText;
+	for (const FMentionMatch& Match : Matches)
+	{
+		// Extract search text (remove # prefix)
+		FString SearchText = Match.Text.Mid(1); // Remove '#'
+		MatchesBySearchText.FindOrAdd(SearchText).Add(Match);
+	}
+	
+	// Process each unique search text
+	for (const auto& Pair : MatchesBySearchText)
+	{
+		const FString& SearchText = Pair.Key;
+		const TArray<FMentionMatch>& MatchesForText = Pair.Value;
+		
+		// Check cache first
+		FString CacheKey = FString::Printf(TEXT("channel:%s"), *SearchText);
+		TArray<FPubnubChatSuggestedMention>* CachedSuggestions = SuggestionsCache.Find(CacheKey);
+		
+		if (CachedSuggestions)
+		{
+			// Use cached suggestions - create suggestions for each match position
+			for (const FMentionMatch& Match : MatchesForText)
+			{
+				for (const FPubnubChatSuggestedMention& CachedSuggestion : *CachedSuggestions)
+				{
+					// Create a new suggestion for each match position (offset may differ)
+					FPubnubChatSuggestedMention Suggestion;
+					Suggestion.Offset = Match.Offset;
+					Suggestion.ReplaceFrom = Match.Text;
+					Suggestion.ReplaceTo = CachedSuggestion.ReplaceTo;
+					Suggestion.Target = CachedSuggestion.Target;
+					Suggestions.Add(Suggestion);
+				}
+			}
+		}
+		else
+		{
+			// Query API for channel suggestions
+			FPubnubChatGetChannelSuggestionsResult GetChannelSuggestionsResult = Channel->Chat->GetChannelSuggestions(SearchText, MessageDraftConfig.ChannelLimit);
+			
+			if (!GetChannelSuggestionsResult.Result.Error)
+			{
+				// Create base suggestions (without offset) for caching
+				TArray<FPubnubChatSuggestedMention> BaseSuggestionsForCache;
+				
+				for (UPubnubChatChannel* SuggestedChannel : GetChannelSuggestionsResult.Channels)
+				{
+					if (!SuggestedChannel)
+					{
+						continue;
+					}
+					
+					FPubnubChatSuggestedMention BaseSuggestion;
+					BaseSuggestion.Offset = 0; // Offset doesn't matter for cache
+					BaseSuggestion.ReplaceFrom = MatchesForText[0].Text; // Use first match's text for cache
+					
+					// Use channel name if available, otherwise channel ID
+					FString ChannelName = SuggestedChannel->GetChannelData().ChannelName;
+					BaseSuggestion.ReplaceTo = !ChannelName.IsEmpty() ? ChannelName : SuggestedChannel->GetChannelID();
+					
+					BaseSuggestion.Target.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+					BaseSuggestion.Target.Target = SuggestedChannel->GetChannelID();
+					
+					BaseSuggestionsForCache.Add(BaseSuggestion);
+					
+					// Create suggestions for each match position
+					for (const FMentionMatch& Match : MatchesForText)
+					{
+						FPubnubChatSuggestedMention Suggestion;
+						Suggestion.Offset = Match.Offset;
+						Suggestion.ReplaceFrom = Match.Text;
+						Suggestion.ReplaceTo = BaseSuggestion.ReplaceTo;
+						Suggestion.Target = BaseSuggestion.Target;
+						Suggestions.Add(Suggestion);
+					}
+				}
+				
+				// Cache the base suggestions (without specific offsets)
+				if (!BaseSuggestionsForCache.IsEmpty())
+				{
+					SuggestionsCache.Add(CacheKey, BaseSuggestionsForCache);
+				}
+			}
+		}
+	}
+	
+	return Suggestions;
+}
+
 void UPubnubChatMessageDraft::TriggerTypingIndicator()
 {
+	// Skip if suppressed (e.g., during batch operations)
+	if (bSuppressDelegateAndTyping)
+	{
+		return;
+	}
+	
 	if (!MessageDraftConfig.IsTypingIndicatorTriggered)
 	{ return;}
 	

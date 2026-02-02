@@ -57,6 +57,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult Update(const FString& NewText);
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
+	FPubnubChatOperationResult InsertSuggestedMention(const FPubnubChatSuggestedMention SuggestedMention);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
+	FPubnubChatOperationResult Send(FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
+	
 private:
 	UPROPERTY()
 	UPubnubChatChannel* Channel = nullptr;
@@ -66,6 +72,14 @@ private:
 	UPROPERTY()
 	TArray<FPubnubChatMessageElement> MessageElements;
 	
+	//Cache for suggestion results to avoid repeated API calls
+	TMap<FString, TArray<FPubnubChatSuggestedMention>> SuggestionsCache;
+	
+	//Flag to suppress delegate and typing indicator calls during batch operations
+	bool bSuppressDelegateAndTyping = false;
+	
+	FString GetDraftTextToSend();
+	
 	void InitMessageDraft(UPubnubChatChannel* InChannel, const FPubnubChatMessageDraftConfig& InMessageDraftConfig);
 	void FireMessageDraftChangedDelegate();
 	void TriggerTypingIndicator();
@@ -74,5 +88,26 @@ private:
 	bool IsPositionWithinMentionTarget(int Position, int Length);
 	
 	void MergeAdjacentTextElements();
+	
+	// Suggested mentions functionality
+	bool HasListenersForSuggestions() const;
+	TArray<FPubnubChatSuggestedMention> GetSuggestedMentions();
+	
+	// Helper struct for regex matches
+	struct FMentionMatch
+	{
+		int32 Offset;
+		FString Text;
+		bool bIsUserMention; // true for @username, false for #channelname
+	};
+	
+	TArray<FMentionMatch> FindUserMentionMatches(const FString& Text) const;
+	TArray<FMentionMatch> FindChannelMentionMatches(const FString& Text) const;
+	TArray<FPubnubChatSuggestedMention> ResolveUserSuggestions(const TArray<FMentionMatch>& Matches);
+	TArray<FPubnubChatSuggestedMention> ResolveChannelSuggestions(const TArray<FMentionMatch>& Matches);
+	
+	// Helper functions for markdown link escaping
+	static FString EscapeLinkText(const FString& Text);
+	static FString EscapeLinkUrl(const FString& Url);
 };
 
