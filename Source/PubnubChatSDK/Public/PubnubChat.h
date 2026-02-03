@@ -23,6 +23,7 @@ class UPubnubChatThreadChannel;
 class UPubnubChatThreadMessage;
 enum class EPubnubSubscriptionStatus  : uint8;
 struct FPubnubSubscriptionStatusData;
+class FPubnubFunctionThread;
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatDestroyed, FString, UserID);
@@ -32,6 +33,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChangedNative,
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatEventReceived, FPubnubChatEvent, Event);
 DECLARE_DELEGATE_OneParam(FOnPubnubChatEventReceivedNative, const FPubnubChatEvent& Event);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatUserResponse, FPubnubChatUserResult, UserResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatUserResponseNative, const FPubnubChatUserResult& UserResult);
 
 
 
@@ -87,7 +91,16 @@ public:
 	FPubnubChatUserResult CreateUser(const FString UserID, FPubnubChatUserData UserData = FPubnubChatUserData());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void CreateUserAsync(const FString UserID, FOnPubnubChatUserResponse OnUserResponse, FPubnubChatUserData UserData = FPubnubChatUserData());
+	void CreateUserAsync(const FString UserID, FOnPubnubChatUserResponseNative OnUserResponseNative, FPubnubChatUserData UserData = FPubnubChatUserData());
+	
+	
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult GetUser(const FString UserID);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void GetUserAsync(const FString UserID, FOnPubnubChatUserResponse OnUserResponse);
+	void GetUserAsync(const FString UserID, FOnPubnubChatUserResponseNative OnUserResponseNative);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatGetUsersResult GetUsers(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
@@ -221,6 +234,9 @@ private:
 	//Container for subscriptions used during listen for events - we need to keep them alive
 	UPROPERTY()
 	TArray<UPubnubSubscription*> ListenForEventsSubscriptions;
+	
+	
+	FPubnubFunctionThread* AsyncFunctionsThread = nullptr;
 	
 	//Timer handles for user activity timestamp management
 	FTimerHandle LastSavedActivityIntervalTimerHandle;

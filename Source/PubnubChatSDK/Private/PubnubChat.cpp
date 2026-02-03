@@ -26,7 +26,9 @@
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
+#include "FunctionLibraries/PubnubUtilities.h"
 #include "Misc/DateTime.h"
+#include "Threads/PubnubFunctionThread.h"
 
 DEFINE_LOG_CATEGORY(PubnubChatLog)
 
@@ -42,7 +44,15 @@ void UPubnubChat::DestroyChat()
 		TimerManager.ClearTimer(RunWithDelayTimerHandle);
 	}
 	
-	PubnubClient->OnPubnubSubscriptionStatusChanged.RemoveDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
+	if(AsyncFunctionsThread)
+	{
+		AsyncFunctionsThread->Stop();
+	}
+	
+	delete AsyncFunctionsThread;
+	AsyncFunctionsThread = nullptr;
+	
+	PubnubClient->OnSubscriptionStatusChanged.RemoveDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
 
 	// Clear repository data
 	if (ObjectsRepository)
@@ -82,6 +92,35 @@ FPubnubChatUserResult UPubnubChat::CreateUser(FString UserID, FPubnubChatUserDat
 	return FinalResult;
 }
 
+void UPubnubChat::CreateUserAsync(const FString UserID, FOnPubnubChatUserResponse OnUserResponse, FPubnubChatUserData UserData)
+{
+	FOnPubnubChatUserResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnUserResponse](const FPubnubChatUserResult& UserResult)
+	{
+		OnUserResponse.ExecuteIfBound(UserResult);
+	});
+
+	CreateUserAsync(UserID, NativeCallback, UserData);
+}
+
+void UPubnubChat::CreateUserAsync(const FString UserID, FOnPubnubChatUserResponseNative OnUserResponseNative, FPubnubChatUserData UserData)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, OnUserResponseNative, UserData = MoveTemp(UserData)]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatUserResult CreateUserResult = WeakThis.Get()->CreateUser(UserID, UserData);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnUserResponseNative, CreateUserResult);
+	});
+}
+
 FPubnubChatUserResult UPubnubChat::GetUser(FString UserID)
 {
 	FPubnubChatUserResult FinalResult;
@@ -95,6 +134,35 @@ FPubnubChatUserResult UPubnubChat::GetUser(FString UserID)
 	//Create user object and return final result
 	FinalResult.User = CreateUserObject(UserID, GetUserResult.UserData);
 	return FinalResult;
+}
+
+void UPubnubChat::GetUserAsync(const FString UserID, FOnPubnubChatUserResponse OnUserResponse)
+{
+	FOnPubnubChatUserResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnUserResponse](const FPubnubChatUserResult& UserResult)
+	{
+		OnUserResponse.ExecuteIfBound(UserResult);
+	});
+
+	GetUserAsync(UserID, NativeCallback);
+}
+
+void UPubnubChat::GetUserAsync(const FString UserID, FOnPubnubChatUserResponseNative OnUserResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, OnUserResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatUserResult GetUserResult = WeakThis.Get()->GetUser(UserID);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnUserResponseNative, GetUserResult);
+	});
 }
 
 FPubnubChatGetUsersResult UPubnubChat::GetUsers(const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
@@ -912,7 +980,7 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 	}
 	
 	//Add callback for subscription status - it will be translated to chat connection status
-	PubnubClient->OnPubnubSubscriptionStatusChanged.AddDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
+	PubnubClient->OnSubscriptionStatusChanged.AddDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
 
 	//Get or create user for this chat instance
 	FPubnubChatUserResult GetUserForInitResult = GetUserForInit(InUserID);
@@ -931,6 +999,10 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 	{
 		StoreUserActivityTimestamp();
 	}
+	
+	//Create new thread to queue all async chat operations
+	AsyncFunctionsThread = new FPubnubFunctionThread;
+	
 
 	return FinalResult;
 }
