@@ -7,7 +7,9 @@
 #include "PubnubChat.h"
 #include "PubnubChatMembership.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
+#include "FunctionLibraries/PubnubUtilities.h"
 #include "PubnubChatUser.h"
+#include "Threads/PubnubFunctionThread.h"
 
 // Schema constants for markdown link rendering
 static const FString SCHEMA_USER = TEXT("pn-user://");
@@ -398,6 +400,38 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::Send(FPubnubChatSendTextPara
 	
 	FString DraftMessage = GetDraftTextToSend();
 	return Channel->SendText(DraftMessage);
+}
+
+void UPubnubChatMessageDraft::SendAsync(FOnPubnubChatOperationResponse OnOperationResponse, FPubnubChatSendTextParams SendTextParams)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	SendAsync(NativeCallback, SendTextParams);
+}
+
+void UPubnubChatMessageDraft::SendAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative, FPubnubChatSendTextParams SendTextParams)
+{
+	if (!Channel)
+	{
+		FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Channel for this MessageDraft is invalid."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
+		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage);
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, FPubnubChatOperationResult::CreateError(ErrorLogMessage));
+		return;
+	}
+	if (GetCurrentText().IsEmpty())
+	{
+		FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Can't send empty message draft."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
+		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage);
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, FPubnubChatOperationResult::CreateError(ErrorLogMessage));
+		return;
+	}
+	
+	FString DraftMessage = GetDraftTextToSend();
+	Channel->SendTextAsync(DraftMessage, OnOperationResponseNative, SendTextParams);
 }
 
 FString UPubnubChatMessageDraft::GetDraftTextToSend()

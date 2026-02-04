@@ -17,6 +17,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
+#include "HAL/PlatformProcess.h"
 #include "PubnubStructLibrary.h"
 #include "Private/PubnubChatConst.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
@@ -2824,6 +2825,1169 @@ bool FPubnubChatMessageStopStreamingUpdatesMultipleCyclesTest::RunTest(const FSt
 		{
 			Chat->DeleteChannel(TestChannelID, false);
 			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (Message)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageEditTextAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.EditTextAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageEditTextAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_edit_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_edit_async_full";
+	const FString TestMessageText = TEXT("Original async text");
+	const FString UpdatedText = TEXT("Edited async text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !ReceivedMessage->IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bCallbackReceived, UpdatedText, OnOperationResponse]()
+	{
+		if(!ReceivedMessage->IsValid())
+		{
+			AddError("Received message is invalid");
+			*bCallbackReceived = true;
+			return;
+		}
+		
+		ReceivedMessage->Get()->EditTextAsync(UpdatedText, OnOperationResponse);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, ReceivedMessage, UpdatedText]()
+	{
+		TestFalse("EditTextAsync should succeed", CallbackResult->Error);
+		if(ReceivedMessage->IsValid())
+		{
+			TestEqual("Message text should be updated", ReceivedMessage->Get()->GetCurrentText(), UpdatedText);
+		}
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDeleteAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.DeleteAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDeleteAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_delete_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_delete_async_full";
+	const FString TestMessageText = TEXT("Delete async text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !ReceivedMessage->IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bCallbackReceived, OnOperationResponse]()
+	{
+		if(!ReceivedMessage->IsValid())
+		{
+			AddError("Received message is invalid");
+			*bCallbackReceived = true;
+			return;
+		}
+		
+		ReceivedMessage->Get()->DeleteAsync(OnOperationResponse, false);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("DeleteAsync should succeed", CallbackResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageToggleReactionAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ToggleReactionAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageToggleReactionAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_reaction_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_reaction_async_full";
+	const FString TestMessageText = TEXT("Reaction async text");
+	const FString Reaction = TEXT("like");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bCallbackReceived, Reaction, OnOperationResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bCallbackReceived = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->ToggleReactionAsync(Reaction, OnOperationResponse);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("ToggleReactionAsync should succeed", CallbackResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageReactionQueriesAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ReactionQueriesAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageReactionQueriesAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_reaction_queries_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_reaction_queries_async_full";
+	const FString TestMessageText = TEXT("Reaction queries async text");
+	const FString Reaction = TEXT("like");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, Reaction]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			return;
+		}
+		(*ReceivedMessage).Get()->ToggleReaction(Reaction);
+	}, 0.1f));
+	
+	TSharedPtr<bool> bGetReactions = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatGetReactionsResult> ReactionsResult = MakeShared<FPubnubChatGetReactionsResult>();
+	FOnPubnubChatGetReactionsResponseNative OnReactionsResponse;
+	OnReactionsResponse.BindLambda([bGetReactions, ReactionsResult](const FPubnubChatGetReactionsResult& Result)
+	{
+		*ReactionsResult = Result;
+		*bGetReactions = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bGetReactions, OnReactionsResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bGetReactions = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->GetReactionsAsync(OnReactionsResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bGetReactions]() { return *bGetReactions; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bHasReaction = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatHasReactionResult> HasReactionResult = MakeShared<FPubnubChatHasReactionResult>();
+	FOnPubnubChatHasReactionResponseNative OnHasReactionResponse;
+	OnHasReactionResponse.BindLambda([bHasReaction, HasReactionResult](const FPubnubChatHasReactionResult& Result)
+	{
+		*HasReactionResult = Result;
+		*bHasReaction = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bHasReaction, Reaction, OnHasReactionResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bHasReaction = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->HasUserReactionAsync(Reaction, OnHasReactionResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bHasReaction]() { return *bHasReaction; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReactionsResult, HasReactionResult]()
+	{
+		TestFalse("GetReactionsAsync should succeed", ReactionsResult->Result.Error);
+		TestFalse("HasUserReactionAsync should succeed", HasReactionResult->Result.Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessagePinUnpinAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.PinUnpinAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessagePinUnpinAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_pin_unpin_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_pin_unpin_async_full";
+	const FString TestMessageText = TEXT("Pin/unpin async text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bPinReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> PinResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnPinResponse;
+	OnPinResponse.BindLambda([bPinReceived, PinResult](const FPubnubChatOperationResult& Result)
+	{
+		*PinResult = Result;
+		*bPinReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bPinReceived, OnPinResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bPinReceived = true;
+			return;
+		}
+		
+		(*ReceivedMessage).Get()->PinAsync(OnPinResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bPinReceived]() { return *bPinReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bUnpinReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> UnpinResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnUnpinResponse;
+	OnUnpinResponse.BindLambda([bUnpinReceived, UnpinResult](const FPubnubChatOperationResult& Result)
+	{
+		*UnpinResult = Result;
+		*bUnpinReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bUnpinReceived, OnUnpinResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bUnpinReceived = true;
+			return;
+		}
+		
+		(*ReceivedMessage).Get()->UnpinAsync(OnUnpinResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bUnpinReceived]() { return *bUnpinReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, PinResult, UnpinResult]()
+	{
+		TestFalse("PinAsync should succeed", PinResult->Error);
+		TestFalse("UnpinAsync should succeed", UnpinResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageRestoreIsDeletedAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.RestoreIsDeletedAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageRestoreIsDeletedAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_restore_isdeleted_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_restore_isdeleted_async_full";
+	const FString TestMessageText = TEXT("Restore/isdeleted async text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			return;
+		}
+		(*ReceivedMessage).Get()->Delete(true);
+	}, 0.1f));
+	
+	TSharedPtr<bool> bIsDeletedReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatIsDeletedResult> IsDeletedResult = MakeShared<FPubnubChatIsDeletedResult>();
+	FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponse;
+	OnIsDeletedResponse.BindLambda([bIsDeletedReceived, IsDeletedResult](const FPubnubChatIsDeletedResult& Result)
+	{
+		*IsDeletedResult = Result;
+		*bIsDeletedReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bIsDeletedReceived, OnIsDeletedResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bIsDeletedReceived = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->IsDeletedAsync(OnIsDeletedResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bIsDeletedReceived]() { return *bIsDeletedReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bRestoreReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> RestoreResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnRestoreResponse;
+	OnRestoreResponse.BindLambda([bRestoreReceived, RestoreResult](const FPubnubChatOperationResult& Result)
+	{
+		*RestoreResult = Result;
+		*bRestoreReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bRestoreReceived, OnRestoreResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bRestoreReceived = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->RestoreAsync(OnRestoreResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bRestoreReceived]() { return *bRestoreReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, IsDeletedResult, RestoreResult]()
+	{
+		TestFalse("IsDeletedAsync should succeed", IsDeletedResult->Result.Error);
+		TestFalse("RestoreAsync should succeed", RestoreResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageForwardAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ForwardAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageForwardAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_forward_async_full_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_message_forward_async_source";
+	const FString DestChannelID = SDK_PREFIX + "test_message_forward_async_dest";
+	const FString TestMessageText = TEXT("Forward async text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, FPubnubChatChannelData());
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestChannelID, FPubnubChatChannelData());
+	TestFalse("Create source channel should succeed", CreateSourceResult.Result.Error);
+	TestFalse("Create destination channel should succeed", CreateDestResult.Result.Error);
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateSourceResult.Channel->Connect();
+	CreateDestResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bForwardReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> ForwardResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnForwardResponse;
+	OnForwardResponse.BindLambda([bForwardReceived, ForwardResult](const FPubnubChatOperationResult& Result)
+	{
+		*ForwardResult = Result;
+		*bForwardReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bForwardReceived, CreateDestResult, OnForwardResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bForwardReceived = true;
+			return;
+		}
+		
+		(*ReceivedMessage).Get()->ForwardAsync(CreateDestResult.Channel, OnForwardResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardReceived]() { return *bForwardReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardResult]()
+	{
+		TestFalse("ForwardAsync should succeed", ForwardResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceChannelID, DestChannelID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID, false);
+			Chat->DeleteChannel(DestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageReportAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ReportAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageReportAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_report_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_report_async_full";
+	const FString TestMessageText = TEXT("Report async text");
+	const FString ReportReason = TEXT("async report reason");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bReportReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> ReportResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnReportResponse;
+	OnReportResponse.BindLambda([bReportReceived, ReportResult](const FPubnubChatOperationResult& Result)
+	{
+		*ReportResult = Result;
+		*bReportReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bReportReceived, ReportReason, OnReportResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bReportReceived = true;
+			return;
+		}
+		
+		(*ReceivedMessage).Get()->ReportAsync(OnReportResponse, ReportReason);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bReportReceived]() { return *bReportReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReportResult]()
+	{
+		TestFalse("ReportAsync should succeed", ReportResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageStreamUpdatesAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.StreamUpdatesAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageStreamUpdatesAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_stream_updates_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_stream_updates_async_full";
+	const FString TestMessageText = TEXT("Stream updates async text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bStreamReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> StreamResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnStreamResponse;
+	OnStreamResponse.BindLambda([bStreamReceived, StreamResult](const FPubnubChatOperationResult& Result)
+	{
+		*StreamResult = Result;
+		*bStreamReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bStreamReceived, OnStreamResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bStreamReceived = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->StreamUpdatesAsync(OnStreamResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bStreamReceived]() { return *bStreamReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bStopReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> StopResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnStopResponse;
+	OnStopResponse.BindLambda([bStopReceived, StopResult](const FPubnubChatOperationResult& Result)
+	{
+		*StopResult = Result;
+		*bStopReceived = true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bStopReceived, OnStopResponse]()
+	{
+		if(!(*ReceivedMessage).IsValid())
+		{
+			AddError("Received message is invalid");
+			*bStopReceived = true;
+			return;
+		}
+		(*ReceivedMessage).Get()->StopStreamingUpdatesAsync(OnStopResponse);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bStopReceived]() { return *bStopReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, StreamResult, StopResult]()
+	{
+		TestFalse("StreamUpdatesAsync should succeed", StreamResult->Error);
+		TestFalse("StopStreamingUpdatesAsync should succeed", StopResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageThreadOpsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.ThreadOpsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageThreadOpsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_message_thread_ops_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_message_thread_ops_async_full";
+	const FString TestMessageText = TEXT("Thread ops async text");
+	const FString TestThreadText = TEXT("Thread propagation");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<TWeakObjectPtr<UPubnubChatMessage>> ReceivedMessage = MakeShared<TWeakObjectPtr<UPubnubChatMessage>>(nullptr);
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda([bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !(*ReceivedMessage).IsValid())
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	});
+	CreateResult.Channel->Connect();
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
+	{
+		FPubnubChatSendTextParams SendTextParams;
+		SendTextParams.StoreInHistory = true;
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText, SendTextParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bAllThreadOpsDone = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatThreadChannelResult> CreateThreadResult = MakeShared<FPubnubChatThreadChannelResult>();
+	TSharedPtr<FPubnubChatHasThreadResult> HasThreadResult = MakeShared<FPubnubChatHasThreadResult>();
+	TSharedPtr<FPubnubChatThreadChannelResult> GetThreadResult = MakeShared<FPubnubChatThreadChannelResult>();
+	TSharedPtr<FPubnubChatOperationResult> RemoveThreadResult = MakeShared<FPubnubChatOperationResult>();
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMessage, bAllThreadOpsDone, CreateThreadResult, HasThreadResult, GetThreadResult, RemoveThreadResult, TestThreadText]()
+	{
+		if(!ReceivedMessage->IsValid())
+		{
+			AddError("Received message is invalid when starting thread ops");
+			*bAllThreadOpsDone = true;
+			return;
+		}
+		UPubnubChatMessage* Message = ReceivedMessage->Get();
+		FOnPubnubChatOperationResponseNative OnRemove;
+		OnRemove.BindLambda([bAllThreadOpsDone, RemoveThreadResult](const FPubnubChatOperationResult& RemoveResult)
+		{
+			*RemoveThreadResult = RemoveResult;
+			*bAllThreadOpsDone = true;
+		});
+		FOnPubnubChatThreadChannelResponseNative OnGet;
+		OnGet.BindLambda([this, Message, bAllThreadOpsDone, GetThreadResult, RemoveThreadResult, OnRemove](const FPubnubChatThreadChannelResult& GetResult)
+		{
+			*GetThreadResult = GetResult;
+			if(GetResult.Result.Error) { *bAllThreadOpsDone = true; return; }
+			if(!IsValid(Message)) { AddError("Message invalid before RemoveThreadAsync"); *bAllThreadOpsDone = true; return; }
+			Message->RemoveThreadAsync(OnRemove);
+		});
+		FOnPubnubChatHasThreadResponseNative OnHas;
+		OnHas.BindLambda([this, Message, bAllThreadOpsDone, HasThreadResult, GetThreadResult, RemoveThreadResult, OnGet](const FPubnubChatHasThreadResult& HasResult)
+		{
+			*HasThreadResult = HasResult;
+			if(HasResult.Result.Error) { *bAllThreadOpsDone = true; return; }
+			if(!IsValid(Message)) { AddError("Message invalid before GetThreadAsync"); *bAllThreadOpsDone = true; return; }
+			Message->GetThreadAsync(OnGet);
+		});
+		FOnPubnubChatThreadChannelResponseNative OnCreate;
+		OnCreate.BindLambda([this, Message, bAllThreadOpsDone, CreateThreadResult, HasThreadResult, GetThreadResult, RemoveThreadResult, OnHas, TestThreadText](const FPubnubChatThreadChannelResult& CreateResult)
+		{
+			*CreateThreadResult = CreateResult;
+			if(CreateResult.Result.Error) { *bAllThreadOpsDone = true; return; }
+			if(!IsValid(Message)) { AddError("Message invalid before HasThreadAsync"); *bAllThreadOpsDone = true; return; }
+			// SendText on thread channel propagates the thread to the server; otherwise GetThreadAsync may fail (no such channel)
+			if(CreateResult.ThreadChannel)
+			{
+				CreateResult.ThreadChannel->Connect();
+				FPubnubChatOperationResult SendResult = CreateResult.ThreadChannel->SendText(TestThreadText);
+				if(SendResult.Error) { AddError("Thread SendText failed"); *bAllThreadOpsDone = true; return; }
+			}
+			FPlatformProcess::Sleep(1.0f);
+			Message->HasThreadAsync(OnHas);
+		});
+		Message->CreateThreadAsync(OnCreate);
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bAllThreadOpsDone]() { return *bAllThreadOpsDone; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateThreadResult, HasThreadResult, GetThreadResult, RemoveThreadResult]()
+	{
+		TestFalse("CreateThreadAsync should succeed", CreateThreadResult->Result.Error);
+		TestFalse("HasThreadAsync should succeed", HasThreadResult->Result.Error);
+		TestFalse("GetThreadAsync should succeed", GetThreadResult->Result.Error);
+		TestFalse("RemoveThreadAsync should succeed", RemoveThreadResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

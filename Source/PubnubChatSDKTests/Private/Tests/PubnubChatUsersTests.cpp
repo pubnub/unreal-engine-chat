@@ -9,6 +9,8 @@
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "Private/PubnubChatConst.h"
+#include "Private/FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -3551,6 +3553,511 @@ bool FPubnubChatGetUserSuggestionsConsistencyTest::RunTest(const FString& Parame
 }
 
 // ============================================================================
+// ASYNC USER TESTS - FULL PARAMETERS (Chat.User Async)
+// ============================================================================
+
+/**
+ * FullParameters test for CreateUserAsync.
+ * Calls CreateUserAsync with all parameters (UserID, UserData) and verifies callback result.
+ * Cleans up created user and init user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatCreateUserAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.CreateUserAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatCreateUserAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_create_user_async_full_init";
+	const FString NewUserID = SDK_PREFIX + "test_create_user_async_full_new";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserData UserData;
+	UserData.UserName = TEXT("TestUserName");
+	UserData.ExternalID = TEXT("external_123");
+	UserData.ProfileUrl = TEXT("https://example.com/profile.jpg");
+	UserData.Email = TEXT("test@example.com");
+	UserData.Custom = TEXT("{\"key\":\"value\"}");
+	UserData.Status = TEXT("active");
+	UserData.Type = TEXT("user");
+
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatUserResult> CallbackResult = MakeShared<FPubnubChatUserResult>();
+
+	FOnPubnubChatUserResponseNative OnUserResponse;
+	OnUserResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatUserResult& UserResult)
+	{
+		*CallbackResult = UserResult;
+		*bCallbackReceived = true;
+	});
+	Chat->CreateUserAsync(NewUserID, OnUserResponse, UserData);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, NewUserID, UserData]()
+	{
+		TestFalse("CreateUserAsync callback should report success", CallbackResult->Result.Error);
+		TestNotNull("CreateUserAsync callback should return user", CallbackResult->User);
+		if(CallbackResult->User)
+		{
+			TestEqual("Created User UserID should match", CallbackResult->User->GetUserID(), NewUserID);
+			FPubnubChatUserData RetrievedData = CallbackResult->User->GetUserData();
+			TestEqual("UserName should match", RetrievedData.UserName, UserData.UserName);
+			TestEqual("ExternalID should match", RetrievedData.ExternalID, UserData.ExternalID);
+			TestEqual("ProfileUrl should match", RetrievedData.ProfileUrl, UserData.ProfileUrl);
+			TestEqual("Email should match", RetrievedData.Email, UserData.Email);
+			TestEqual("Custom should match", RetrievedData.Custom, UserData.Custom);
+			TestEqual("Status should match", RetrievedData.Status, UserData.Status);
+			TestEqual("Type should match", RetrievedData.Type, UserData.Type);
+		}
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, NewUserID, InitUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(NewUserID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
+	return true;
+}
+
+/**
+ * FullParameters test for GetUserAsync.
+ * Creates a user synchronously, then calls GetUserAsync with UserID and verifies callback result.
+ * Cleans up created user and init user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatGetUserAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_get_user_async_full_target";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserData UserData;
+	UserData.UserName = TEXT("GetUserAsyncTarget");
+	UserData.Email = TEXT("getuserasync@example.com");
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID, UserData);
+	TestFalse("CreateUser should succeed for GetUserAsync test", CreateResult.Result.Error);
+
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatUserResult> CallbackResult = MakeShared<FPubnubChatUserResult>();
+
+	FOnPubnubChatUserResponseNative OnUserResponse;
+	OnUserResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatUserResult& UserResult)
+	{
+		*CallbackResult = UserResult;
+		*bCallbackReceived = true;
+	});
+	Chat->GetUserAsync(TargetUserID, OnUserResponse);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TargetUserID, UserData]()
+	{
+		TestFalse("GetUserAsync callback should report success", CallbackResult->Result.Error);
+		TestNotNull("GetUserAsync callback should return user", CallbackResult->User);
+		if(CallbackResult->User)
+		{
+			TestEqual("GetUser UserID should match", CallbackResult->User->GetUserID(), TargetUserID);
+			FPubnubChatUserData RetrievedData = CallbackResult->User->GetUserData();
+			TestEqual("UserName should match", RetrievedData.UserName, UserData.UserName);
+			TestEqual("Email should match", RetrievedData.Email, UserData.Email);
+		}
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID, InitUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
+	return true;
+}
+
+/**
+ * FullParameters test for GetUsersAsync.
+ * Creates users synchronously, then calls GetUsersAsync with Limit, Filter, Sort, Page and verifies callback result.
+ * Cleans up created users and init user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUsersAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUsersAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatGetUsersAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_users_async_full_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_users_async_full_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_users_async_full_2";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateResult1 = Chat->CreateUser(TestUserID1);
+	FPubnubChatUserResult CreateResult2 = Chat->CreateUser(TestUserID2);
+	TestFalse("CreateUser1 should succeed", CreateResult1.Result.Error);
+	TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
+
+	const int TestLimit = 10;
+	const FString TestFilter = TEXT("name LIKE '*test_get_users_async_full*'");
+	FPubnubGetAllSort TestSort;
+	FPubnubGetAllSingleSort SingleSort;
+	SingleSort.SortType = EPubnubGetAllSortType::PGAST_ID;
+	SingleSort.SortOrder = false;
+	TestSort.GetAllSort.Add(SingleSort);
+	FPubnubPage TestPage;
+
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatGetUsersResult> CallbackResult = MakeShared<FPubnubChatGetUsersResult>();
+
+	FOnPubnubChatGetUsersResponseNative OnUsersResponse;
+	OnUsersResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatGetUsersResult& UsersResult)
+	{
+		*CallbackResult = UsersResult;
+		*bCallbackReceived = true;
+	});
+	Chat->GetUsersAsync(OnUsersResponse, TestLimit, TestFilter, TestSort, TestPage);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestLimit]()
+	{
+		TestFalse("GetUsersAsync callback should report success", CallbackResult->Result.Error);
+		TestTrue("Users array should be valid", CallbackResult->Users.Num() >= 0);
+		TestTrue("Total count should be non-negative", CallbackResult->Total >= 0);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestUserID1, TestUserID2, InitUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TestUserID1, false);
+			Chat->DeleteUser(TestUserID2, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
+	return true;
+}
+
+/**
+ * FullParameters test for UpdateUserAsync.
+ * Creates a user synchronously, then calls UpdateUserAsync with UserID and full UpdateUserInputData; verifies callback result.
+ * Cleans up created user and init user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUpdateUserAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.UpdateUserAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatUpdateUserAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_update_user_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_update_user_async_full";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed for UpdateUserAsync test", CreateResult.Result.Error);
+
+	FPubnubChatUpdateUserInputData UpdateData;
+	UpdateData.UserName = TEXT("UpdatedFullUser");
+	UpdateData.ExternalID = TEXT("updated_external_456");
+	UpdateData.ProfileUrl = TEXT("https://example.com/updated_profile.jpg");
+	UpdateData.Email = TEXT("updated@example.com");
+	UpdateData.Custom = TEXT("{\"updated\":\"data\"}");
+	UpdateData.Status = TEXT("updatedStatus");
+	UpdateData.Type = TEXT("updatedType");
+	UpdateData.ForceSetUserName = true;
+	UpdateData.ForceSetExternalID = true;
+	UpdateData.ForceSetProfileUrl = true;
+	UpdateData.ForceSetEmail = true;
+	UpdateData.ForceSetCustom = true;
+	UpdateData.ForceSetStatus = true;
+	UpdateData.ForceSetType = true;
+
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatUserResult> CallbackResult = MakeShared<FPubnubChatUserResult>();
+
+	FOnPubnubChatUserResponseNative OnUserResponse;
+	OnUserResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatUserResult& UserResult)
+	{
+		*CallbackResult = UserResult;
+		*bCallbackReceived = true;
+	});
+	Chat->UpdateUserAsync(TargetUserID, UpdateData, OnUserResponse);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TargetUserID, UpdateData]()
+	{
+		TestFalse("UpdateUserAsync callback should report success", CallbackResult->Result.Error);
+		TestNotNull("UpdateUserAsync callback should return user", CallbackResult->User);
+		if(CallbackResult->User)
+		{
+			TestEqual("Updated User UserID should match", CallbackResult->User->GetUserID(), TargetUserID);
+			FPubnubChatUserData RetrievedData = CallbackResult->User->GetUserData();
+			TestEqual("UserName should match", RetrievedData.UserName, UpdateData.UserName);
+			TestEqual("ExternalID should match", RetrievedData.ExternalID, UpdateData.ExternalID);
+			TestEqual("ProfileUrl should match", RetrievedData.ProfileUrl, UpdateData.ProfileUrl);
+			TestEqual("Email should match", RetrievedData.Email, UpdateData.Email);
+			TestEqual("Custom should match", RetrievedData.Custom, UpdateData.Custom);
+			TestEqual("Status should match", RetrievedData.Status, UpdateData.Status);
+			TestEqual("Type should match", RetrievedData.Type, UpdateData.Type);
+		}
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID, InitUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
+	return true;
+}
+
+/**
+ * FullParameters test for DeleteUserAsync.
+ * Creates a user synchronously, then calls DeleteUserAsync with UserID and Soft=true; verifies callback result.
+ * Cleans up: hard-delete the soft-deleted user, then delete init user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUserAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatDeleteUserAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_delete_user_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_delete_user_async_full_target";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed for DeleteUserAsync test", CreateResult.Result.Error);
+
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	Chat->DeleteUserAsync(TargetUserID, OnOperationResponse, true);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("DeleteUserAsync callback should report success", CallbackResult->Error);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID, InitUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
+	return true;
+}
+
+/**
+ * FullParameters test for GetUserSuggestionsAsync.
+ * Creates users with names synchronously, then calls GetUserSuggestionsAsync with Text and Limit; verifies callback result.
+ * Cleans up created users and init user.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUserSuggestionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.GetUserSuggestionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatGetUserSuggestionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_user_suggestions_async_full_init";
+	const FString TestUserID1 = SDK_PREFIX + "test_get_user_suggestions_async_full_1";
+	const FString TestUserID2 = SDK_PREFIX + "test_get_user_suggestions_async_full_2";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserData UserData1;
+	UserData1.UserName = TEXT("AsyncFullTestUser1");
+	FPubnubChatUserResult CreateResult1 = Chat->CreateUser(TestUserID1, UserData1);
+	FPubnubChatUserData UserData2;
+	UserData2.UserName = TEXT("AsyncFullTestUser2");
+	FPubnubChatUserResult CreateResult2 = Chat->CreateUser(TestUserID2, UserData2);
+	TestFalse("CreateUser1 should succeed", CreateResult1.Result.Error);
+	TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
+
+	const FString SearchText = TEXT("AsyncFullTest");
+	const int TestLimit = 5;
+
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatGetUserSuggestionsResult> CallbackResult = MakeShared<FPubnubChatGetUserSuggestionsResult>();
+
+	FOnPubnubChatGetUserSuggestionsResponseNative OnSuggestionsResponse;
+	OnSuggestionsResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatGetUserSuggestionsResult& SuggestionsResult)
+	{
+		*CallbackResult = SuggestionsResult;
+		*bCallbackReceived = true;
+	});
+	Chat->GetUserSuggestionsAsync(SearchText, OnSuggestionsResponse, TestLimit);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestLimit]()
+	{
+		TestFalse("GetUserSuggestionsAsync callback should report success", CallbackResult->Result.Error);
+		TestTrue("Users array should be valid", CallbackResult->Users.Num() >= 0);
+		TestTrue("Users count should not exceed limit when enforced", CallbackResult->Users.Num() <= TestLimit || CallbackResult->Users.Num() == 0);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestUserID1, TestUserID2, InitUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TestUserID1, false);
+			Chat->DeleteUser(TestUserID2, false);
+			Chat->DeleteUser(InitUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
+	return true;
+}
+
+// ============================================================================
 // PRESENCE TESTS
 // ============================================================================
 
@@ -4728,6 +5235,936 @@ bool FPubnubChatUserGetMembershipsWithInvitedTest::RunTest(const FString& Parame
 	
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (User object)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserUpdateAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.UpdateAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserUpdateAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_update_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_user_update_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUpdateUserInputData UpdateData;
+	UpdateData.UserName = TEXT("AsyncUpdatedName");
+	UpdateData.Email = TEXT("async_updated@example.com");
+	UpdateData.Custom = TEXT("{\"async\":\"update\"}");
+	UpdateData.Status = TEXT("active");
+	UpdateData.Type = TEXT("test");
+	UpdateData.ForceSetUserName = true;
+	UpdateData.ForceSetEmail = true;
+	UpdateData.ForceSetCustom = true;
+	UpdateData.ForceSetStatus = true;
+	UpdateData.ForceSetType = true;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->UpdateAsync(UpdateData, OnOperationResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateResult, UpdateData]()
+	{
+		TestFalse("UpdateAsync should succeed", CallbackResult->Error);
+		FPubnubChatUserData RetrievedData = CreateResult.User->GetUserData();
+		TestEqual("UserName should be updated", RetrievedData.UserName, UpdateData.UserName);
+		TestEqual("Email should be updated", RetrievedData.Email, UpdateData.Email);
+		TestEqual("Custom should be updated", RetrievedData.Custom, UpdateData.Custom);
+		TestEqual("Status should be updated", RetrievedData.Status, UpdateData.Status);
+		TestEqual("Type should be updated", RetrievedData.Type, UpdateData.Type);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserDeleteAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.DeleteAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserDeleteAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_delete_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_user_delete_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->DeleteAsync(OnOperationResponse, true);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateResult]()
+	{
+		TestFalse("DeleteAsync should succeed", CallbackResult->Error);
+		FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.User->IsDeleted();
+		TestFalse("IsDeleted should succeed", IsDeletedResult.Result.Error);
+		TestTrue("User should be marked as deleted", IsDeletedResult.IsDeleted);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.RestoreAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserRestoreAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_restore_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_user_restore_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->RestoreAsync(OnOperationResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateResult]()
+	{
+		TestFalse("RestoreAsync should succeed", CallbackResult->Error);
+		FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.User->IsDeleted();
+		TestFalse("IsDeleted should succeed", IsDeletedResult.Result.Error);
+		TestFalse("User should not be deleted after restore", IsDeletedResult.IsDeleted);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeletedAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsDeletedAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_is_deleted_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_user_is_deleted_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
+	TestFalse("Soft delete should succeed", DeleteResult.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatIsDeletedResult> CallbackResult = MakeShared<FPubnubChatIsDeletedResult>();
+	FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponse;
+	OnIsDeletedResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatIsDeletedResult& IsDeletedResult)
+	{
+		*CallbackResult = IsDeletedResult;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->IsDeletedAsync(OnIsDeletedResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("IsDeletedAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("IsDeletedAsync should report deleted", CallbackResult->IsDeleted);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsActiveAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsActiveAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsActiveAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_is_active_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_user_is_active_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUpdateUserInputData UpdateData;
+	UpdateData.Custom = UPubnubChatInternalUtilities::AddLastActiveTimestampToCustom(TEXT("{}"), UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
+	UpdateData.ForceSetCustom = true;
+	FPubnubChatOperationResult UpdateResult = CreateResult.User->Update(UpdateData);
+	TestFalse("Update user custom should succeed", UpdateResult.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<bool> bIsActive = MakeShared<bool>(false);
+	FOnPubnubChatIsActiveResponseNative OnIsActiveResponse;
+	OnIsActiveResponse.BindLambda([bCallbackReceived, bIsActive](bool bActive)
+	{
+		*bIsActive = bActive;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->IsActiveAsync(OnIsActiveResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bIsActive]()
+	{
+		TestTrue("IsActiveAsync should return true with current timestamp", *bIsActive);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TargetUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserWherePresentAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.WherePresentAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatUserWherePresentAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_where_present_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_where_present_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	if(!CurrentUser)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatWherePresentResult> CallbackResult = MakeShared<FPubnubChatWherePresentResult>();
+	FOnPubnubChatWherePresentResponseNative OnWherePresentResponse;
+	OnWherePresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatWherePresentResult& WherePresentResult)
+	{
+		*CallbackResult = WherePresentResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CurrentUser, OnWherePresentResponse]()
+	{
+		CurrentUser->WherePresentAsync(OnWherePresentResponse);
+	}, 1.0f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestChannelID]()
+	{
+		TestFalse("WherePresentAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("Channels array should contain joined channel", CallbackResult->Channels.Contains(TestChannelID));
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsPresentOnAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsPresentOnAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatUserIsPresentOnAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_is_present_on_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_is_present_on_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	if(!CurrentUser)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatIsPresentResult> CallbackResult = MakeShared<FPubnubChatIsPresentResult>();
+	FOnPubnubChatIsPresentResponseNative OnIsPresentResponse;
+	OnIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatIsPresentResult& IsPresentResult)
+	{
+		*CallbackResult = IsPresentResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CurrentUser, TestChannelID, OnIsPresentResponse]()
+	{
+		CurrentUser->IsPresentOnAsync(TestChannelID, OnIsPresentResponse);
+	}, 1.0f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("IsPresentOnAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("IsPresentOnAsync should return true", CallbackResult->IsPresent);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetMembershipsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetMembershipsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetMembershipsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_get_memberships_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_get_memberships_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	if(!CurrentUser)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	const int TestLimit = 10;
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID + TEXT("\"");
+	FPubnubMembershipSort TestSort;
+	FPubnubMembershipSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSort.SortOrder = false;
+	TestSort.MembershipSort.Add(SingleSort);
+	FPubnubPage TestPage;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatMembershipsResult> CallbackResult = MakeShared<FPubnubChatMembershipsResult>();
+	FOnPubnubChatMembershipsResponseNative OnMembershipsResponse;
+	OnMembershipsResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatMembershipsResult& MembershipsResult)
+	{
+		*CallbackResult = MembershipsResult;
+		*bCallbackReceived = true;
+	});
+	
+	CurrentUser->GetMembershipsAsync(OnMembershipsResponse, TestLimit, TestFilter, TestSort, TestPage);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestChannelID]()
+	{
+		TestFalse("GetMembershipsAsync should succeed", CallbackResult->Result.Error);
+		if(CallbackResult->Memberships.Num() > 0)
+		{
+			TestEqual("First membership channel should match", CallbackResult->Memberships[0]->GetChannelID(), TestChannelID);
+		}
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserSetRestrictionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.SetRestrictionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserSetRestrictionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_set_restrictions_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_set_restrictions_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	if(!CurrentUser)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	CurrentUser->SetRestrictionsAsync(TestChannelID, true, false, OnOperationResponse, TEXT("Async reason"));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateChannelResult, CurrentUser]()
+	{
+		TestFalse("SetRestrictionsAsync should succeed", CallbackResult->Error);
+		if(CreateChannelResult.Channel)
+		{
+			FPubnubChatGetRestrictionResult GetResult = CreateChannelResult.Channel->GetUserRestrictions(CurrentUser);
+			TestFalse("GetUserRestrictions should succeed", GetResult.Result.Error);
+			TestTrue("Restriction Ban should be true", GetResult.Restriction.Ban);
+		}
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, InitUserID]()
+	{
+		if(Chat)
+		{
+			UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+			if(PubnubClient)
+			{
+				FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+				FPubnubChannelMembersResult RemoveResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, {InitUserID}, FPubnubMemberInclude::FromValue(false), 1);
+				if(RemoveResult.Result.Error)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
+				}
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetChannelRestrictionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetChannelRestrictionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetChannelRestrictionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_get_channel_restrictions_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_get_channel_restrictions_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	if(!CurrentUser)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatOperationResult SetResult = CurrentUser->SetRestrictions(TestChannelID, true, false, TEXT("Async reason"));
+	TestFalse("SetRestrictions should succeed", SetResult.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatGetRestrictionResult> CallbackResult = MakeShared<FPubnubChatGetRestrictionResult>();
+	FOnPubnubChatGetRestrictionResponseNative OnRestrictionResponse;
+	OnRestrictionResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatGetRestrictionResult& RestrictionResult)
+	{
+		*CallbackResult = RestrictionResult;
+		*bCallbackReceived = true;
+	});
+	
+	CurrentUser->GetChannelRestrictionsAsync(CreateChannelResult.Channel, OnRestrictionResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestChannelID]()
+	{
+		TestFalse("GetChannelRestrictionsAsync should succeed", CallbackResult->Result.Error);
+		TestEqual("Restriction ChannelID should match", CallbackResult->Restriction.ChannelID, TestChannelID);
+		TestTrue("Restriction Ban should be true", CallbackResult->Restriction.Ban);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, InitUserID]()
+	{
+		if(Chat)
+		{
+			UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+			if(PubnubClient)
+			{
+				FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+				FPubnubChannelMembersResult RemoveResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, {InitUserID}, FPubnubMemberInclude::FromValue(false), 1);
+				if(RemoveResult.Result.Error)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
+				}
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetChannelsRestrictionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetChannelsRestrictionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetChannelsRestrictionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_user_get_channels_restrictions_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_user_get_channels_restrictions_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	UPubnubChatUser* CurrentUser = Chat->GetCurrentUser();
+	if(!CurrentUser)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatOperationResult SetResult = CurrentUser->SetRestrictions(TestChannelID, true, false, TEXT("Async reason"));
+	TestFalse("SetRestrictions should succeed", SetResult.Error);
+	
+	const int TestLimit = 10;
+	FPubnubMembershipSort TestSort;
+	FPubnubMembershipSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSort.SortOrder = false;
+	TestSort.MembershipSort.Add(SingleSort);
+	FPubnubPage TestPage;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatGetRestrictionsResult> CallbackResult = MakeShared<FPubnubChatGetRestrictionsResult>();
+	FOnPubnubChatGetRestrictionsResponseNative OnRestrictionsResponse;
+	OnRestrictionsResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatGetRestrictionsResult& RestrictionsResult)
+	{
+		*CallbackResult = RestrictionsResult;
+		*bCallbackReceived = true;
+	});
+	
+	CurrentUser->GetChannelsRestrictionsAsync(OnRestrictionsResponse, TestLimit, TestSort, TestPage);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestChannelID]()
+	{
+		TestFalse("GetChannelsRestrictionsAsync should succeed", CallbackResult->Result.Error);
+		bool bFound = false;
+		for(const FPubnubChatRestriction& Restriction : CallbackResult->Restrictions)
+		{
+			if(Restriction.ChannelID == TestChannelID)
+			{
+				bFound = true;
+				break;
+			}
+		}
+		TestTrue("Restrictions should include test channel", bFound);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, InitUserID]()
+	{
+		if(Chat)
+		{
+			UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+			if(PubnubClient)
+			{
+				FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+				FPubnubChannelMembersResult RemoveResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, {InitUserID}, FPubnubMemberInclude::FromValue(false), 1);
+				if(RemoveResult.Result.Error)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
+				}
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
 	return true;
 }
 

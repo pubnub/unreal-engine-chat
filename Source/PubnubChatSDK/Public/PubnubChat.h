@@ -36,7 +36,71 @@ DECLARE_DELEGATE_OneParam(FOnPubnubChatEventReceivedNative, const FPubnubChatEve
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatUserResponse, FPubnubChatUserResult, UserResult);
 DECLARE_DELEGATE_OneParam(FOnPubnubChatUserResponseNative, const FPubnubChatUserResult& UserResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetUsersResponse, FPubnubChatGetUsersResult, UsersResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetUsersResponseNative, const FPubnubChatGetUsersResult& UsersResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatOperationResponse, FPubnubChatOperationResult, OperationResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatOperationResponseNative, const FPubnubChatOperationResult& OperationResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetUserSuggestionsResponse, FPubnubChatGetUserSuggestionsResult, SuggestionsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetUserSuggestionsResponseNative, const FPubnubChatGetUserSuggestionsResult& SuggestionsResult);
 
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatChannelResponse, FPubnubChatChannelResult, ChannelResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatChannelResponseNative, const FPubnubChatChannelResult& ChannelResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatCreateGroupConversationResponse, FPubnubChatCreateGroupConversationResult, GroupConversationResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatCreateGroupConversationResponseNative, const FPubnubChatCreateGroupConversationResult& GroupConversationResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatCreateDirectConversationResponse, FPubnubChatCreateDirectConversationResult, DirectConversationResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatCreateDirectConversationResponseNative, const FPubnubChatCreateDirectConversationResult& DirectConversationResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetChannelsResponse, FPubnubChatGetChannelsResult, ChannelsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetChannelsResponseNative, const FPubnubChatGetChannelsResult& ChannelsResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetChannelSuggestionsResponse, FPubnubChatGetChannelSuggestionsResult, SuggestionsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetChannelSuggestionsResponseNative, const FPubnubChatGetChannelSuggestionsResult& SuggestionsResult);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatWherePresentResponse, FPubnubChatWherePresentResult, WherePresentResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatWherePresentResponseNative, const FPubnubChatWherePresentResult& WherePresentResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatWhoIsPresentResponse, FPubnubChatWhoIsPresentResult, WhoIsPresentResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatWhoIsPresentResponseNative, const FPubnubChatWhoIsPresentResult& WhoIsPresentResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatIsPresentResponse, FPubnubChatIsPresentResult, IsPresentResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatIsPresentResponseNative, const FPubnubChatIsPresentResult& IsPresentResult);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatEventsResponse, FPubnubChatEventsResult, EventsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatEventsResponseNative, const FPubnubChatEventsResult& EventsResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetUnreadMessagesCountsResponse, FPubnubChatGetUnreadMessagesCountsResult, UnreadMessagesCountsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetUnreadMessagesCountsResponseNative, const FPubnubChatGetUnreadMessagesCountsResult& UnreadMessagesCountsResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatMarkAllMessagesAsReadResponse, FPubnubChatMarkAllMessagesAsReadResult, MarkAllMessagesAsReadResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatMarkAllMessagesAsReadResponseNative, const FPubnubChatMarkAllMessagesAsReadResult& MarkAllMessagesAsReadResult);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatThreadChannelResponse, FPubnubChatThreadChannelResult, ThreadChannelResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatThreadChannelResponseNative, const FPubnubChatThreadChannelResult& ThreadChannelResult);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatJoinResponse, FPubnubChatJoinResult, JoinResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatJoinResponseNative, const FPubnubChatJoinResult& JoinResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatInviteResponse, FPubnubChatInviteResult, InviteResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatInviteResponseNative, const FPubnubChatInviteResult& InviteResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatInviteMultipleResponse, FPubnubChatInviteMultipleResult, InviteMultipleResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatInviteMultipleResponseNative, const FPubnubChatInviteMultipleResult& InviteMultipleResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatMessageResponse, FPubnubChatMessageResult, MessageResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatMessageResponseNative, const FPubnubChatMessageResult& MessageResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatMembershipsResponse, FPubnubChatMembershipsResult, MembershipsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatMembershipsResponseNative, const FPubnubChatMembershipsResult& MembershipsResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatIsDeletedResponse, FPubnubChatIsDeletedResult, IsDeletedResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatIsDeletedResponseNative, const FPubnubChatIsDeletedResult& IsDeletedResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetRestrictionResponse, FPubnubChatGetRestrictionResult, RestrictionResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetRestrictionResponseNative, const FPubnubChatGetRestrictionResult& RestrictionResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetRestrictionsResponse, FPubnubChatGetRestrictionsResult, RestrictionsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetRestrictionsResponseNative, const FPubnubChatGetRestrictionsResult& RestrictionsResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetHistoryResponse, FPubnubChatGetHistoryResult, HistoryResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetHistoryResponseNative, const FPubnubChatGetHistoryResult& HistoryResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetThreadHistoryResponse, FPubnubChatGetThreadHistoryResult, ThreadHistoryResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetThreadHistoryResponseNative, const FPubnubChatGetThreadHistoryResult& ThreadHistoryResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetUnreadMessagesCountResponse, FPubnubChatGetUnreadMessagesCountResult, UnreadMessagesCountResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetUnreadMessagesCountResponseNative, const FPubnubChatGetUnreadMessagesCountResult& UnreadMessagesCountResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatGetReactionsResponse, FPubnubChatGetReactionsResult, ReactionsResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatGetReactionsResponseNative, const FPubnubChatGetReactionsResult& ReactionsResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatHasReactionResponse, FPubnubChatHasReactionResult, HasReactionResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatHasReactionResponseNative, const FPubnubChatHasReactionResult& HasReactionResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatHasThreadResponse, FPubnubChatHasThreadResult, HasThreadResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatHasThreadResponseNative, const FPubnubChatHasThreadResult& HasThreadResult);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatIsActiveResponse, bool, bIsActive);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatIsActiveResponseNative, bool bIsActive);
 
 
 /**
@@ -53,6 +117,7 @@ class PUBNUBCHATSDK_API UPubnubChat : public UObject
 	friend class UPubnubChatMessage;
 	friend class UPubnubChatMembership;
 	friend class UPubnubChatThreadChannel;
+	friend class UPubnubChatThreadMessage;
 	
 public:
 
@@ -106,13 +171,29 @@ public:
 	FPubnubChatGetUsersResult GetUsers(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void GetUsersAsync(FOnPubnubChatGetUsersResponse OnUsersResponse, const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
+	void GetUsersAsync(FOnPubnubChatGetUsersResponseNative OnUsersResponseNative, const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatUserResult UpdateUser(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void UpdateUserAsync(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatUserResponse OnUserResponse);
+	void UpdateUserAsync(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatUserResponseNative OnUserResponseNative = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatOperationResult DeleteUser(const FString UserID, bool Soft = false);
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
+	void DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
+
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatGetUserSuggestionsResult GetUserSuggestions(const FString Text, int Limit = 10);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void GetUserSuggestionsAsync(const FString Text, FOnPubnubChatGetUserSuggestionsResponse OnSuggestionsResponse, int Limit = 10);
+	void GetUserSuggestionsAsync(const FString Text, FOnPubnubChatGetUserSuggestionsResponseNative OnSuggestionsResponseNative, int Limit = 10);
 
 	
 	/*  CHANNEL  */
@@ -121,43 +202,95 @@ public:
 	FPubnubChatChannelResult CreatePublicConversation(const FString ChannelID, FPubnubChatChannelData ChannelData = FPubnubChatChannelData());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void CreatePublicConversationAsync(const FString ChannelID, FOnPubnubChatChannelResponse OnChannelResponse, FPubnubChatChannelData ChannelData = FPubnubChatChannelData());
+	void CreatePublicConversationAsync(const FString ChannelID, FOnPubnubChatChannelResponseNative OnChannelResponseNative, FPubnubChatChannelData ChannelData = FPubnubChatChannelData());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatCreateGroupConversationResult CreateGroupConversation(TArray<UPubnubChatUser*> Users, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void CreateGroupConversationAsync(TArray<UPubnubChatUser*> Users, FOnPubnubChatCreateGroupConversationResponse OnGroupConversationResponse, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
+	void CreateGroupConversationAsync(TArray<UPubnubChatUser*> Users, FOnPubnubChatCreateGroupConversationResponseNative OnGroupConversationResponseNative, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatCreateDirectConversationResult CreateDirectConversation(UPubnubChatUser* User, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void CreateDirectConversationAsync(UPubnubChatUser* User, FOnPubnubChatCreateDirectConversationResponse OnDirectConversationResponse, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
+	void CreateDirectConversationAsync(UPubnubChatUser* User, FOnPubnubChatCreateDirectConversationResponseNative OnDirectConversationResponseNative, const FString ChannelID = "", FPubnubChatChannelData ChannelData = FPubnubChatChannelData(), FPubnubChatMembershipData HostMembershipData = FPubnubChatMembershipData());
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult GetChannel(const FString ChannelID);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void GetChannelAsync(const FString ChannelID, FOnPubnubChatChannelResponse OnChannelResponse);
+	void GetChannelAsync(const FString ChannelID, FOnPubnubChatChannelResponseNative OnChannelResponseNative);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatGetChannelsResult GetChannels(const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void GetChannelsAsync(FOnPubnubChatGetChannelsResponse OnChannelsResponse, const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
+	void GetChannelsAsync(FOnPubnubChatGetChannelsResponseNative OnChannelsResponseNative, const int Limit = 0, const FString Filter = "", FPubnubGetAllSort Sort = FPubnubGetAllSort(), FPubnubPage Page = FPubnubPage());
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatChannelResult UpdateChannel(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData);
 
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void UpdateChannelAsync(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData, FOnPubnubChatChannelResponse OnChannelResponse);
+	void UpdateChannelAsync(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData, FOnPubnubChatChannelResponseNative OnChannelResponseNative);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult DeleteChannel(const FString ChannelID, bool Soft = false);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
+	void DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult PinMessageToChannel(UPubnubChatMessage* Message, UPubnubChatChannel* Channel);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void PinMessageToChannelAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponse OnOperationResponse);
+	void PinMessageToChannelAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult UnpinMessageFromChannel(UPubnubChatChannel* Channel);
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void UnpinMessageFromChannelAsync(UPubnubChatChannel* Channel, FOnPubnubChatOperationResponse OnOperationResponse);
+	void UnpinMessageFromChannelAsync(UPubnubChatChannel* Channel, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Chanenl")
 	FPubnubChatGetChannelSuggestionsResult GetChannelSuggestions(const FString Text, int Limit = 10);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	void GetChannelSuggestionsAsync(const FString Text, FOnPubnubChatGetChannelSuggestionsResponse OnSuggestionsResponse, int Limit = 10);
+	void GetChannelSuggestionsAsync(const FString Text, FOnPubnubChatGetChannelSuggestionsResponseNative OnSuggestionsResponseNative, int Limit = 10);
 
 	
 	/* PRESENCE */
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatWherePresentResult WherePresent(const FString UserID);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	void WherePresentAsync(const FString UserID, FOnPubnubChatWherePresentResponse OnWherePresentResponse);
+	void WherePresentAsync(const FString UserID, FOnPubnubChatWherePresentResponseNative OnWherePresentResponseNative);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatWhoIsPresentResult WhoIsPresent(const FString ChannelID, int Limit = 1000, int Offset = 0);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	void WhoIsPresentAsync(const FString ChannelID, FOnPubnubChatWhoIsPresentResponse OnWhoIsPresentResponse, int Limit = 1000, int Offset = 0);
+	void WhoIsPresentAsync(const FString ChannelID, FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponseNative, int Limit = 1000, int Offset = 0);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
 	FPubnubChatIsPresentResult IsPresent(const FString UserID, const FString ChannelID);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Presence")
+	void IsPresentAsync(const FString UserID, const FString ChannelID, FOnPubnubChatIsPresentResponse OnIsPresentResponse);
+	void IsPresentAsync(const FString UserID, const FString ChannelID, FOnPubnubChatIsPresentResponseNative OnIsPresentResponseNative);
 
 
 	/* MODERATION */
@@ -165,11 +298,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
 	FPubnubChatOperationResult SetRestrictions(FPubnubChatRestriction Restriction);
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void SetRestrictionsAsync(FPubnubChatRestriction Restriction, FOnPubnubChatOperationResponse OnOperationResponse);
+	void SetRestrictionsAsync(FPubnubChatRestriction Restriction, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
 	FPubnubChatOperationResult EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
 
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponse OnOperationResponse, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
+	void EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
+
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
 	FPubnubChatEventsResult GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count = 100);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
+	void GetEventsHistoryAsync(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatEventsResponse OnEventsResponse, int Count = 100);
+	void GetEventsHistoryAsync(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatEventsResponseNative OnEventsResponseNative, int Count = 100);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
 	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback);
@@ -180,24 +325,48 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
 	FPubnubChatOperationResult ForwardMessage(UPubnubChatMessage* Message, UPubnubChatChannel* Channel);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void ForwardMessageAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponse OnOperationResponse);
+	void ForwardMessageAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
 	FPubnubChatGetUnreadMessagesCountsResult GetUnreadMessagesCounts(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
+	void GetUnreadMessagesCountsAsync(FOnPubnubChatGetUnreadMessagesCountsResponse OnUnreadMessagesCountsResponse, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	void GetUnreadMessagesCountsAsync(FOnPubnubChatGetUnreadMessagesCountsResponseNative OnUnreadMessagesCountsResponseNative, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
 	FPubnubChatMarkAllMessagesAsReadResult MarkAllMessagesAsRead(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Messages")
+	void MarkAllMessagesAsReadAsync(FOnPubnubChatMarkAllMessagesAsReadResponse OnMarkAllMessagesAsReadResponse, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	void MarkAllMessagesAsReadAsync(FOnPubnubChatMarkAllMessagesAsReadResponseNative OnMarkAllMessagesAsReadResponseNative, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
 	
 	/* THREADS */
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
 	FPubnubChatThreadChannelResult CreateThreadChannel(UPubnubChatMessage* Message);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
+	void CreateThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponse OnThreadChannelResponse);
+	void CreateThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponseNative OnThreadChannelResponseNative);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
 	FPubnubChatThreadChannelResult GetThreadChannel(UPubnubChatMessage* Message);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
+	void GetThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponse OnThreadChannelResponse);
+	void GetThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponseNative OnThreadChannelResponseNative);
 	
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads")
 	FPubnubChatOperationResult RemoveThreadChannel(UPubnubChatMessage* Message);
+
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Threads", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void RemoveThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponse OnOperationResponse);
+	void RemoveThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	
 	/* ACCESS MANAGER */
@@ -210,9 +379,17 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status")
 	FPubnubChatOperationResult ReconnectSubscriptions(const FString Timetoken = "");
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void ReconnectSubscriptionsAsync(FOnPubnubChatOperationResponse OnOperationResponse, const FString Timetoken = "");
+	void ReconnectSubscriptionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, const FString Timetoken = "");
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status")
 	FPubnubChatOperationResult DisconnectSubscriptions();
+
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Connection Status", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void DisconnectSubscriptionsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void DisconnectSubscriptionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	
 private:

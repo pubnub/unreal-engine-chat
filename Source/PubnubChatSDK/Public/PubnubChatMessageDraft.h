@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PubnubChat.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 
@@ -62,6 +63,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult Send(FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void SendAsync(FOnPubnubChatOperationResponse OnOperationResponse, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
+	void SendAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
 	
 private:
 	UPROPERTY()

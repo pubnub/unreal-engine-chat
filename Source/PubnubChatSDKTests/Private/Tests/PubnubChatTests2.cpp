@@ -810,5 +810,93 @@ bool FPubnubChatMarkAllMessagesAsReadLocalMatchesServerTest::RunTest(const FStri
 	return true;
 }
 
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (Messages)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMarkAllMessagesAsReadAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.MarkAllMessagesAsReadAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMarkAllMessagesAsReadAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_mark_all_read_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_mark_all_read_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	const int TestLimit = 10;
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID + TEXT("\"");
+	FPubnubMembershipSort TestSort;
+	FPubnubMembershipSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSort.SortOrder = false;
+	TestSort.MembershipSort.Add(SingleSort);
+	FPubnubPage TestPage;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatMarkAllMessagesAsReadResult> CallbackResult = MakeShared<FPubnubChatMarkAllMessagesAsReadResult>();
+	FOnPubnubChatMarkAllMessagesAsReadResponseNative OnMarkAllResponse;
+	OnMarkAllResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatMarkAllMessagesAsReadResult& MarkAllResult)
+	{
+		*CallbackResult = MarkAllResult;
+		*bCallbackReceived = true;
+	});
+	
+	Chat->MarkAllMessagesAsReadAsync(OnMarkAllResponse, TestLimit, TestFilter, TestSort, TestPage);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("MarkAllMessagesAsReadAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("Memberships array should be valid", CallbackResult->Memberships.Num() >= 0);
+		TestTrue("Total should be non-negative", CallbackResult->Total >= 0);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

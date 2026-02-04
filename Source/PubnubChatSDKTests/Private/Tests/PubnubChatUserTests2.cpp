@@ -1228,5 +1228,150 @@ bool FPubnubChatUserStopStreamingUpdatesMultipleStopsTest::RunTest(const FString
 	return true;
 }
 
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (Stream Updates)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamUpdatesAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamUpdatesAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamUpdatesAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_updates_async_full_init";
+	const FString TestUserID = SDK_PREFIX + "test_stream_updates_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->StreamUpdatesAsync(OnOperationResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("StreamUpdatesAsync should succeed", CallbackResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestUserID]()
+	{
+		if(CreateResult.User)
+		{
+			CreateResult.User->StopStreamingUpdates();
+		}
+		if(Chat)
+		{
+			Chat->DeleteUser(TestUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingUpdatesAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingUpdatesAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingUpdatesAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_streaming_async_full_init";
+	const FString TestUserID = SDK_PREFIX + "test_stop_streaming_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateResult = Chat->CreateUser(TestUserID);
+	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
+	if(!CreateResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatOperationResult StreamResult = CreateResult.User->StreamUpdates();
+	TestFalse("StreamUpdates should succeed", StreamResult.Error);
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	CreateResult.User->StopStreamingUpdatesAsync(OnOperationResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("StopStreamingUpdatesAsync should succeed", CallbackResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestUserID]()
+	{
+		if(Chat)
+		{
+			Chat->DeleteUser(TestUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

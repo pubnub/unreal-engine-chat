@@ -2420,5 +2420,98 @@ bool FPubnubChatChannelSetRestrictionsHappyPathTest::RunTest(const FString& Para
 	return true;
 }
 
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (Moderation)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatSetRestrictionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.SetRestrictionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatSetRestrictionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_set_restrictions_async_full_init";
+	const FString TargetUserID = SDK_PREFIX + "test_set_restrictions_async_full_target";
+	const FString TestChannelID = SDK_PREFIX + "test_set_restrictions_async_full_channel";
+	const FString TestReason = TEXT("Async moderation reason");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TargetUserID);
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID);
+	TestFalse("CreateChannel should succeed", CreateChannelResult.Result.Error);
+	
+	FPubnubChatRestriction Restriction;
+	Restriction.UserID = TargetUserID;
+	Restriction.ChannelID = TestChannelID;
+	Restriction.Ban = true;
+	Restriction.Mute = false;
+	Restriction.Reason = TestReason;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	Chat->SetRestrictionsAsync(Restriction, OnOperationResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateChannelResult, CreateUserResult]()
+	{
+		TestFalse("SetRestrictionsAsync should succeed", CallbackResult->Error);
+		if(CreateChannelResult.Channel && CreateUserResult.User)
+		{
+			FPubnubChatGetRestrictionResult GetResult = CreateChannelResult.Channel->GetUserRestrictions(CreateUserResult.User);
+			TestFalse("GetUserRestrictions should succeed", GetResult.Result.Error);
+			TestTrue("Restriction Ban should be true", GetResult.Restriction.Ban);
+		}
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TargetUserID]()
+	{
+		if(Chat)
+		{
+			UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+			if(PubnubClient)
+			{
+				FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+				FPubnubChannelMembersResult RemoveResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, {TargetUserID}, FPubnubMemberInclude::FromValue(false), 1);
+				if(RemoveResult.Result.Error)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
+				}
+			}
+			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteUser(TargetUserID, false);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

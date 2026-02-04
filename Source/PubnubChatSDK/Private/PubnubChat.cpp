@@ -105,7 +105,7 @@ void UPubnubChat::CreateUserAsync(const FString UserID, FOnPubnubChatUserRespons
 
 void UPubnubChat::CreateUserAsync(const FString UserID, FOnPubnubChatUserResponseNative OnUserResponseNative, FPubnubChatUserData UserData)
 {
-	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
 	
 	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
 
@@ -149,7 +149,7 @@ void UPubnubChat::GetUserAsync(const FString UserID, FOnPubnubChatUserResponse O
 
 void UPubnubChat::GetUserAsync(const FString UserID, FOnPubnubChatUserResponseNative OnUserResponseNative)
 {
-	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
 	
 	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
 
@@ -185,6 +185,35 @@ FPubnubChatGetUsersResult UPubnubChat::GetUsers(const int Limit, const FString F
 	return FinalResult;
 }
 
+void UPubnubChat::GetUsersAsync(FOnPubnubChatGetUsersResponse OnUsersResponse, const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
+{
+	FOnPubnubChatGetUsersResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnUsersResponse](const FPubnubChatGetUsersResult& UsersResult)
+	{
+		OnUsersResponse.ExecuteIfBound(UsersResult);
+	});
+
+	GetUsersAsync(NativeCallback, Limit, Filter, Sort, Page);
+}
+
+void UPubnubChat::GetUsersAsync(FOnPubnubChatGetUsersResponseNative OnUsersResponseNative, const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUsersResponseNative, FPubnubChatGetUsersResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Limit, Filter, Sort = MoveTemp(Sort), Page = MoveTemp(Page), OnUsersResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatGetUsersResult GetUsersResult = WeakThis.Get()->GetUsers(Limit, Filter, Sort, Page);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnUsersResponseNative, GetUsersResult);
+	});
+}
+
 FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData)
 {
 	FPubnubChatUserResult FinalResult;
@@ -202,6 +231,35 @@ FPubnubChatUserResult UPubnubChat::UpdateUser(const FString UserID, FPubnubChatU
 	//Create user object and return final result
 	FinalResult.User = CreateUserObject(UserID, SetUserResult.UserData);
 	return FinalResult;
+}
+
+void UPubnubChat::UpdateUserAsync(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatUserResponse OnUserResponse)
+{
+	FOnPubnubChatUserResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnUserResponse](const FPubnubChatUserResult& UserResult)
+	{
+		OnUserResponse.ExecuteIfBound(UserResult);
+	});
+
+	UpdateUserAsync(UserID, UpdateUserData, NativeCallback);
+}
+
+void UPubnubChat::UpdateUserAsync(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatUserResponseNative OnUserResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUserResponseNative, FPubnubChatUserResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, UpdateUserData = MoveTemp(UpdateUserData), OnUserResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatUserResult UpdateUserResult = WeakThis.Get()->UpdateUser(UserID, UpdateUserData);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnUserResponseNative, UpdateUserResult);
+	});
 }
 
 FPubnubChatOperationResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
@@ -244,6 +302,35 @@ FPubnubChatOperationResult UPubnubChat::DeleteUser(const FString UserID, bool So
 	return FinalResult;
 }
 
+void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	DeleteUserAsync(UserID, NativeCallback, Soft);
+}
+
+void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponseNative OnOperationResponseNative, bool Soft)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, Soft, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult DeleteUserResult = WeakThis.Get()->DeleteUser(UserID, Soft);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DeleteUserResult);
+	});
+}
+
 FPubnubChatGetUserSuggestionsResult UPubnubChat::GetUserSuggestions(const FString Text, int Limit)
 {
 	FPubnubChatGetUserSuggestionsResult FinalResult;
@@ -256,6 +343,35 @@ FPubnubChatGetUserSuggestionsResult UPubnubChat::GetUserSuggestions(const FStrin
 
 	FinalResult.Users = GetUsersResult.Users;
 	return FinalResult;
+}
+
+void UPubnubChat::GetUserSuggestionsAsync(const FString Text, FOnPubnubChatGetUserSuggestionsResponse OnSuggestionsResponse, int Limit)
+{
+	FOnPubnubChatGetUserSuggestionsResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnSuggestionsResponse](const FPubnubChatGetUserSuggestionsResult& SuggestionsResult)
+	{
+		OnSuggestionsResponse.ExecuteIfBound(SuggestionsResult);
+	});
+
+	GetUserSuggestionsAsync(Text, NativeCallback, Limit);
+}
+
+void UPubnubChat::GetUserSuggestionsAsync(const FString Text, FOnPubnubChatGetUserSuggestionsResponseNative OnSuggestionsResponseNative, int Limit)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnSuggestionsResponseNative, FPubnubChatGetUserSuggestionsResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Text, Limit, OnSuggestionsResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatGetUserSuggestionsResult GetUserSuggestionsResult = WeakThis.Get()->GetUserSuggestions(Text, Limit);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnSuggestionsResponseNative, GetUserSuggestionsResult);
+	});
 }
 
 FPubnubChatChannelResult UPubnubChat::CreatePublicConversation(const FString ChannelID, FPubnubChatChannelData ChannelData)
@@ -274,6 +390,35 @@ FPubnubChatChannelResult UPubnubChat::CreatePublicConversation(const FString Cha
 	//Create Channel object and return final result
 	FinalResult.Channel = CreateChannelObject(ChannelID, ChannelData);
 	return FinalResult;
+}
+
+void UPubnubChat::CreatePublicConversationAsync(const FString ChannelID, FOnPubnubChatChannelResponse OnChannelResponse, FPubnubChatChannelData ChannelData)
+{
+	FOnPubnubChatChannelResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnChannelResponse](const FPubnubChatChannelResult& ChannelResult)
+	{
+		OnChannelResponse.ExecuteIfBound(ChannelResult);
+	});
+
+	CreatePublicConversationAsync(ChannelID, NativeCallback, ChannelData);
+}
+
+void UPubnubChat::CreatePublicConversationAsync(const FString ChannelID, FOnPubnubChatChannelResponseNative OnChannelResponseNative, FPubnubChatChannelData ChannelData)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnChannelResponseNative, FPubnubChatChannelResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, ChannelData = MoveTemp(ChannelData), OnChannelResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatChannelResult CreatePublicConversationResult = WeakThis.Get()->CreatePublicConversation(ChannelID, ChannelData);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnChannelResponseNative, CreatePublicConversationResult);
+	});
 }
 
 FPubnubChatCreateGroupConversationResult UPubnubChat::CreateGroupConversation(TArray<UPubnubChatUser*> Users, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
@@ -309,6 +454,35 @@ FPubnubChatCreateGroupConversationResult UPubnubChat::CreateGroupConversation(TA
 	FinalResult.InviteesMemberships = InviteMultipleResult.Memberships;
 	
 	return FinalResult;
+}
+
+void UPubnubChat::CreateGroupConversationAsync(TArray<UPubnubChatUser*> Users, FOnPubnubChatCreateGroupConversationResponse OnGroupConversationResponse, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
+{
+	FOnPubnubChatCreateGroupConversationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnGroupConversationResponse](const FPubnubChatCreateGroupConversationResult& GroupConversationResult)
+	{
+		OnGroupConversationResponse.ExecuteIfBound(GroupConversationResult);
+	});
+
+	CreateGroupConversationAsync(Users, NativeCallback, ChannelID, ChannelData, HostMembershipData);
+}
+
+void UPubnubChat::CreateGroupConversationAsync(TArray<UPubnubChatUser*> Users, FOnPubnubChatCreateGroupConversationResponseNative OnGroupConversationResponseNative, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnGroupConversationResponseNative, FPubnubChatCreateGroupConversationResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Users, ChannelID, ChannelData = MoveTemp(ChannelData), HostMembershipData = MoveTemp(HostMembershipData), OnGroupConversationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatCreateGroupConversationResult CreateGroupConversationResult = WeakThis.Get()->CreateGroupConversation(Users, ChannelID, ChannelData, HostMembershipData);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnGroupConversationResponseNative, CreateGroupConversationResult);
+	});
 }
 
 FPubnubChatCreateDirectConversationResult UPubnubChat::CreateDirectConversation(UPubnubChatUser* User, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
@@ -350,6 +524,34 @@ FPubnubChatCreateDirectConversationResult UPubnubChat::CreateDirectConversation(
 	return FinalResult;
 }
 
+void UPubnubChat::CreateDirectConversationAsync(UPubnubChatUser* User, FOnPubnubChatCreateDirectConversationResponse OnDirectConversationResponse, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
+{
+	FOnPubnubChatCreateDirectConversationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnDirectConversationResponse](const FPubnubChatCreateDirectConversationResult& DirectConversationResult)
+	{
+		OnDirectConversationResponse.ExecuteIfBound(DirectConversationResult);
+	});
+
+	CreateDirectConversationAsync(User, NativeCallback, ChannelID, ChannelData, HostMembershipData);
+}
+
+void UPubnubChat::CreateDirectConversationAsync(UPubnubChatUser* User, FOnPubnubChatCreateDirectConversationResponseNative OnDirectConversationResponseNative, const FString ChannelID, FPubnubChatChannelData ChannelData, FPubnubChatMembershipData HostMembershipData)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnDirectConversationResponseNative, FPubnubChatCreateDirectConversationResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, User, ChannelID, ChannelData = MoveTemp(ChannelData), HostMembershipData = MoveTemp(HostMembershipData), OnDirectConversationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatCreateDirectConversationResult CreateDirectConversationResult = WeakThis.Get()->CreateDirectConversation(User, ChannelID, ChannelData, HostMembershipData);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnDirectConversationResponseNative, CreateDirectConversationResult);
+	});
+}
 
 FPubnubChatChannelResult UPubnubChat::GetChannel(const FString ChannelID)
 {
@@ -364,6 +566,35 @@ FPubnubChatChannelResult UPubnubChat::GetChannel(const FString ChannelID)
 	//Create channel object and return final result
 	FinalResult.Channel = CreateChannelObject(ChannelID, GetChannelResult.ChannelData);
 	return FinalResult;
+}
+
+void UPubnubChat::GetChannelAsync(const FString ChannelID, FOnPubnubChatChannelResponse OnChannelResponse)
+{
+	FOnPubnubChatChannelResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnChannelResponse](const FPubnubChatChannelResult& ChannelResult)
+	{
+		OnChannelResponse.ExecuteIfBound(ChannelResult);
+	});
+
+	GetChannelAsync(ChannelID, NativeCallback);
+}
+
+void UPubnubChat::GetChannelAsync(const FString ChannelID, FOnPubnubChatChannelResponseNative OnChannelResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnChannelResponseNative, FPubnubChatChannelResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, OnChannelResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatChannelResult GetChannelResult = WeakThis.Get()->GetChannel(ChannelID);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnChannelResponseNative, GetChannelResult);
+	});
 }
 
 FPubnubChatGetChannelsResult UPubnubChat::GetChannels(const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
@@ -386,6 +617,35 @@ FPubnubChatGetChannelsResult UPubnubChat::GetChannels(const int Limit, const FSt
 	return FinalResult;
 }
 
+void UPubnubChat::GetChannelsAsync(FOnPubnubChatGetChannelsResponse OnChannelsResponse, const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
+{
+	FOnPubnubChatGetChannelsResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnChannelsResponse](const FPubnubChatGetChannelsResult& ChannelsResult)
+	{
+		OnChannelsResponse.ExecuteIfBound(ChannelsResult);
+	});
+
+	GetChannelsAsync(NativeCallback, Limit, Filter, Sort, Page);
+}
+
+void UPubnubChat::GetChannelsAsync(FOnPubnubChatGetChannelsResponseNative OnChannelsResponseNative, const int Limit, const FString Filter, FPubnubGetAllSort Sort, FPubnubPage Page)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnChannelsResponseNative, FPubnubChatGetChannelsResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Limit, Filter, Sort = MoveTemp(Sort), Page = MoveTemp(Page), OnChannelsResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatGetChannelsResult GetChannelsResult = WeakThis.Get()->GetChannels(Limit, Filter, Sort, Page);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnChannelsResponseNative, GetChannelsResult);
+	});
+}
+
 FPubnubChatChannelResult UPubnubChat::UpdateChannel(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData)
 {
 	FPubnubChatChannelResult FinalResult;
@@ -403,6 +663,35 @@ FPubnubChatChannelResult UPubnubChat::UpdateChannel(const FString ChannelID, FPu
 	//Create channel object and return final result
 	FinalResult.Channel = CreateChannelObject(ChannelID, SetChannelResult.ChannelData);
 	return FinalResult;
+}
+
+void UPubnubChat::UpdateChannelAsync(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData, FOnPubnubChatChannelResponse OnChannelResponse)
+{
+	FOnPubnubChatChannelResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnChannelResponse](const FPubnubChatChannelResult& ChannelResult)
+	{
+		OnChannelResponse.ExecuteIfBound(ChannelResult);
+	});
+
+	UpdateChannelAsync(ChannelID, UpdateChannelData, NativeCallback);
+}
+
+void UPubnubChat::UpdateChannelAsync(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData, FOnPubnubChatChannelResponseNative OnChannelResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnChannelResponseNative, FPubnubChatChannelResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, UpdateChannelData = MoveTemp(UpdateChannelData), OnChannelResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatChannelResult UpdateChannelResult = WeakThis.Get()->UpdateChannel(ChannelID, UpdateChannelData);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnChannelResponseNative, UpdateChannelResult);
+	});
 }
 
 FPubnubChatOperationResult UPubnubChat::DeleteChannel(const FString ChannelID, bool Soft)
@@ -445,6 +734,35 @@ FPubnubChatOperationResult UPubnubChat::DeleteChannel(const FString ChannelID, b
 	return FinalResult;
 }
 
+void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	DeleteChannelAsync(ChannelID, NativeCallback, Soft);
+}
+
+void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponseNative OnOperationResponseNative, bool Soft)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, Soft, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult DeleteChannelResult = WeakThis.Get()->DeleteChannel(ChannelID, Soft);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DeleteChannelResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChat::PinMessageToChannel(UPubnubChatMessage* Message, UPubnubChatChannel* Channel)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -454,11 +772,69 @@ FPubnubChatOperationResult UPubnubChat::PinMessageToChannel(UPubnubChatMessage* 
 	return Channel->PinMessage(Message);
 }
 
+void UPubnubChat::PinMessageToChannelAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	PinMessageToChannelAsync(Message, Channel, NativeCallback);
+}
+
+void UPubnubChat::PinMessageToChannelAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Message, Channel, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult PinMessageResult = WeakThis.Get()->PinMessageToChannel(Message, Channel);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, PinMessageResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChat::UnpinMessageFromChannel(UPubnubChatChannel* Channel)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_OBJECT_INVALID(Channel);
 	return Channel->UnpinMessage();
+}
+
+void UPubnubChat::UnpinMessageFromChannelAsync(UPubnubChatChannel* Channel, FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	UnpinMessageFromChannelAsync(Channel, NativeCallback);
+}
+
+void UPubnubChat::UnpinMessageFromChannelAsync(UPubnubChatChannel* Channel, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Channel, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult UnpinMessageResult = WeakThis.Get()->UnpinMessageFromChannel(Channel);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, UnpinMessageResult);
+	});
 }
 
 FPubnubChatGetChannelSuggestionsResult UPubnubChat::GetChannelSuggestions(const FString Text, int Limit)
@@ -475,6 +851,35 @@ FPubnubChatGetChannelSuggestionsResult UPubnubChat::GetChannelSuggestions(const 
 	return FinalResult;
 }
 
+void UPubnubChat::GetChannelSuggestionsAsync(const FString Text, FOnPubnubChatGetChannelSuggestionsResponse OnSuggestionsResponse, int Limit)
+{
+	FOnPubnubChatGetChannelSuggestionsResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnSuggestionsResponse](const FPubnubChatGetChannelSuggestionsResult& SuggestionsResult)
+	{
+		OnSuggestionsResponse.ExecuteIfBound(SuggestionsResult);
+	});
+
+	GetChannelSuggestionsAsync(Text, NativeCallback, Limit);
+}
+
+void UPubnubChat::GetChannelSuggestionsAsync(const FString Text, FOnPubnubChatGetChannelSuggestionsResponseNative OnSuggestionsResponseNative, int Limit)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnSuggestionsResponseNative, FPubnubChatGetChannelSuggestionsResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Text, Limit, OnSuggestionsResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatGetChannelSuggestionsResult GetChannelSuggestionsResult = WeakThis.Get()->GetChannelSuggestions(Text, Limit);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnSuggestionsResponseNative, GetChannelSuggestionsResult);
+	});
+}
+
 FPubnubChatWherePresentResult UPubnubChat::WherePresent(const FString UserID)
 {
 	FPubnubChatWherePresentResult FinalResult;
@@ -487,6 +892,35 @@ FPubnubChatWherePresentResult UPubnubChat::WherePresent(const FString UserID)
 	
 	FinalResult.Channels = WhereNowResult.Channels;
 	return FinalResult;
+}
+
+void UPubnubChat::WherePresentAsync(const FString UserID, FOnPubnubChatWherePresentResponse OnWherePresentResponse)
+{
+	FOnPubnubChatWherePresentResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnWherePresentResponse](const FPubnubChatWherePresentResult& WherePresentResult)
+	{
+		OnWherePresentResponse.ExecuteIfBound(WherePresentResult);
+	});
+
+	WherePresentAsync(UserID, NativeCallback);
+}
+
+void UPubnubChat::WherePresentAsync(const FString UserID, FOnPubnubChatWherePresentResponseNative OnWherePresentResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnWherePresentResponseNative, FPubnubChatWherePresentResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, OnWherePresentResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatWherePresentResult WherePresentResult = WeakThis.Get()->WherePresent(UserID);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnWherePresentResponseNative, WherePresentResult);
+	});
 }
 
 FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID, int Limit, int Offset)
@@ -506,6 +940,35 @@ FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID,
 	return FinalResult;
 }
 
+void UPubnubChat::WhoIsPresentAsync(const FString ChannelID, FOnPubnubChatWhoIsPresentResponse OnWhoIsPresentResponse, int Limit, int Offset)
+{
+	FOnPubnubChatWhoIsPresentResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnWhoIsPresentResponse](const FPubnubChatWhoIsPresentResult& WhoIsPresentResult)
+	{
+		OnWhoIsPresentResponse.ExecuteIfBound(WhoIsPresentResult);
+	});
+
+	WhoIsPresentAsync(ChannelID, NativeCallback, Limit, Offset);
+}
+
+void UPubnubChat::WhoIsPresentAsync(const FString ChannelID, FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponseNative, int Limit, int Offset)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnWhoIsPresentResponseNative, FPubnubChatWhoIsPresentResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, Limit, Offset, OnWhoIsPresentResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult = WeakThis.Get()->WhoIsPresent(ChannelID, Limit, Offset);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnWhoIsPresentResponseNative, WhoIsPresentResult);
+	});
+}
+
 FPubnubChatIsPresentResult UPubnubChat::IsPresent(const FString UserID, const FString ChannelID)
 {
 	FPubnubChatIsPresentResult FinalResult;
@@ -520,6 +983,35 @@ FPubnubChatIsPresentResult UPubnubChat::IsPresent(const FString UserID, const FS
 	//And just check if provided channel is in the list
 	FinalResult.IsPresent = WherePresentResult.Channels.Contains(ChannelID);
 	return FinalResult;
+}
+
+void UPubnubChat::IsPresentAsync(const FString UserID, const FString ChannelID, FOnPubnubChatIsPresentResponse OnIsPresentResponse)
+{
+	FOnPubnubChatIsPresentResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnIsPresentResponse](const FPubnubChatIsPresentResult& IsPresentResult)
+	{
+		OnIsPresentResponse.ExecuteIfBound(IsPresentResult);
+	});
+
+	IsPresentAsync(UserID, ChannelID, NativeCallback);
+}
+
+void UPubnubChat::IsPresentAsync(const FString UserID, const FString ChannelID, FOnPubnubChatIsPresentResponseNative OnIsPresentResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnIsPresentResponseNative, FPubnubChatIsPresentResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, ChannelID, OnIsPresentResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatIsPresentResult IsPresentResult = WeakThis.Get()->IsPresent(UserID, ChannelID);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnIsPresentResponseNative, IsPresentResult);
+	});
 }
 
 FPubnubChatOperationResult UPubnubChat::SetRestrictions(FPubnubChatRestriction Restriction)
@@ -568,6 +1060,35 @@ FPubnubChatOperationResult UPubnubChat::SetRestrictions(FPubnubChatRestriction R
 	return FinalResult;
 }
 
+void UPubnubChat::SetRestrictionsAsync(FPubnubChatRestriction Restriction, FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	SetRestrictionsAsync(Restriction, NativeCallback);
+}
+
+void UPubnubChat::SetRestrictionsAsync(FPubnubChatRestriction Restriction, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Restriction = MoveTemp(Restriction), OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult SetRestrictionsResult = WeakThis.Get()->SetRestrictions(Restriction);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, SetRestrictionsResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod)
 {
 	FPubnubChatOperationResult FinalResult;
@@ -601,6 +1122,35 @@ FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType Event
 	return FinalResult;
 }
 
+void UPubnubChat::EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponse OnOperationResponse, EPubnubChatEventMethod EventMethod)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	EmitChatEventAsync(EventType, ChannelID, Payload, NativeCallback, EventMethod);
+}
+
+void UPubnubChat::EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponseNative OnOperationResponseNative, EPubnubChatEventMethod EventMethod)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, EventType, ChannelID, Payload, EventMethod, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult EmitChatEventResult = WeakThis.Get()->EmitChatEvent(EventType, ChannelID, Payload, EventMethod);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, EmitChatEventResult);
+	});
+}
+
 FPubnubChatEventsResult UPubnubChat::GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count)
 {
 	FPubnubChatEventsResult FinalResult;
@@ -629,6 +1179,35 @@ FPubnubChatEventsResult UPubnubChat::GetEventsHistory(const FString ChannelID, c
 	FinalResult.IsMore = FetchHistoryResult.Messages.Num() == Count;
 	
 	return FinalResult;
+}
+
+void UPubnubChat::GetEventsHistoryAsync(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatEventsResponse OnEventsResponse, int Count)
+{
+	FOnPubnubChatEventsResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnEventsResponse](const FPubnubChatEventsResult& EventsResult)
+	{
+		OnEventsResponse.ExecuteIfBound(EventsResult);
+	});
+
+	GetEventsHistoryAsync(ChannelID, StartTimetoken, EndTimetoken, NativeCallback, Count);
+}
+
+void UPubnubChat::GetEventsHistoryAsync(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatEventsResponseNative OnEventsResponseNative, int Count)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnEventsResponseNative, FPubnubChatEventsResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, StartTimetoken, EndTimetoken, Count, OnEventsResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatEventsResult GetEventsHistoryResult = WeakThis.Get()->GetEventsHistory(ChannelID, StartTimetoken, EndTimetoken, Count);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnEventsResponseNative, GetEventsHistoryResult);
+	});
 }
 
 FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback)
@@ -736,6 +1315,35 @@ FPubnubChatOperationResult UPubnubChat::ForwardMessage(UPubnubChatMessage* Messa
 	return FinalResult;
 }
 
+void UPubnubChat::ForwardMessageAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	ForwardMessageAsync(Message, Channel, NativeCallback);
+}
+
+void UPubnubChat::ForwardMessageAsync(UPubnubChatMessage* Message, UPubnubChatChannel* Channel, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Message, Channel, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult ForwardMessageResult = WeakThis.Get()->ForwardMessage(Message, Channel);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, ForwardMessageResult);
+	});
+}
+
 FPubnubChatGetUnreadMessagesCountsResult UPubnubChat::GetUnreadMessagesCounts(const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
 {
 	FPubnubChatGetUnreadMessagesCountsResult FinalResult;
@@ -775,6 +1383,35 @@ FPubnubChatGetUnreadMessagesCountsResult UPubnubChat::GetUnreadMessagesCounts(co
 	FinalResult.Page = GetMembershipsResult.Page;
 	FinalResult.Total = GetMembershipsResult.Total;
 	return FinalResult;
+}
+
+void UPubnubChat::GetUnreadMessagesCountsAsync(FOnPubnubChatGetUnreadMessagesCountsResponse OnUnreadMessagesCountsResponse, const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FOnPubnubChatGetUnreadMessagesCountsResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnUnreadMessagesCountsResponse](const FPubnubChatGetUnreadMessagesCountsResult& UnreadMessagesCountsResult)
+	{
+		OnUnreadMessagesCountsResponse.ExecuteIfBound(UnreadMessagesCountsResult);
+	});
+
+	GetUnreadMessagesCountsAsync(NativeCallback, Limit, Filter, Sort, Page);
+}
+
+void UPubnubChat::GetUnreadMessagesCountsAsync(FOnPubnubChatGetUnreadMessagesCountsResponseNative OnUnreadMessagesCountsResponseNative, const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnUnreadMessagesCountsResponseNative, FPubnubChatGetUnreadMessagesCountsResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Limit, Filter, Sort = MoveTemp(Sort), Page = MoveTemp(Page), OnUnreadMessagesCountsResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatGetUnreadMessagesCountsResult GetUnreadMessagesCountsResult = WeakThis.Get()->GetUnreadMessagesCounts(Limit, Filter, Sort, Page);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnUnreadMessagesCountsResponseNative, GetUnreadMessagesCountsResult);
+	});
 }
 
 FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
@@ -826,6 +1463,35 @@ FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const 
 	return FinalResult;
 }
 
+void UPubnubChat::MarkAllMessagesAsReadAsync(FOnPubnubChatMarkAllMessagesAsReadResponse OnMarkAllMessagesAsReadResponse, const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	FOnPubnubChatMarkAllMessagesAsReadResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnMarkAllMessagesAsReadResponse](const FPubnubChatMarkAllMessagesAsReadResult& MarkAllMessagesAsReadResult)
+	{
+		OnMarkAllMessagesAsReadResponse.ExecuteIfBound(MarkAllMessagesAsReadResult);
+	});
+
+	MarkAllMessagesAsReadAsync(NativeCallback, Limit, Filter, Sort, Page);
+}
+
+void UPubnubChat::MarkAllMessagesAsReadAsync(FOnPubnubChatMarkAllMessagesAsReadResponseNative OnMarkAllMessagesAsReadResponseNative, const int Limit, const FString Filter, FPubnubMembershipSort Sort, FPubnubPage Page)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnMarkAllMessagesAsReadResponseNative, FPubnubChatMarkAllMessagesAsReadResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Limit, Filter, Sort = MoveTemp(Sort), Page = MoveTemp(Page), OnMarkAllMessagesAsReadResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatMarkAllMessagesAsReadResult MarkAllMessagesAsReadResult = WeakThis.Get()->MarkAllMessagesAsRead(Limit, Filter, Sort, Page);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnMarkAllMessagesAsReadResponseNative, MarkAllMessagesAsReadResult);
+	});
+}
+
 FPubnubChatThreadChannelResult UPubnubChat::CreateThreadChannel(UPubnubChatMessage* Message)
 {
 	FPubnubChatThreadChannelResult FinalResult;
@@ -852,6 +1518,35 @@ FPubnubChatThreadChannelResult UPubnubChat::CreateThreadChannel(UPubnubChatMessa
 	return FinalResult;
 }
 
+void UPubnubChat::CreateThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponse OnThreadChannelResponse)
+{
+	FOnPubnubChatThreadChannelResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnThreadChannelResponse](const FPubnubChatThreadChannelResult& ThreadChannelResult)
+	{
+		OnThreadChannelResponse.ExecuteIfBound(ThreadChannelResult);
+	});
+
+	CreateThreadChannelAsync(Message, NativeCallback);
+}
+
+void UPubnubChat::CreateThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponseNative OnThreadChannelResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnThreadChannelResponseNative, FPubnubChatThreadChannelResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Message, OnThreadChannelResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatThreadChannelResult CreateThreadChannelResult = WeakThis.Get()->CreateThreadChannel(Message);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnThreadChannelResponseNative, CreateThreadChannelResult);
+	});
+}
+
 FPubnubChatThreadChannelResult UPubnubChat::GetThreadChannel(UPubnubChatMessage* Message)
 {
 	FPubnubChatThreadChannelResult FinalResult;
@@ -875,6 +1570,35 @@ FPubnubChatThreadChannelResult UPubnubChat::GetThreadChannel(UPubnubChatMessage*
 	FinalResult.ThreadChannel = CreateThreadChannelObject(ThreadChannelID, GetChannelResult.ChannelData, Message, true);
 	
 	return FinalResult;
+}
+
+void UPubnubChat::GetThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponse OnThreadChannelResponse)
+{
+	FOnPubnubChatThreadChannelResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnThreadChannelResponse](const FPubnubChatThreadChannelResult& ThreadChannelResult)
+	{
+		OnThreadChannelResponse.ExecuteIfBound(ThreadChannelResult);
+	});
+
+	GetThreadChannelAsync(Message, NativeCallback);
+}
+
+void UPubnubChat::GetThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatThreadChannelResponseNative OnThreadChannelResponseNative)
+{
+	PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnThreadChannelResponseNative, FPubnubChatThreadChannelResult());
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Message, OnThreadChannelResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatThreadChannelResult GetThreadChannelResult = WeakThis.Get()->GetThreadChannel(Message);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnThreadChannelResponseNative, GetThreadChannelResult);
+	});
 }
 
 FPubnubChatOperationResult UPubnubChat::RemoveThreadChannel(UPubnubChatMessage* Message)
@@ -908,6 +1632,35 @@ FPubnubChatOperationResult UPubnubChat::RemoveThreadChannel(UPubnubChatMessage* 
 	return FinalResult;
 }
 
+void UPubnubChat::RemoveThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	RemoveThreadChannelAsync(Message, NativeCallback);
+}
+
+void UPubnubChat::RemoveThreadChannelAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Message, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult RemoveThreadChannelResult = WeakThis.Get()->RemoveThreadChannel(Message);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, RemoveThreadChannelResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChat::ReconnectSubscriptions(const FString Timetoken)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -919,6 +1672,35 @@ FPubnubChatOperationResult UPubnubChat::ReconnectSubscriptions(const FString Tim
 	return FinalResult;
 }
 
+void UPubnubChat::ReconnectSubscriptionsAsync(FOnPubnubChatOperationResponse OnOperationResponse, const FString Timetoken)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	ReconnectSubscriptionsAsync(NativeCallback, Timetoken);
+}
+
+void UPubnubChat::ReconnectSubscriptionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative, const FString Timetoken)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, Timetoken, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult ReconnectSubscriptionsResult = WeakThis.Get()->ReconnectSubscriptions(Timetoken);
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, ReconnectSubscriptionsResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChat::DisconnectSubscriptions()
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -928,6 +1710,35 @@ FPubnubChatOperationResult UPubnubChat::DisconnectSubscriptions()
 	FinalResult.AddStep("DisconnectSubscriptions", DisconnectResult);
 	
 	return FinalResult;
+}
+
+void UPubnubChat::DisconnectSubscriptionsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	DisconnectSubscriptionsAsync(NativeCallback);
+}
+
+void UPubnubChat::DisconnectSubscriptionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
+
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, OnOperationResponseNative]
+	{
+		if(!WeakThis.IsValid())
+		{return;}
+		
+		FPubnubChatOperationResult DisconnectSubscriptionsResult = WeakThis.Get()->DisconnectSubscriptions();
+
+		//Execute provided delegate with results
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DisconnectSubscriptionsResult);
+	});
 }
 
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -35,12 +35,24 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
 	FPubnubChatGetThreadHistoryResult GetThreadHistory(const FString StartTimetoken, const FString EndTimetoken, const int Count = 25);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
+	void GetThreadHistoryAsync(const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatGetThreadHistoryResponse OnThreadHistoryResponse, const int Count = 25);
+	void GetThreadHistoryAsync(const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatGetThreadHistoryResponseNative OnThreadHistoryResponseNative, const int Count = 25);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
 	FPubnubChatOperationResult PinMessageToParentChannel(UPubnubChatThreadMessage* ThreadMessage);
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void PinMessageToParentChannelAsync(UPubnubChatThreadMessage* ThreadMessage, FOnPubnubChatOperationResponse OnOperationResponse);
+	void PinMessageToParentChannelAsync(UPubnubChatThreadMessage* ThreadMessage, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
 	FPubnubChatOperationResult UnpinMessageFromParentChannel();
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void UnpinMessageFromParentChannelAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void UnpinMessageFromParentChannelAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 private:
 	

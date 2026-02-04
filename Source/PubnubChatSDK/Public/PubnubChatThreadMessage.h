@@ -1,4 +1,4 @@
-﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -23,8 +23,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult PinMessageToParentChannel();
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void PinMessageToParentChannelAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void PinMessageToParentChannelAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
 	FPubnubChatOperationResult UnpinMessageFromParentChannel();
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void UnpinMessageFromParentChannelAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void UnpinMessageFromParentChannelAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 private:
 	

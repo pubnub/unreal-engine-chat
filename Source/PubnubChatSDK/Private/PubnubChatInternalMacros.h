@@ -247,7 +247,7 @@
 
 
 
-#define PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(Delegate, ReturnWrapper) \
+#define PUBNUB_CHAT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(Delegate, ReturnWrapper) \
 	do { \
 		if (!IsInitialized) \
 		{ \
@@ -267,6 +267,42 @@
 		} \
 	} while (false)
 
+#define PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(Delegate, ReturnWrapper) \
+	do { \
+		if (!IsInitialized) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Not initialized. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			ReturnWrapper.Result = FPubnubChatOperationResult::CreateError(ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, ReturnWrapper); \
+			return; \
+		} \
+		if (!PubnubClient) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Pubnub Client is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			ReturnWrapper.Result = FPubnubChatOperationResult::CreateError(ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, ReturnWrapper); \
+			return; \
+		} \
+		if (!Chat) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Chat is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			ReturnWrapper.Result = FPubnubChatOperationResult::CreateError(ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, ReturnWrapper); \
+			return; \
+		} \
+		if (!Chat->AsyncFunctionsThread) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: AsyncFunctionsThread is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			ReturnWrapper.Result = FPubnubChatOperationResult::CreateError(ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, ReturnWrapper); \
+			return; \
+		} \
+	} while (false)
+
 #define PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(Delegate) \
 	do { \
 		if (!IsInitialized) \
@@ -277,6 +313,39 @@
 			return; \
 		} \
 		if (!AsyncFunctionsThread) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: AsyncFunctionsThread is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, FPubnubChatOperationResult::CreateError(ErrorLogMessage)); \
+			return; \
+		} \
+	} while (false)
+
+
+#define PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(Delegate) \
+	do { \
+		if (!IsInitialized) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Not initialized. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, FPubnubChatOperationResult::CreateError(ErrorLogMessage)); \
+			return; \
+		} \
+		if (!PubnubClient) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Pubnub Client is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, FPubnubChatOperationResult::CreateError(ErrorLogMessage)); \
+			return; \
+		} \
+		if (!Chat) \
+		{ \
+			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Chat is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
+			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \
+			UPubnubUtilities::CallPubnubDelegate(Delegate, FPubnubChatOperationResult::CreateError(ErrorLogMessage)); \
+			return; \
+		} \
+		if (!Chat->AsyncFunctionsThread) \
 		{ \
 			FString ErrorLogMessage = FString::Printf(TEXT("[%s]: AsyncFunctionsThread is invalid. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__))); \
 			UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage); \

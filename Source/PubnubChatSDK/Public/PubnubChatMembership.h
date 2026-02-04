@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "PubnubChat.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChatEnumLibrary.h"
 
@@ -59,17 +60,37 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult Delete();
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatOperationResult Update(const FPubnubChatUpdateMembershipInputData& UpdateMembershipData);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void UpdateAsync(const FPubnubChatUpdateMembershipInputData& UpdateMembershipData, FOnPubnubChatOperationResponse OnOperationResponse);
+	void UpdateAsync(const FPubnubChatUpdateMembershipInputData& UpdateMembershipData, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult SetLastReadMessageTimetoken(const FString Timetoken);
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void SetLastReadMessageTimetokenAsync(const FString Timetoken, FOnPubnubChatOperationResponse OnOperationResponse);
+	void SetLastReadMessageTimetokenAsync(const FString Timetoken, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
 	FPubnubChatOperationResult SetLastReadMessage(UPubnubChatMessage* Message);
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void SetLastReadMessageAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponse OnOperationResponse);
+	void SetLastReadMessageAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatOperationResult StreamUpdates();
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StreamUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void StreamUpdatesAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatMembership*>& Memberships);
@@ -77,8 +98,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+	
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
 	FPubnubChatGetUnreadMessagesCountResult GetUnreadMessagesCount();
+	
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership")
+	void GetUnreadMessagesCountAsync(FOnPubnubChatGetUnreadMessagesCountResponse OnUnreadMessagesCountResponse);
+	void GetUnreadMessagesCountAsync(FOnPubnubChatGetUnreadMessagesCountResponseNative OnUnreadMessagesCountResponseNative);
 	
 private:
 	UPROPERTY()
