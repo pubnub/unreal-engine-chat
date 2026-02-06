@@ -30,8 +30,8 @@ public:
 	 * Creates a PubNub client with the given keys and user ID, then initializes a chat for that user. The chat is stored in the subsystem and can be retrieved with GetChat(UserID).
 	 * Blocking: creates the client and initializes the chat on the calling thread. If a chat for this UserID already exists, returns an error result but with the existing Chat in the result (no new chat created).
 	 *
-	 * @param PublishKey PubNub publish key. Must be non-empty.
-	 * @param SubscribeKey PubNub subscribe key. Must be non-empty.
+	 * @param PublishKey PubNub publish key. Must a valid key from the PubNub Admin Portal.
+	 * @param SubscribeKey PubNub subscribe key. Must a valid key from the PubNub Admin Portal.
 	 * @param UserID User ID for this chat session. Must be non-empty.
 	 * @param Config Optional chat configuration (typing timeout, rate limiter, etc.). Default is valid.
 	 * @return Result and the UPubnubChat instance. Error if keys/UserID empty, client creation failed, or chat init failed; also error (with existing Chat) if chat for UserID already exists.
