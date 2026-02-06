@@ -245,39 +245,6 @@ bool UPubnubChatUser::IsActive() const
 	return ElapsedTimeMs <= Chat->ChatConfig.StoreUserActivityInterval;
 }
 
-void UPubnubChatUser::IsActiveAsync(FOnPubnubChatIsActiveResponse OnIsActiveResponse)
-{
-	FOnPubnubChatIsActiveResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnIsActiveResponse](bool bIsActive)
-	{
-		OnIsActiveResponse.ExecuteIfBound(bIsActive);
-	});
-
-	IsActiveAsync(NativeCallback);
-}
-
-void UPubnubChatUser::IsActiveAsync(FOnPubnubChatIsActiveResponseNative OnIsActiveResponseNative)
-{
-	if (!IsInitialized || !PubnubClient || !Chat || !Chat->AsyncFunctionsThread)
-	{
-		FString ErrorLogMessage = FString::Printf(TEXT("[%s]: Not initialized. Aborting operation. This object was already destroyed or was not initialized correctly."), *UPubnubChatLogUtilities::ConvertFunctionNameMacroToLog(ANSI_TO_TCHAR(__FUNCTION__)));
-		UE_LOG(PubnubChatLog, Error, TEXT("%s"), *ErrorLogMessage);
-		UPubnubUtilities::CallPubnubDelegate(OnIsActiveResponseNative, false);
-		return;
-	}
-	
-	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
-
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnIsActiveResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		const bool bIsActive = WeakThis.Get()->IsActive();
-		UPubnubUtilities::CallPubnubDelegate(OnIsActiveResponseNative, bIsActive);
-	});
-}
-
 FString UPubnubChatUser::GetLastActiveTimestamp() const
 {
 	if (!IsInitialized || !Chat)

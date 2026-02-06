@@ -18,7 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceived, 
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString UserID, const FPubnubChatUserData& UserData);
 
 /**
- * 
+ * Represents a chat user in the PubNub Chat SDK. Provides access to user metadata, memberships, presence, restrictions, and streaming updates.
  */
 UCLASS(BlueprintType)
 class PUBNUBCHATSDK_API UPubnubChatUser : public UObject
@@ -32,111 +32,401 @@ public:
 	
 	/* DELEGATES */
 	
+	/**
+	 * Broadcast when this user's metadata is updated or the user is deleted (e.g. after StreamUpdates is active).
+	 * @param UpdateType Whether the user was updated (PCSUT_Updated) or deleted (PCSUT_Deleted).
+	 * @param UserID The user ID (this user).
+	 * @param UserData Updated user metadata; empty when UpdateType is Deleted.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatUserUpdateReceived OnUserUpdateReceived;
 	FOnPubnubChatUserUpdateReceivedNative OnUserUpdateReceivedNative;
 	
+	/* PUBLIC FUNCTIONS */
+	
+	/**
+	 * Returns the current user metadata (UserName, ExternalID, ProfileUrl, Email, Custom, Status, Type) from the local cache.
+	 * Local: does not perform any network requests. Data may be stale if the user was updated elsewhere.
+	 *
+	 * @return User metadata struct, or empty struct if user is not initialized or not in cache.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FPubnubChatUserData GetUserData() const;
 	
+	/**
+	 * Returns the unique identifier of this user.
+	 * Local: does not perform any network requests.
+	 *
+	 * @return User ID string.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FString GetUserID() const { return UserID; }
 
+	/**
+	 * Updates this user's metadata on the PubNub server and updates the local cache.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 * Fails if the user is not initialized or the server request fails.
+	 *
+	 * @param UpdateUserData Fields to update (UserName, ExternalID, ProfileUrl, Email, Custom, Status, Type) and ForceSet flags
+	 *        (ForceSetUserName, ForceSetExternalID, ForceSetProfileUrl, ForceSetEmail, ForceSetCustom, ForceSetStatus, ForceSetType) to control
+	 *        whether each field is merged or fully replaced.
+	 * @return Operation result with success or error details.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Update(FPubnubChatUpdateUserInputData UpdateUserData);
 	
+	/**
+	 * Updates this user's metadata asynchronously on the PubNub server and updates the local cache.
+	 * Fails if the user is not initialized or the server request fails.
+	 *
+	 * @param UpdateUserData Fields to update (UserName, ExternalID, ProfileUrl, Email, Custom, Status, Type) and ForceSet flags to control merge or full replacement.
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void UpdateAsync(FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Updates this user's metadata asynchronously on the PubNub server and updates the local cache.
+	 * Fails if the user is not initialized or the server request fails.
+	 *
+	 * @param UpdateUserData Fields to update (UserName, ExternalID, ProfileUrl, Email, Custom, Status, Type) and ForceSet flags
+	 *        (ForceSetUserName, ForceSetExternalID, ForceSetProfileUrl, ForceSetEmail, ForceSetCustom, ForceSetStatus, ForceSetType) to control
+	 *        whether each field is merged or fully replaced.
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void UpdateAsync(FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
+	/**
+	 * Deletes this user on the PubNub server (or soft-deletes by marking it in custom metadata).
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param Soft When true, updates the user's custom metadata with a deleted flag instead of removing the user from the server (default false).
+	 * @return Operation result.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Delete(bool Soft = false);
 	
+	/**
+	 * Deletes this user asynchronously on the PubNub server (or soft-deletes by marking it in custom metadata).
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 * @param Soft When true, updates the user's custom metadata with a deleted flag instead of removing the user from the server (default false).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
+	/**
+	 * Deletes this user asynchronously on the PubNub server (or soft-deletes by marking it in custom metadata).
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param Soft When true, updates the user's custom metadata with a deleted flag instead of removing the user from the server (default false).
+	 */
 	void DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
 	
+	/**
+	 * Restores a soft-deleted user by removing the deleted flag from the user's custom metadata on the server.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @return Operation result. Success if metadata was updated.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatOperationResult Restore();
 	
+	/**
+	 * Restores a soft-deleted user asynchronously by removing the deleted flag from the user's custom metadata on the server.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void RestoreAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Restores a soft-deleted user asynchronously by removing the deleted flag from the user's custom metadata on the server.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void RestoreAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
+	/**
+	 * Checks whether this user is marked as deleted (soft-deleted) by reading the user metadata from the server.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @return Operation result and whether the user has the deleted flag in its custom metadata.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	FPubnubChatIsDeletedResult IsDeleted();
 	
+	/**
+	 * Checks asynchronously whether this user is marked as deleted (soft-deleted) by reading the user metadata from the server.
+	 * Returns result and whether the user has the deleted flag in its custom metadata.
+	 *
+	 * @param OnIsDeletedResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
 	void IsDeletedAsync(FOnPubnubChatIsDeletedResponse OnIsDeletedResponse);
+	/**
+	 * Checks asynchronously whether this user is marked as deleted (soft-deleted) by reading the user metadata from the server.
+	 * Returns result and whether the user has the deleted flag in its custom metadata.
+	 *
+	 * @param OnIsDeletedResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void IsDeletedAsync(FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponseNative);
 	
+	/**
+	 * Returns whether this user is considered active based on the last-active timestamp in the local cache.
+	 * Local: does not perform network requests. Compares lastActiveTimestamp from user Custom metadata to the chat's StoreUserActivityInterval.
+	 *
+	 * @return true if the user's last activity is within the activity interval, false otherwise or if no timestamp or not initialized.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	bool IsActive() const;
 	
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
-	void IsActiveAsync(FOnPubnubChatIsActiveResponse OnIsActiveResponse);
-	void IsActiveAsync(FOnPubnubChatIsActiveResponseNative OnIsActiveResponseNative);
-	
+	/**
+	 * Returns the last-active timestamp string from this user's custom metadata in the local cache.
+	 * Local: does not perform any network requests.
+	 *
+	 * @return Last-active timestamp (timetoken format), or empty string if not set or not initialized.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|User")
 	FString GetLastActiveTimestamp() const;
 	
+	/**
+	 * Lists channel IDs where this user is currently present (subscribed). Presence reflects active subscriptions, not channel membership.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @return Operation result and list of channel IDs where this user is present.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatWherePresentResult WherePresent();
 	
+	/**
+	 * Lists channel IDs asynchronously where this user is currently present (subscribed). Presence reflects active subscriptions, not channel membership.
+	 *
+	 * @param OnWherePresentResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	void WherePresentAsync(FOnPubnubChatWherePresentResponse OnWherePresentResponse);
+	/**
+	 * Lists channel IDs asynchronously where this user is currently present (subscribed). Presence reflects active subscriptions, not channel membership.
+	 *
+	 * @param OnWherePresentResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void WherePresentAsync(FOnPubnubChatWherePresentResponseNative OnWherePresentResponseNative);
 	
+	/**
+	 * Checks whether this user is currently present (subscribed) on the given channel. Presence reflects active subscriptions, not channel membership.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param ChannelID Unique identifier of the channel to check.
+	 * @return Operation result and whether this user is present on the channel.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatIsPresentResult IsPresentOn(const FString ChannelID);
 	
+	/**
+	 * Checks asynchronously whether this user is currently present (subscribed) on the given channel. Presence reflects active subscriptions, not channel membership.
+	 *
+	 * @param ChannelID Unique identifier of the channel to check.
+	 * @param OnIsPresentResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	void IsPresentOnAsync(const FString ChannelID, FOnPubnubChatIsPresentResponse OnIsPresentResponse);
+	/**
+	 * Checks asynchronously whether this user is currently present (subscribed) on the given channel. Presence reflects active subscriptions, not channel membership.
+	 *
+	 * @param ChannelID Unique identifier of the channel to check.
+	 * @param OnIsPresentResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void IsPresentOnAsync(const FString ChannelID, FOnPubnubChatIsPresentResponseNative OnIsPresentResponseNative);
 	
+	/**
+	 * Retrieves this user's channel memberships from the PubNub server. Returns channel and membership data for each membership.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param Limit Maximum number of memberships to return. Pass 0 to use the server default.
+	 * @param Filter Expression used to filter the results. Check online documentation for filter formulas.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 * @return Operation result, list of memberships (channel + membership data), pagination data, and total count.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatMembershipsResult GetMemberships(const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	/**
+	 * Retrieves this user's channel memberships asynchronously from the PubNub server. Returns channel and membership data for each membership.
+	 *
+	 * @param OnMembershipsResponse Callback executed when the operation completes.
+	 * @param Limit Maximum number of memberships to return. Pass 0 to use the server default.
+	 * @param Filter Expression used to filter the results. Check online documentation for filter formulas.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	void GetMembershipsAsync(FOnPubnubChatMembershipsResponse OnMembershipsResponse, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	/**
+	 * Retrieves this user's channel memberships asynchronously from the PubNub server. Returns channel and membership data for each membership.
+	 *
+	 * @param OnMembershipsResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param Limit Maximum number of memberships to return. Pass 0 to use the server default.
+	 * @param Filter Expression used to filter the results. Check online documentation for filter formulas.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 */
 	void GetMembershipsAsync(FOnPubnubChatMembershipsResponseNative OnMembershipsResponseNative, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 
+	/**
+	 * Sets or lifts moderation restrictions (ban, mute) for this user on the given channel.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param ChannelID Unique identifier of the channel on which to restrict or unrestrict this user.
+	 * @param Ban When true, bans this user from the channel; when false, lifts ban if present.
+	 * @param Mute When true, mutes this user on the channel; when false, lifts mute if present.
+	 * @param Reason Optional reason for the restriction (e.g. for audit).
+	 * @return Operation result.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatOperationResult SetRestrictions(const FString ChannelID, bool Ban, bool Mute, FString Reason = "");
 	
+	/**
+	 * Sets or lifts moderation restrictions (ban, mute) asynchronously for this user on the given channel.
+	 *
+	 * @param ChannelID Unique identifier of the channel on which to restrict or unrestrict this user.
+	 * @param Ban When true, bans this user from the channel; when false, lifts ban if present.
+	 * @param Mute When true, mutes this user on the channel; when false, lifts mute if present.
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 * @param Reason Optional reason for the restriction (e.g. for audit).
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void SetRestrictionsAsync(const FString ChannelID, bool Ban, bool Mute, FOnPubnubChatOperationResponse OnOperationResponse, FString Reason = "");
+	/**
+	 * Sets or lifts moderation restrictions (ban, mute) asynchronously for this user on the given channel.
+	 *
+	 * @param ChannelID Unique identifier of the channel on which to restrict or unrestrict this user.
+	 * @param Ban When true, bans this user from the channel; when false, lifts ban if present.
+	 * @param Mute When true, mutes this user on the channel; when false, lifts mute if present.
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param Reason Optional reason for the restriction (e.g. for audit).
+	 */
 	void SetRestrictionsAsync(const FString ChannelID, bool Ban, bool Mute, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, FString Reason = "");
 	
+	/**
+	 * Retrieves moderation restrictions (ban, mute) for this user on the given channel.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 * Returns a restriction with Ban/Mute false if this user has no restrictions on the channel.
+	 *
+	 * @param Channel The channel object to query. Must be valid (non-null).
+	 * @return Operation result and this user's restriction (Ban, Mute, Reason) on the channel.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatGetRestrictionResult GetChannelRestrictions(UPubnubChatChannel* Channel);
 	
+	/**
+	 * Retrieves moderation restrictions (ban, mute) asynchronously for this user on the given channel.
+	 * Returns a restriction with Ban/Mute false if this user has no restrictions on the channel.
+	 *
+	 * @param Channel The channel object to query. Must be valid (non-null).
+	 * @param OnRestrictionResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	void GetChannelRestrictionsAsync(UPubnubChatChannel* Channel, FOnPubnubChatGetRestrictionResponse OnRestrictionResponse);
+	/**
+	 * Retrieves moderation restrictions (ban, mute) asynchronously for this user on the given channel.
+	 * Returns a restriction with Ban/Mute false if this user has no restrictions on the channel.
+	 *
+	 * @param Channel The channel object to query. Must be valid (non-null).
+	 * @param OnRestrictionResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void GetChannelRestrictionsAsync(UPubnubChatChannel* Channel, FOnPubnubChatGetRestrictionResponseNative OnRestrictionResponseNative);
 	
+	/**
+	 * Retrieves moderation restrictions for this user on all channels where they are restricted.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param Limit Maximum number of restrictions to return. Pass 0 to use the server default.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 * @return Operation result, list of restrictions, pagination data, and total count.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	FPubnubChatGetRestrictionsResult GetChannelsRestrictions(const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	/**
+	 * Retrieves moderation restrictions asynchronously for this user on all channels where they are restricted.
+	 *
+	 * @param OnRestrictionsResponse Callback executed when the operation completes.
+	 * @param Limit Maximum number of restrictions to return. Pass 0 to use the server default.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
 	void GetChannelsRestrictionsAsync(FOnPubnubChatGetRestrictionsResponse OnRestrictionsResponse, const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
+	/**
+	 * Retrieves moderation restrictions asynchronously for this user on all channels where they are restricted.
+	 *
+	 * @param OnRestrictionsResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param Limit Maximum number of restrictions to return. Pass 0 to use the server default.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 */
 	void GetChannelsRestrictionsAsync(FOnPubnubChatGetRestrictionsResponseNative OnRestrictionsResponseNative, const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
+	/**
+	 * Starts listening for user metadata updates (and delete events) for this user. Updates and deletions are delivered via OnUserUpdateReceived / OnUserUpdateReceivedNative.
+	 * Blocking: subscribes on the calling thread. Blocks until the subscription is established.
+	 * No-op if already streaming updates.
+	 *
+	 * @return Operation result. Success if subscribe succeeded or already streaming.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatOperationResult StreamUpdates();
 	
+	/**
+	 * Starts listening asynchronously for user metadata updates (and delete events) for this user. Updates and deletions are delivered via OnUserUpdateReceived / OnUserUpdateReceivedNative.
+	 * No-op if already streaming updates.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StreamUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Starts listening asynchronously for user metadata updates (and delete events) for this user. Updates and deletions are delivered via OnUserUpdateReceived / OnUserUpdateReceivedNative.
+	 * No-op if already streaming updates.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void StreamUpdatesAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
+	/**
+	 * Starts listening for user metadata updates on each of the given users. Calls StreamUpdates() on each user.
+	 * Blocking: performs StreamUpdates on each user on the calling thread. Blocks for the duration of all operations.
+	 *
+	 * @param Users Array of user objects on which to start streaming updates.
+	 * @return Combined operation result from all users.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatUser*>& Users);
 	
+	/**
+	 * Stops listening for user metadata updates for this user. OnUserUpdateReceived will no longer fire for updates.
+	 * Blocking: unsubscribes on the calling thread. Blocks for the duration of the operation.
+	 * No-op if not streaming updates.
+	 *
+	 * @return Operation result. Success if unsubscribe succeeded or was not streaming.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
+	/**
+	 * Stops listening asynchronously for user metadata updates for this user. OnUserUpdateReceived will no longer fire for updates.
+	 * No-op if not streaming updates.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Stops listening asynchronously for user metadata updates for this user. OnUserUpdateReceived will no longer fire for updates.
+	 * No-op if not streaming updates.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
 	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 private:

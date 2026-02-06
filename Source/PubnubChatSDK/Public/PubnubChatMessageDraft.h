@@ -19,7 +19,8 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageDraftUpdatedWithSuggest
 
 
 /**
- * 
+ * Editable draft for a channel message with structured content (text and mentions). Belongs to a channel; edits are in-memory until Send.
+ * Supports insert/remove text, add/remove mentions, replace-all via Update, and insert-from-suggestion. Fires delegates on content change; Send publishes the draft as a message (with mentions as markdown links).
  */
 UCLASS(BlueprintType)
 class PUBNUBCHATSDK_API UPubnubChatMessageDraft : public UObject
@@ -29,43 +30,133 @@ class PUBNUBCHATSDK_API UPubnubChatMessageDraft : public UObject
 
 public:
 	
+	/**
+	 * Broadcast when the draft content changes (after InsertText, RemoveText, AddMention, RemoveMention, Update, or InsertSuggestedMention).
+	 * @param MessageElements Current list of message elements (text and mentions) in the draft.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatMessageDraftUpdated OnMessageDraftUpdated;
 	FOnPubnubChatMessageDraftUpdatedNative OnMessageDraftUpdatedNative;
 	
+	/**
+	 * Broadcast when the draft content changes, and also provides suggested mentions for @user / #channel patterns in the text (e.g. for autocomplete).
+	 * SuggestedMentions may be populated from API when there are listeners; otherwise empty.
+	 * @param MessageElements Current list of message elements in the draft.
+	 * @param SuggestedMentions Suggestions for unresolved @user / #channel spans in the draft.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatMessageDraftUpdatedWithSuggestions OnMessageDraftUpdatedWithSuggestions;
 	FOnPubnubChatMessageDraftUpdatedWithSuggestionsNative OnMessageDraftUpdatedWithSuggestionsNative;
 	
+	/* PUBLIC FUNCTIONS */
+	
+	/**
+	 * Returns the current draft text by concatenating all message elements (plain text and mention display text).
+	 * Local: does not perform any network requests.
+	 *
+	 * @return Full draft text string.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
 	FString GetCurrentText() const;
 	
+	/**
+	 * Returns a copy of the current message elements (text segments and mentions with position and target).
+	 * Local: does not perform any network requests.
+	 *
+	 * @return Array of message elements.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
 	TArray<FPubnubChatMessageElement> GetMessageElements() const { return MessageElements; }
 	
+	/**
+	 * Inserts text at the given position in the draft. Fires OnMessageDraftUpdated (and suggestion delegates); may trigger typing indicator on the channel.
+	 * Local: edits the in-memory draft only. Fails if Position is negative, beyond the end of the draft, or inside an existing mention.
+	 *
+	 * @param Position Index at which to insert (0-based). Must be within current draft bounds and not inside a mention.
+	 * @param Text Text to insert. Must be non-empty.
+	 * @return Operation result. Success if the text was inserted.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult InsertText(int Position, const FString Text);
 	
+	/**
+	 * Removes Length characters starting at Position from the draft. Fires OnMessageDraftUpdated; may trigger typing indicator on the channel.
+	 * Local: edits the in-memory draft only. Fails if Position or range is invalid, or if the range overlaps an existing mention.
+	 *
+	 * @param Position Start index (0-based). Must be within draft bounds.
+	 * @param Length Number of characters to remove. Must be positive; range must not extend past the end or overlap a mention.
+	 * @return Operation result. Success if the text was removed.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult RemoveText(int Position, int Length);
 
+	/**
+	 * Marks the span [Position, Position + Length) as a mention with the given target (user, channel, or URL). Fires OnMessageDraftUpdated; may trigger typing indicator.
+	 * Local: edits the in-memory draft only. Fails if the draft is empty, the range is invalid, or overlaps an existing mention.
+	 *
+	 * @param Position Start index (0-based) of the span to turn into a mention.
+	 * @param Length Length of the span. Must be positive; range must be within draft bounds and not overlap another mention.
+	 * @param MentionTarget The mention target (user ID, channel ID, or URL).
+	 * @return Operation result. Success if the mention was added.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult AddMention(int Position, int Length, const FPubnubChatMentionTarget MentionTarget);
 	
+	/**
+	 * Removes the mention at the given position (converts that element back to plain text). Fires OnMessageDraftUpdated; may trigger typing indicator.
+	 * Local: edits the in-memory draft only. Fails if Position is not within a mention element.
+	 *
+	 * @param Position Any index (0-based) inside the mention element to remove.
+	 * @return Operation result. Success if the mention was removed.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult RemoveMention(int Position);
 	
+	/**
+	 * Replaces the entire draft content with NewText. Mentions that overlap changed regions are removed; unchanged regions preserve structure where possible. Fires OnMessageDraftUpdated; may trigger typing indicator.
+	 * Local: edits the in-memory draft only. No-op if current text equals NewText.
+	 *
+	 * @param NewText The new full draft text.
+	 * @return Operation result. Success if the draft was updated (or unchanged).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult Update(const FString& NewText);
 	
+	/**
+	 * Replaces the text at the suggestion's offset (ReplaceFrom) with ReplaceTo and adds a mention for the suggestion's target. Used to apply an autocomplete selection (e.g. from OnMessageDraftUpdatedWithSuggestions).
+	 * Local: edits the in-memory draft only. Fails if ReplaceFrom does not match the current text at Offset, or if target is invalid.
+	 *
+	 * @param SuggestedMention Suggestion with Offset, ReplaceFrom, ReplaceTo, and Target. ReplaceFrom must match draft text at Offset.
+	 * @return Operation result. Success if the mention was inserted.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult InsertSuggestedMention(const FPubnubChatSuggestedMention SuggestedMention);
 	
+	/**
+	 * Sends the draft as a message on the associated channel. Draft text is serialized (mentions as markdown links); the channel's SendText is used.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 * Fails if the channel is invalid or the draft text is empty.
+	 *
+	 * @param SendTextParams Optional parameters passed to the channel send (e.g. metadata, quoted message).
+	 * @return Operation result. Success if the message was sent.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult Send(FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
 	
+	/**
+	 * Sends the draft asynchronously as a message on the associated channel. Fails if the channel is invalid or the draft text is empty.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 * @param SendTextParams Optional parameters passed to the channel send (e.g. metadata, quoted message).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void SendAsync(FOnPubnubChatOperationResponse OnOperationResponse, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
+	/**
+	 * Sends the draft asynchronously as a message on the associated channel. Fails if the channel is invalid or the draft text is empty.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param SendTextParams Optional parameters passed to the channel send (e.g. metadata, quoted message).
+	 */
 	void SendAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams());
 	
 private:

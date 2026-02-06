@@ -89,7 +89,6 @@ void UPubnubChatSubsystem::DestroyChat(FString UserID)
 	ChatToDestroy->OnChatDestroyed.RemoveDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
 	ChatToDestroy->DestroyChat();
 	
-	// Remove from map (OnChatDestroyed will also clean up, but we do it here to be safe)
 	Chats.Remove(UserID);
 }
 
