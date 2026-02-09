@@ -2,6 +2,7 @@
 
 #include "Samples/Sample_Chat.h"
 #include "PubnubChatSubsystem.h"
+#include "PubnubChatMessage.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
 
@@ -729,6 +730,8 @@ void ASample_Chat::OnMarkAllMessagesAsReadResponse(const FPubnubChatMarkAllMessa
 
 // snippet.create_thread_channel
 
+#include "PubnubChatThreadChannel.h"
+
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::CreateThreadChannelSample()
 {
@@ -751,8 +754,11 @@ void ASample_Chat::CreateThreadChannelSample()
 void ASample_Chat::OnCreateThreadChannelResponse(const FPubnubChatThreadChannelResult& Result)
 {
 	if (Result.Result.Error) { return; }
+	// At this point the thread channel exists locally; it is created on the server when the first reply is sent
 	UPubnubChatThreadChannel* ThreadChannel = Result.ThreadChannel;
-	// Thread is created on the server when the first reply is sent
+	
+	// Send the first reply to create the thread on the server
+	ThreadChannel->SendText(TEXT("First thread message"));
 }
 
 // snippet.get_thread_channel

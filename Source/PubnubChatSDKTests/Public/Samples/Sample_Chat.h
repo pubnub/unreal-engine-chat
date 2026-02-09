@@ -242,8 +242,4 @@ public:
 	
 	// snippet.end
 
-private:
-	/** Stored Chat reference so connection status handler can call ReconnectSubscriptionsAsync. Set before binding in ConnectionStatusChangedReconnectSample. */
-	UPROPERTY()
-	TObjectPtr<UPubnubChat> CachedChatForReconnect = nullptr;
 };

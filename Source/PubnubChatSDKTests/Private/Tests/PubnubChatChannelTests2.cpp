@@ -13,6 +13,7 @@
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "Private/FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
