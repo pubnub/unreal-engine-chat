@@ -299,7 +299,7 @@ bool FPubnubChatCreateUserHappyPathTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		if(Chat)
 		{
-			Chat->DeleteUser(NewUserID, false);
+			Chat->DeleteUser(NewUserID);
 		}
 	}
 
@@ -368,7 +368,7 @@ bool FPubnubChatCreateUserFullParametersTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		if(Chat)
 		{
-			Chat->DeleteUser(NewUserID, false);
+			Chat->DeleteUser(NewUserID);
 		}
 	}
 
@@ -418,7 +418,7 @@ bool FPubnubChatCreateUserDuplicateTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		if(Chat)
 		{
-			Chat->DeleteUser(NewUserID, false);
+			Chat->DeleteUser(NewUserID);
 		}
 	}
 
@@ -477,7 +477,7 @@ bool FPubnubChatCreateUserDataSharingTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		if(Chat)
 		{
-			Chat->DeleteUser(NewUserID, false);
+			Chat->DeleteUser(NewUserID);
 		}
 	}
 
@@ -611,7 +611,7 @@ bool FPubnubChatGetUserHappyPathTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		if(Chat)
 		{
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(TargetUserID);
 		}
 	}
 
@@ -722,7 +722,7 @@ bool FPubnubChatGetUserMultipleCallsTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		if(Chat)
 		{
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(TargetUserID);
 		}
 	}
 
@@ -948,7 +948,7 @@ bool FPubnubChatUpdateUserHappyPathTest::RunTest(const FString& Parameters)
 			TestEqual("UserName should be updated", UpdatedData.UserName, UserData.UserName);
 				
 			// Cleanup: Delete created user
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(TargetUserID);
 		}
 	}
 
@@ -1027,7 +1027,7 @@ bool FPubnubChatUpdateUserFullParametersTest::RunTest(const FString& Parameters)
 			
 		}
 		// Cleanup: Delete created user
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteUser(TargetUserID);
 		
 	}
 
@@ -1112,7 +1112,7 @@ bool FPubnubChatUpdateUserMultipleTimesTest::RunTest(const FString& Parameters)
 			}
 			
 			// Cleanup: Delete created user
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(TargetUserID);
 		}
 	}
 
@@ -1177,7 +1177,7 @@ bool FPubnubChatUpdateUserDataSynchronizationTest::RunTest(const FString& Parame
 			TestEqual("GetUser1 Email should match GetUser2 Email", GetData1.Email, GetData2.Email);
 			
 			// Cleanup: Delete created user
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(TargetUserID);
 		}
 	}
 
@@ -1214,7 +1214,7 @@ bool FPubnubChatDeleteUserNotInitializedTest::RunTest(const FString& Parameters)
 		if(Chat)
 		{
 			const FString TestUserID = SDK_PREFIX + "test_delete_user_not_init";
-			FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TestUserID, false);
+			FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TestUserID);
 			
 			TestTrue("DeleteUser should fail when Chat is not initialized", DeleteResult.Error);
 			TestFalse("ErrorMessage should not be empty", DeleteResult.ErrorMessage.IsEmpty());
@@ -1249,7 +1249,7 @@ bool FPubnubChatDeleteUserEmptyUserIDTest::RunTest(const FString& Parameters)
 	if(Chat)
 	{
 		// Try to delete user with empty UserID
-		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TEXT(""), false);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TEXT(""));
 		
 		TestTrue("DeleteUser should fail with empty UserID", DeleteResult.Error);
 		TestFalse("ErrorMessage should not be empty", DeleteResult.ErrorMessage.IsEmpty());
@@ -1333,710 +1333,15 @@ bool FPubnubChatDeleteUserHardDeleteTest::RunTest(const FString& Parameters)
 		FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
 		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
 		
-		// Hard delete user (Soft = false)
-		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
+		// Delete user
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID);
 		
-		TestFalse("Hard DeleteUser should succeed", DeleteResult.Error);
+		TestFalse("DeleteUser should succeed", DeleteResult.Error);
 		
 		// Verify user is actually deleted - GetUser should fail
 		FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
-		TestTrue("GetUser should fail after hard delete", GetResult.Result.Error);
+		TestTrue("GetUser should fail after delete", GetResult.Result.Error);
 	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserSoftDeleteTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.3FullParameters.SoftDelete", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatDeleteUserSoftDeleteTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_delete_user_soft_init";
-	const FString TargetUserID = SDK_PREFIX + "test_delete_user_soft";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(Chat)
-	{
-		// First create the user
-		FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-		
-		// Soft delete user (Soft = true)
-		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, true);
-		
-		TestFalse("Soft DeleteUser should succeed", DeleteResult.Error);
-		
-		// Verify user still exists but is marked as deleted
-		FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
-		TestFalse("GetUser should succeed after soft delete", GetResult.Result.Error);
-		TestNotNull("GetUser should return user after soft delete", GetResult.User);
-		
-		// Cleanup: Hard delete the soft-deleted user
-		if(Chat)
-		{
-			Chat->DeleteUser(TargetUserID, false);
-		}
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// ADVANCED SCENARIO TESTS
-// ============================================================================
-
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserHardVsSoftTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUser.4Advanced.HardVsSoft", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatDeleteUserHardVsSoftTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_delete_user_hardsoft_init";
-	const FString SoftDeleteUserID = SDK_PREFIX + "test_delete_user_soft";
-	const FString HardDeleteUserID = SDK_PREFIX + "test_delete_user_hard";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(Chat)
-	{
-		// Create first user for soft delete
-		FPubnubChatUserResult CreateResult1 = Chat->CreateUser(SoftDeleteUserID);
-		TestFalse("CreateUser1 should succeed", CreateResult1.Result.Error);
-		
-		// Create second user for hard delete
-		FPubnubChatUserResult CreateResult2 = Chat->CreateUser(HardDeleteUserID);
-		TestFalse("CreateUser2 should succeed", CreateResult2.Result.Error);
-		
-		// Soft delete first user
-		FPubnubChatOperationResult SoftDeleteResult = Chat->DeleteUser(SoftDeleteUserID, true);
-		TestFalse("Soft DeleteUser should succeed", SoftDeleteResult.Error);
-		
-		// Hard delete second user
-		FPubnubChatOperationResult HardDeleteResult = Chat->DeleteUser(HardDeleteUserID, false);
-		TestFalse("Hard DeleteUser should succeed", HardDeleteResult.Error);
-		
-		// Verify soft-deleted user still exists
-		FPubnubChatUserResult GetSoftResult = Chat->GetUser(SoftDeleteUserID);
-		TestFalse("GetUser should succeed for soft-deleted user", GetSoftResult.Result.Error);
-		TestNotNull("GetUser should return soft-deleted user", GetSoftResult.User);
-		
-		// Verify hard-deleted user no longer exists
-		FPubnubChatUserResult GetHardResult = Chat->GetUser(HardDeleteUserID);
-		TestTrue("GetUser should fail for hard-deleted user", GetHardResult.Result.Error);
-		TestNull("GetUser should not return hard-deleted user", GetHardResult.User);
-		
-		// Cleanup: Hard delete the soft-deleted user
-		if(Chat)
-		{
-			Chat->DeleteUser(SoftDeleteUserID, false);
-		}
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// RESTORE TESTS
-// ============================================================================
-
-// ============================================================================
-// VALIDATION TESTS (Fast Failing Conditions)
-// ============================================================================
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserRestoreNotInitializedTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_restore_not_init_init";
-	const FString TargetUserID = SDK_PREFIX + "test_restore_not_init";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(Chat)
-	{
-		// Create user
-		FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-		
-		// Create uninitialized user object
-		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
-		
-		// Try to restore with uninitialized user
-		FPubnubChatOperationResult RestoreResult = UninitializedUser->Restore();
-		TestTrue("Restore should fail with uninitialized user", RestoreResult.Error);
-		TestFalse("ErrorMessage should not be empty", RestoreResult.ErrorMessage.IsEmpty());
-		
-		// Cleanup
-		if(Chat)
-		{
-			Chat->DeleteUser(TargetUserID, false);
-		}
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// HAPPY PATH TESTS (Required Parameters Only)
-// ============================================================================
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserRestoreHappyPathTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_restore_happy_init";
-	const FString TargetUserID = SDK_PREFIX + "test_restore_happy";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Soft delete the user first
-	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
-	TestFalse("Soft delete should succeed", DeleteResult.Error);
-	
-	// Verify user is marked as deleted
-	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
-	TestTrue("User should be marked as deleted", IsDeletedBeforeResult.IsDeleted);
-	
-	// Restore the user
-	FPubnubChatOperationResult RestoreResult = CreateResult.User->Restore();
-	TestFalse("Restore should succeed", RestoreResult.Error);
-	
-	// Verify user is no longer marked as deleted
-	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterResult.Result.Error);
-	TestFalse("User should not be marked as deleted after restore", IsDeletedAfterResult.IsDeleted);
-	
-	// Cleanup
-	if(Chat)
-	{
-		Chat->DeleteUser(TargetUserID, false);
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// ADVANCED SCENARIO TESTS
-// ============================================================================
-
-// Test: Restore a user that wasn't deleted (should still succeed)
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreNonDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.4Advanced.RestoreNonDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserRestoreNonDeletedUserTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_restore_non_deleted_init";
-	const FString TargetUserID = SDK_PREFIX + "test_restore_non_deleted";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Verify user is not deleted
-	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
-	TestFalse("User should not be marked as deleted", IsDeletedBeforeResult.IsDeleted);
-	
-	// Restore a non-deleted user (should still succeed)
-	FPubnubChatOperationResult RestoreResult = CreateResult.User->Restore();
-	TestFalse("Restore should succeed even for non-deleted user", RestoreResult.Error);
-	
-	// Verify user is still not deleted
-	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterResult.Result.Error);
-	TestFalse("User should still not be marked as deleted", IsDeletedAfterResult.IsDeleted);
-	
-	// Cleanup
-	if(Chat)
-	{
-		Chat->DeleteUser(TargetUserID, false);
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// Test: Restore a hard-deleted user (should fail)
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreHardDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.Restore.4Advanced.RestoreHardDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserRestoreHardDeletedUserTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_restore_hard_deleted_init";
-	const FString TargetUserID = SDK_PREFIX + "test_restore_hard_deleted";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Hard delete the user
-	FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
-	TestFalse("Hard delete should succeed", DeleteResult.Error);
-	
-	// Try to get the user again (should fail)
-	FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
-	TestTrue("GetUser should fail after hard delete", GetResult.Result.Error);
-	
-	// Note: After hard delete, the user object is no longer valid, so we can't test Restore on it
-	// This test verifies that hard-deleted users cannot be restored (they don't exist anymore)
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// ISDELETED TESTS
-// ============================================================================
-
-// ============================================================================
-// VALIDATION TESTS (Fast Failing Conditions)
-// ============================================================================
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserIsDeletedNotInitializedTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_is_deleted_not_init_init";
-	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_not_init";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(Chat)
-	{
-		// Create user
-		FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-		TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-		
-		// Create uninitialized user object
-		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
-		
-		// Try to check IsDeleted with uninitialized user
-		FPubnubChatIsDeletedResult IsDeletedResult = UninitializedUser->IsDeleted();
-		TestTrue("IsDeleted should fail with uninitialized user", IsDeletedResult.Result.Error);
-		TestFalse("IsDeleted should be false when error occurs", IsDeletedResult.IsDeleted);
-		TestFalse("ErrorMessage should not be empty", IsDeletedResult.Result.ErrorMessage.IsEmpty());
-		
-		// Cleanup
-		if(Chat)
-		{
-			Chat->DeleteUser(TargetUserID, false);
-		}
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// HAPPY PATH TESTS (Required Parameters Only)
-// ============================================================================
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserIsDeletedHappyPathTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_is_deleted_happy_init";
-	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_happy";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Check IsDeleted for a non-deleted user
-	FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed", IsDeletedResult.Result.Error);
-	TestFalse("User should not be marked as deleted", IsDeletedResult.IsDeleted);
-	
-	// Cleanup
-	if(Chat)
-	{
-		Chat->DeleteUser(TargetUserID, false);
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// FULL PARAMETER TESTS (All Parameters)
-// ============================================================================
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedSoftDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.3FullParameters.SoftDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserIsDeletedSoftDeletedUserTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_is_deleted_soft_init";
-	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_soft";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Verify user is not deleted initially
-	FPubnubChatIsDeletedResult IsDeletedBeforeResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed", IsDeletedBeforeResult.Result.Error);
-	TestFalse("User should not be marked as deleted initially", IsDeletedBeforeResult.IsDeleted);
-	
-	// Soft delete the user
-	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
-	TestFalse("Soft delete should succeed", DeleteResult.Error);
-	
-	// Check IsDeleted for a soft-deleted user
-	FPubnubChatIsDeletedResult IsDeletedAfterResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed after soft delete", IsDeletedAfterResult.Result.Error);
-	TestTrue("User should be marked as deleted after soft delete", IsDeletedAfterResult.IsDeleted);
-	
-	// Cleanup
-	if(Chat)
-	{
-		Chat->DeleteUser(TargetUserID, false);
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// ============================================================================
-// ADVANCED SCENARIO TESTS
-// ============================================================================
-
-// Test: Check IsDeleted after restore
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedAfterRestoreTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.4Advanced.AfterRestore", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserIsDeletedAfterRestoreTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_is_deleted_restore_init";
-	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_restore";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Soft delete the user
-	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
-	TestFalse("Soft delete should succeed", DeleteResult.Error);
-	
-	// Verify user is marked as deleted
-	FPubnubChatIsDeletedResult IsDeletedBeforeRestoreResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed", IsDeletedBeforeRestoreResult.Result.Error);
-	TestTrue("User should be marked as deleted", IsDeletedBeforeRestoreResult.IsDeleted);
-	
-	// Restore the user
-	FPubnubChatOperationResult RestoreResult = CreateResult.User->Restore();
-	TestFalse("Restore should succeed", RestoreResult.Error);
-	
-	// Check IsDeleted after restore
-	FPubnubChatIsDeletedResult IsDeletedAfterRestoreResult = CreateResult.User->IsDeleted();
-	TestFalse("IsDeleted check should succeed after restore", IsDeletedAfterRestoreResult.Result.Error);
-	TestFalse("User should not be marked as deleted after restore", IsDeletedAfterRestoreResult.IsDeleted);
-	
-	// Cleanup
-	if(Chat)
-	{
-		Chat->DeleteUser(TargetUserID, false);
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-// Test: Check IsDeleted for hard-deleted user (should fail)
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedHardDeletedUserTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeleted.4Advanced.HardDeletedUser", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserIsDeletedHardDeletedUserTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_is_deleted_hard_init";
-	const FString TargetUserID = SDK_PREFIX + "test_is_deleted_hard";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		AddError("Chat should be initialized");
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Create user
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	TestNotNull("User should be created", CreateResult.User);
-	
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	// Hard delete the user
-	FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TargetUserID, false);
-	TestFalse("Hard delete should succeed", DeleteResult.Error);
-	
-	// Try to get the user again (should fail)
-	FPubnubChatUserResult GetResult = Chat->GetUser(TargetUserID);
-	TestTrue("GetUser should fail after hard delete", GetResult.Result.Error);
-	
-	// Note: After hard delete, the user object is no longer valid, so we can't test IsDeleted on it
-	// This test verifies that hard-deleted users cannot be checked for IsDeleted (they don't exist anymore)
-	// The user object from CreateResult is no longer valid after hard delete
 
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -2191,7 +1496,7 @@ bool FPubnubChatGetUsersFullParametersTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2251,7 +1556,7 @@ bool FPubnubChatGetUsersWithLimitTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2300,7 +1605,7 @@ bool FPubnubChatGetUsersWithFilterTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2371,7 +1676,7 @@ bool FPubnubChatGetUsersWithSortTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2501,7 +1806,7 @@ bool FPubnubChatGetUsersMultipleUsersTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2655,7 +1960,7 @@ bool FPubnubChatGetUsersFilteringTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2751,7 +2056,7 @@ bool FPubnubChatGetUsersSortingTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2854,7 +2159,7 @@ bool FPubnubChatGetUsersConsistencyTest::RunTest(const FString& Parameters)
 		// Cleanup: Delete created user
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 	
@@ -2983,7 +2288,7 @@ bool FPubnubChatGetUserSuggestionsHappyPathTest::RunTest(const FString& Paramete
 		// Cleanup: Delete created user
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3054,7 +2359,7 @@ bool FPubnubChatGetUserSuggestionsFullParametersTest::RunTest(const FString& Par
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3121,7 +2426,7 @@ bool FPubnubChatGetUserSuggestionsWithLimitTest::RunTest(const FString& Paramete
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3203,7 +2508,7 @@ bool FPubnubChatGetUserSuggestionsMultipleMatchesTest::RunTest(const FString& Pa
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3289,7 +2594,7 @@ bool FPubnubChatGetUserSuggestionsPartialMatchTest::RunTest(const FString& Param
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3344,7 +2649,7 @@ bool FPubnubChatGetUserSuggestionsNoMatchesTest::RunTest(const FString& Paramete
 		// Cleanup: Delete created user
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3409,7 +2714,7 @@ bool FPubnubChatGetUserSuggestionsCaseSensitivityTest::RunTest(const FString& Pa
 		// Cleanup: Delete created user
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3480,7 +2785,7 @@ bool FPubnubChatGetUserSuggestionsLimitEnforcementTest::RunTest(const FString& P
 		// Cleanup: Delete created users
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3543,7 +2848,7 @@ bool FPubnubChatGetUserSuggestionsConsistencyTest::RunTest(const FString& Parame
 		// Cleanup: Delete created user
 		for(const FString& UserID : CreatedUserIDs)
 		{
-			Chat->DeleteUser(UserID, false);
+			Chat->DeleteUser(UserID);
 		}
 	}
 
@@ -3634,8 +2939,8 @@ bool FPubnubChatCreateUserAsyncFullParametersTest::RunTest(const FString& Parame
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(NewUserID, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteUser(NewUserID);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3714,8 +3019,8 @@ bool FPubnubChatGetUserAsyncFullParametersTest::RunTest(const FString& Parameter
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TargetUserID, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteUser(TargetUserID);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3797,9 +3102,9 @@ bool FPubnubChatGetUsersAsyncFullParametersTest::RunTest(const FString& Paramete
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID1, false);
-			Chat->DeleteUser(TestUserID2, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteUser(TestUserID1);
+			Chat->DeleteUser(TestUserID2);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3896,8 +3201,8 @@ bool FPubnubChatUpdateUserAsyncFullParametersTest::RunTest(const FString& Parame
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TargetUserID, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteUser(TargetUserID);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3908,8 +3213,7 @@ bool FPubnubChatUpdateUserAsyncFullParametersTest::RunTest(const FString& Parame
 
 /**
  * FullParameters test for DeleteUserAsync.
- * Creates a user synchronously, then calls DeleteUserAsync with UserID and Soft=true; verifies callback result.
- * Cleans up: hard-delete the soft-deleted user, then delete init user.
+ * Creates a user synchronously, then calls DeleteUserAsync and verifies callback result.
  */
 IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDeleteUserAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.User.DeleteUserAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
 
@@ -3952,7 +3256,7 @@ bool FPubnubChatDeleteUserAsyncFullParametersTest::RunTest(const FString& Parame
 		*CallbackResult = OperationResult;
 		*bCallbackReceived = true;
 	});
-	Chat->DeleteUserAsync(TargetUserID, OnOperationResponse, true);
+	Chat->DeleteUserAsync(TargetUserID, OnOperationResponse);
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
 
@@ -3965,8 +3269,8 @@ bool FPubnubChatDeleteUserAsyncFullParametersTest::RunTest(const FString& Parame
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TargetUserID, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteUser(TargetUserID);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4046,9 +3350,9 @@ bool FPubnubChatGetUserSuggestionsAsyncFullParametersTest::RunTest(const FString
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID1, false);
-			Chat->DeleteUser(TestUserID2, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteUser(TestUserID1);
+			Chat->DeleteUser(TestUserID2);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4146,7 +3450,7 @@ bool FPubnubChatUserWherePresentHappyPathTest::RunTest(const FString& Parameters
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -4235,7 +3539,7 @@ bool FPubnubChatUserIsPresentOnHappyPathTest::RunTest(const FString& Parameters)
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -4385,7 +3689,7 @@ bool FPubnubChatUserGetMembershipsHappyPathTest::RunTest(const FString& Paramete
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -4496,7 +3800,7 @@ bool FPubnubChatUserGetMembershipsFullParametersTest::RunTest(const FString& Par
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -4585,7 +3889,7 @@ bool FPubnubChatUserGetMembershipsMultipleChannelsTest::RunTest(const FString& P
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID1, false);
+			Chat->DeleteChannel(TestChannelID1);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4647,8 +3951,8 @@ bool FPubnubChatUserGetMembershipsMultipleChannelsTest::RunTest(const FString& P
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID1, false);
-		Chat->DeleteChannel(TestChannelID2, false);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID2);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -4763,7 +4067,7 @@ bool FPubnubChatUserGetMembershipsPaginationTest::RunTest(const FString& Paramet
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -4848,7 +4152,7 @@ bool FPubnubChatUserGetMembershipsFilterTest::RunTest(const FString& Parameters)
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID1, false);
+			Chat->DeleteChannel(TestChannelID1);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4918,8 +4222,8 @@ bool FPubnubChatUserGetMembershipsFilterTest::RunTest(const FString& Parameters)
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID1, false);
-		Chat->DeleteChannel(TestChannelID2, false);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID2);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -5004,7 +4308,7 @@ bool FPubnubChatUserGetMembershipsSortTest::RunTest(const FString& Parameters)
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID1, false);
+			Chat->DeleteChannel(TestChannelID1);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5086,8 +4390,8 @@ bool FPubnubChatUserGetMembershipsSortTest::RunTest(const FString& Parameters)
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID1, false);
-		Chat->DeleteChannel(TestChannelID2, false);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID2);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -5171,7 +4475,7 @@ bool FPubnubChatUserGetMembershipsWithInvitedTest::RunTest(const FString& Parame
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5229,8 +4533,8 @@ bool FPubnubChatUserGetMembershipsWithInvitedTest::RunTest(const FString& Parame
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -5318,221 +4622,7 @@ bool FPubnubChatUserUpdateAsyncFullParametersTest::RunTest(const FString& Parame
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TargetUserID, false);
-		}
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-	}, 0.1f));
-	
-	return true;
-}
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserDeleteAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.DeleteAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserDeleteAsyncFullParametersTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_user_delete_async_full_init";
-	const FString TargetUserID = SDK_PREFIX + "test_user_delete_async_full";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
-	FOnPubnubChatOperationResponseNative OnOperationResponse;
-	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
-	{
-		*CallbackResult = OperationResult;
-		*bCallbackReceived = true;
-	});
-	
-	CreateResult.User->DeleteAsync(OnOperationResponse, true);
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateResult]()
-	{
-		TestFalse("DeleteAsync should succeed", CallbackResult->Error);
-		FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.User->IsDeleted();
-		TestFalse("IsDeleted should succeed", IsDeletedResult.Result.Error);
-		TestTrue("User should be marked as deleted", IsDeletedResult.IsDeleted);
-	}, 0.1f));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
-	{
-		if(Chat)
-		{
-			Chat->DeleteUser(TargetUserID, false);
-		}
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-	}, 0.1f));
-	
-	return true;
-}
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserRestoreAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.RestoreAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserRestoreAsyncFullParametersTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_user_restore_async_full_init";
-	const FString TargetUserID = SDK_PREFIX + "test_user_restore_async_full";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
-	TestFalse("Soft delete should succeed", DeleteResult.Error);
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
-	FOnPubnubChatOperationResponseNative OnOperationResponse;
-	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
-	{
-		*CallbackResult = OperationResult;
-		*bCallbackReceived = true;
-	});
-	
-	CreateResult.User->RestoreAsync(OnOperationResponse);
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, CreateResult]()
-	{
-		TestFalse("RestoreAsync should succeed", CallbackResult->Error);
-		FPubnubChatIsDeletedResult IsDeletedResult = CreateResult.User->IsDeleted();
-		TestFalse("IsDeleted should succeed", IsDeletedResult.Result.Error);
-		TestFalse("User should not be deleted after restore", IsDeletedResult.IsDeleted);
-	}, 0.1f));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
-	{
-		if(Chat)
-		{
-			Chat->DeleteUser(TargetUserID, false);
-		}
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-	}, 0.1f));
-	
-	return true;
-}
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsDeletedAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsDeletedAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatUserIsDeletedAsyncFullParametersTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_user_is_deleted_async_full_init";
-	const FString TargetUserID = SDK_PREFIX + "test_user_is_deleted_async_full";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	FPubnubChatUserResult CreateResult = Chat->CreateUser(TargetUserID);
-	TestFalse("CreateUser should succeed", CreateResult.Result.Error);
-	if(!CreateResult.User)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	FPubnubChatOperationResult DeleteResult = CreateResult.User->Delete(true);
-	TestFalse("Soft delete should succeed", DeleteResult.Error);
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatIsDeletedResult> CallbackResult = MakeShared<FPubnubChatIsDeletedResult>();
-	FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponse;
-	OnIsDeletedResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatIsDeletedResult& IsDeletedResult)
-	{
-		*CallbackResult = IsDeletedResult;
-		*bCallbackReceived = true;
-	});
-	
-	CreateResult.User->IsDeletedAsync(OnIsDeletedResponse);
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
-	{
-		TestFalse("IsDeletedAsync should succeed", CallbackResult->Result.Error);
-		TestTrue("IsDeletedAsync should report deleted", CallbackResult->IsDeleted);
-	}, 0.1f));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID]()
-	{
-		if(Chat)
-		{
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5618,7 +4708,7 @@ bool FPubnubChatUserWherePresentAsyncFullParametersTest::RunTest(const FString& 
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5704,7 +4794,7 @@ bool FPubnubChatUserIsPresentOnAsyncFullParametersTest::RunTest(const FString& P
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5799,7 +4889,7 @@ bool FPubnubChatUserGetMembershipsAsyncFullParametersTest::RunTest(const FString
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5890,7 +4980,7 @@ bool FPubnubChatUserSetRestrictionsAsyncFullParametersTest::RunTest(const FStrin
 					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5980,7 +5070,7 @@ bool FPubnubChatUserGetChannelRestrictionsAsyncFullParametersTest::RunTest(const
 					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -6086,7 +5176,7 @@ bool FPubnubChatUserGetChannelsRestrictionsAsyncFullParametersTest::RunTest(cons
 					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

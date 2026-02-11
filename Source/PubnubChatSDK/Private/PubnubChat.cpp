@@ -262,47 +262,24 @@ void UPubnubChat::UpdateUserAsync(const FString UserID, FPubnubChatUpdateUserInp
 	});
 }
 
-FPubnubChatOperationResult UPubnubChat::DeleteUser(const FString UserID, bool Soft)
+FPubnubChatOperationResult UPubnubChat::DeleteUser(const FString UserID)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(UserID);
 
 	FPubnubChatOperationResult FinalResult;
 
-	//If it's not soft, remove user metadata from the server
-	if(!Soft)
-	{
-		//RemoveUserMetadata by PubnubClient
-		FPubnubOperationResult RemoveUserResult = PubnubClient->RemoveUserMetadata(UserID);
-		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveUserResult, "RemoveUserMetadata");
-		
-		//Remove user from repository
-		ObjectsRepository->RemoveUserData(UserID);
-		
-		return FinalResult;
-	}
+	//RemoveUserMetadata by PubnubClient
+	FPubnubOperationResult RemoveUserResult = PubnubClient->RemoveUserMetadata(UserID);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveUserResult, "RemoveUserMetadata");
 
-	//Soft Delete - just update User Metadata
+	//Remove user from repository
+	ObjectsRepository->RemoveUserData(UserID);
 
-	//GetUserMetadata from PubnubClient to have up to date data
-	FPubnubUserMetadataResult GetUserResult = PubnubClient->GetUserMetadata(UserID, FPubnubGetMetadataInclude::FromValue(true));
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetUserResult.Result, "GetUserMetadata");
-
-	//Add Deleted property to Custom field
-	FPubnubUserInputData NewUserData = FPubnubUserInputData::FromPubnubUserData(GetUserResult.UserData);
-	NewUserData.Custom = UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(NewUserData.Custom);
-
-	//SetUserMetadata with updated metadata
-	FPubnubUserMetadataResult SetUserResult = PubnubClient->SetUserMetadata(UserID, NewUserData);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetUserResult.Result, "SetUserMetadata");
-	
-	//Update User data on the repository
-	ObjectsRepository->UpdateUserData(UserID, FPubnubChatUserData::FromPubnubUserData(SetUserResult.UserData));
-	
 	return FinalResult;
 }
 
-void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft)
+void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponse OnOperationResponse)
 {
 	FOnPubnubChatOperationResponseNative NativeCallback;
 	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
@@ -310,21 +287,21 @@ void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationRe
 		OnOperationResponse.ExecuteIfBound(OperationResult);
 	});
 
-	DeleteUserAsync(UserID, NativeCallback, Soft);
+	DeleteUserAsync(UserID, NativeCallback);
 }
 
-void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponseNative OnOperationResponseNative, bool Soft)
+void UPubnubChat::DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
 {
 	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
-	
+
 	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
 
-	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, Soft, OnOperationResponseNative]
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, UserID, OnOperationResponseNative]
 	{
 		if(!WeakThis.IsValid())
 		{return;}
-		
-		FPubnubChatOperationResult DeleteUserResult = WeakThis.Get()->DeleteUser(UserID, Soft);
+
+		FPubnubChatOperationResult DeleteUserResult = WeakThis.Get()->DeleteUser(UserID);
 
 		//Execute provided delegate with results
 		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DeleteUserResult);
@@ -694,47 +671,24 @@ void UPubnubChat::UpdateChannelAsync(const FString ChannelID, FPubnubChatUpdateC
 	});
 }
 
-FPubnubChatOperationResult UPubnubChat::DeleteChannel(const FString ChannelID, bool Soft)
+FPubnubChatOperationResult UPubnubChat::DeleteChannel(const FString ChannelID)
 {
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
 
 	FPubnubChatOperationResult FinalResult;
-	
-	//If it's not soft, remove channel metadata from the server
-	if(!Soft)
-	{
-		//RemoveChannelMetadata by PubnubClient
-		FPubnubOperationResult RemoveChannelResult = PubnubClient->RemoveChannelMetadata(ChannelID);
-		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveChannelResult, "RemoveChannelMetadata");
-		
-		//Remove channel from repository
-		ObjectsRepository->RemoveChannelData(ChannelID);
-		
-		return FinalResult;
-	}
 
-	//Soft Delete - just update Channel Metadata
+	//RemoveChannelMetadata by PubnubClient
+	FPubnubOperationResult RemoveChannelResult = PubnubClient->RemoveChannelMetadata(ChannelID);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveChannelResult, "RemoveChannelMetadata");
 
-	//GetChannelMetadata from PubnubClient to have up to date data
-	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ChannelID, FPubnubGetMetadataInclude::FromValue(true));
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
+	//Remove channel from repository
+	ObjectsRepository->RemoveChannelData(ChannelID);
 
-	//Add Deleted property to Custom field
-	FPubnubChannelInputData NewChannelData = FPubnubChannelInputData::FromPubnubChannelData(GetChannelResult.ChannelData);
-	NewChannelData.Custom = UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(NewChannelData.Custom);
-
-	//SetChannelMetadata updated metadata
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, NewChannelData);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
-	
-	//Update ObjectsRepository with updated channel data
-	ObjectsRepository->UpdateChannelData(ChannelID, FPubnubChatChannelData::FromPubnubChannelData(GetChannelResult.ChannelData));
-	
 	return FinalResult;
 }
 
-void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft)
+void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponse OnOperationResponse)
 {
 	FOnPubnubChatOperationResponseNative NativeCallback;
 	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
@@ -742,21 +696,21 @@ void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOpera
 		OnOperationResponse.ExecuteIfBound(OperationResult);
 	});
 
-	DeleteChannelAsync(ChannelID, NativeCallback, Soft);
+	DeleteChannelAsync(ChannelID, NativeCallback);
 }
 
-void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponseNative OnOperationResponseNative, bool Soft)
+void UPubnubChat::DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponseNative OnOperationResponseNative)
 {
 	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
-	
+
 	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
 
-	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, Soft, OnOperationResponseNative]
+	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, ChannelID, OnOperationResponseNative]
 	{
 		if(!WeakThis.IsValid())
 		{return;}
-		
-		FPubnubChatOperationResult DeleteChannelResult = WeakThis.Get()->DeleteChannel(ChannelID, Soft);
+
+		FPubnubChatOperationResult DeleteChannelResult = WeakThis.Get()->DeleteChannel(ChannelID);
 
 		//Execute provided delegate with results
 		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DeleteChannelResult);
@@ -1626,7 +1580,7 @@ FPubnubChatOperationResult UPubnubChat::RemoveThreadChannel(UPubnubChatMessage* 
 	
 	//Delete ThreadChannel
 	FString ThreadChannelID = UPubnubChatInternalUtilities::GetThreadID(MessageData.ChannelID, Message->GetMessageTimetoken());
-	FPubnubChatOperationResult DeleteChannelResult = DeleteChannel(ThreadChannelID, false);
+	FPubnubChatOperationResult DeleteChannelResult = DeleteChannel(ThreadChannelID);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteChannelResult);
 	
 	return FinalResult;

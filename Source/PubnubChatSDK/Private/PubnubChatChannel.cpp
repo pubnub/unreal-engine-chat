@@ -731,15 +731,15 @@ void UPubnubChatChannel::IsPresentAsync(const FString UserID, FOnPubnubChatIsPre
 	});
 }
 
-FPubnubChatOperationResult UPubnubChatChannel::Delete(bool Soft)
+FPubnubChatOperationResult UPubnubChatChannel::Delete()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 
-	FPubnubChatOperationResult DeleteChannelResult = Chat->DeleteChannel(ChannelID, Soft);
+	FPubnubChatOperationResult DeleteChannelResult = Chat->DeleteChannel(ChannelID);
 	return DeleteChannelResult;
 }
 
-void UPubnubChatChannel::DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse, bool Soft)
+void UPubnubChatChannel::DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse)
 {
 	FOnPubnubChatOperationResponseNative NativeCallback;
 	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
@@ -747,111 +747,22 @@ void UPubnubChatChannel::DeleteAsync(FOnPubnubChatOperationResponse OnOperationR
 		OnOperationResponse.ExecuteIfBound(OperationResult);
 	});
 
-	DeleteAsync(NativeCallback, Soft);
+	DeleteAsync(NativeCallback);
 }
 
-void UPubnubChatChannel::DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative, bool Soft)
+void UPubnubChatChannel::DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
 {
 	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
-	
-	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
 
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, Soft, OnOperationResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		FPubnubChatOperationResult DeleteResult = WeakThis.Get()->Delete(Soft);
-		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DeleteResult);
-	});
-}
-
-FPubnubChatOperationResult UPubnubChatChannel::Restore()
-{
-	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
-	
-	FPubnubChatOperationResult FinalResult;
-	
-	//GetChannelMetadata from PubnubClient to have up to date data
-	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ChannelID, FPubnubGetMetadataInclude::FromValue(true));
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
-
-	//Remove Deleted property from Custom field
-	FPubnubChannelInputData NewChannelData = FPubnubChannelInputData::FromPubnubChannelData(GetChannelResult.ChannelData);
-	NewChannelData.Custom = UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(NewChannelData.Custom);
-
-	//SetChannelMetadata with updated metadata
-	FPubnubChannelMetadataResult SetChannelResult = PubnubClient->SetChannelMetadata(ChannelID, NewChannelData);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SetChannelResult.Result, "SetChannelMetadata");
-	
-	return FinalResult;
-}
-
-void UPubnubChatChannel::RestoreAsync(FOnPubnubChatOperationResponse OnOperationResponse)
-{
-	FOnPubnubChatOperationResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
-	{
-		OnOperationResponse.ExecuteIfBound(OperationResult);
-	});
-
-	RestoreAsync(NativeCallback);
-}
-
-void UPubnubChatChannel::RestoreAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
-{
-	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
-	
 	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
 
 	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
 	{
 		if (!WeakThis.IsValid())
 		{ return; }
-		
-		FPubnubChatOperationResult RestoreResult = WeakThis.Get()->Restore();
-		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, RestoreResult);
-	});
-}
 
-FPubnubChatIsDeletedResult UPubnubChatChannel::IsDeleted()
-{
-	FPubnubChatIsDeletedResult FinalResult;
-	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
-	
-	//GetChannelMetadata from PubnubClient to have up to date data
-	FPubnubChannelMetadataResult GetChannelResult = PubnubClient->GetChannelMetadata(ChannelID, FPubnubGetMetadataInclude::FromValue(true));
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelResult.Result, "GetChannelMetadata");
-	
-	FinalResult.IsDeleted = UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(GetChannelResult.ChannelData.Custom);
-	
-	return FinalResult;
-}
-
-void UPubnubChatChannel::IsDeletedAsync(FOnPubnubChatIsDeletedResponse OnIsDeletedResponse)
-{
-	FOnPubnubChatIsDeletedResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnIsDeletedResponse](const FPubnubChatIsDeletedResult& IsDeletedResult)
-	{
-		OnIsDeletedResponse.ExecuteIfBound(IsDeletedResult);
-	});
-
-	IsDeletedAsync(NativeCallback);
-}
-
-void UPubnubChatChannel::IsDeletedAsync(FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponseNative)
-{
-	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnIsDeletedResponseNative, FPubnubChatIsDeletedResult());
-	
-	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
-
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnIsDeletedResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		FPubnubChatIsDeletedResult IsDeletedResult = WeakThis.Get()->IsDeleted();
-		UPubnubUtilities::CallPubnubDelegate(OnIsDeletedResponseNative, IsDeletedResult);
+		FPubnubChatOperationResult DeleteResult = WeakThis.Get()->Delete();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, DeleteResult);
 	});
 }
 

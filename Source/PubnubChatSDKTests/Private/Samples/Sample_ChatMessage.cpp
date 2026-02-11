@@ -93,7 +93,7 @@ void ASample_ChatMessage::DeleteMessageSample()
 	// Assumes Message is a valid UPubnubChatMessage
 
 	// Delete the message (use Soft = true to soft-delete)
-	Message->DeleteAsync(nullptr, false);
+	Message->DeleteAsync(nullptr);
 }
 
 // snippet.restore_message

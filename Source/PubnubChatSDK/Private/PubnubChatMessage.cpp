@@ -149,6 +149,13 @@ FPubnubChatOperationResult UPubnubChatMessage::Delete(bool Soft)
 		
 		//Remove Message data from the repository
 		Chat->ObjectsRepository->RemoveMessageData(GetInternalMessageID());
+		
+		//Now we can Delete thread if it exists
+		if (GetThreadResult.ThreadChannel)
+		{
+			FPubnubChatOperationResult DeleteThreadResult = GetThreadResult.ThreadChannel->Delete();
+			PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteThreadResult);
+		}
 	}
 	else
 	{
@@ -165,13 +172,6 @@ FPubnubChatOperationResult UPubnubChatMessage::Delete(bool Soft)
 		//Add this new message action to MessageData and update ObjectsRepository
 		CurrentMessageData.MessageActions.Add(FPubnubChatMessageAction::FromPubnubMessageActionData(AddActionResult.MessageActionData));
 		Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
-	}
-	
-	//Now we can Delete thread if it exists
-	if (GetThreadResult.ThreadChannel)
-	{
-		FPubnubChatOperationResult DeleteThreadResult = GetThreadResult.ThreadChannel->Delete(Soft);
-		PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, DeleteThreadResult);
 	}
 	
 	return FinalResult;
@@ -223,13 +223,6 @@ FPubnubChatOperationResult UPubnubChatMessage::Restore()
 	
 	//Update repository with new data
 	Chat->ObjectsRepository->UpdateMessageData(GetInternalMessageID(), CurrentMessageData);
-	
-	//If Message has thread, also restore it
-	FPubnubChatThreadChannelResult GetThreadResult = GetThread();
-	if (GetThreadResult.ThreadChannel)
-	{
-		GetThreadResult.ThreadChannel->Restore();
-	}
 	
 	return FinalResult;
 }

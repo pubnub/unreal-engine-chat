@@ -83,10 +83,10 @@ bool FPubnubChatChannelInviteNotInitializedTest::RunTest(const FString& Paramete
 			// Cleanup
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 				if(CreateUserResult.User)
 				{
-					Chat->DeleteUser(TargetUserID, false);
+					Chat->DeleteUser(TargetUserID);
 				}
 			}
 		}
@@ -173,7 +173,7 @@ bool FPubnubChatChannelConnectAsyncFullParametersTest::RunTest(const FString& Pa
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -241,7 +241,7 @@ bool FPubnubChatChannelDisconnectAsyncFullParametersTest::RunTest(const FString&
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -323,8 +323,8 @@ bool FPubnubChatChannelLeaveAsyncFullParametersTest::RunTest(const FString& Para
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -424,7 +424,7 @@ bool FPubnubChatChannelPinMessageAsyncFullParametersTest::RunTest(const FString&
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -528,7 +528,7 @@ bool FPubnubChatChannelUnpinMessageAsyncFullParametersTest::RunTest(const FStrin
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -634,7 +634,7 @@ bool FPubnubChatChannelGetPinnedMessageAsyncFullParametersTest::RunTest(const FS
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -687,7 +687,7 @@ bool FPubnubChatChannelInviteNullUserTest::RunTest(const FString& Parameters)
 			}
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 			}
 		}
 	}
@@ -761,7 +761,7 @@ bool FPubnubChatChannelWhoIsPresentAsyncFullParametersTest::RunTest(const FStrin
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -833,7 +833,7 @@ bool FPubnubChatChannelIsPresentAsyncFullParametersTest::RunTest(const FString& 
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -887,102 +887,21 @@ bool FPubnubChatChannelDeleteAsyncFullParametersTest::RunTest(const FString& Par
 		*bCallbackReceived = true;
 	});
 	
-	CreateResult.Channel->DeleteAsync(OnOperationResponse, true);
-	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([CreateResult, OnOperationResponse]()
+	{
+		CreateResult.Channel->DeleteAsync(OnOperationResponse);
+	}, 2.0f));
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, CallbackResult]()
 	{
 		TestFalse("DeleteAsync should succeed", CallbackResult->Error);
-	}, 0.1f));
-	
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelRestoreIsDeletedAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.RestoreIsDeletedAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatChannelRestoreIsDeletedAsyncFullParametersTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError("TestInitialization failed");
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_channel_restore_isdeleted_async_full_init";
-	const FString TestChannelID = SDK_PREFIX + "test_channel_restore_isdeleted_async_full";
-	
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-	TestFalse("InitChat should succeed", InitResult.Result.Error);
-	
-	UPubnubChat* Chat = InitResult.Chat;
-	if(!Chat)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
-	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
-	if(!CreateResult.Channel)
-	{
-		CleanUpCurrentChatUser(Chat);
-		CleanUp();
-		return false;
-	}
-	
-	CreateResult.Channel->Delete(true);
-	
-	TSharedPtr<bool> bIsDeletedReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatIsDeletedResult> IsDeletedResult = MakeShared<FPubnubChatIsDeletedResult>();
-	FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponse;
-	OnIsDeletedResponse.BindLambda([bIsDeletedReceived, IsDeletedResult](const FPubnubChatIsDeletedResult& Result)
-	{
-		*IsDeletedResult = Result;
-		*bIsDeletedReceived = true;
-	});
-	
-	CreateResult.Channel->IsDeletedAsync(OnIsDeletedResponse);
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bIsDeletedReceived]() { return *bIsDeletedReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, IsDeletedResult]()
-	{
-		TestFalse("IsDeletedAsync should succeed", IsDeletedResult->Result.Error);
-		TestTrue("Channel should be deleted", IsDeletedResult->IsDeleted);
-	}, 0.1f));
-	
-	TSharedPtr<bool> bRestoreReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatOperationResult> RestoreResult = MakeShared<FPubnubChatOperationResult>();
-	FOnPubnubChatOperationResponseNative OnRestoreResponse;
-	OnRestoreResponse.BindLambda([bRestoreReceived, RestoreResult](const FPubnubChatOperationResult& Result)
-	{
-		*RestoreResult = Result;
-		*bRestoreReceived = true;
-	});
-	
-	CreateResult.Channel->RestoreAsync(OnRestoreResponse);
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bRestoreReceived]() { return *bRestoreReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, RestoreResult]()
-	{
-		TestFalse("RestoreAsync should succeed", RestoreResult->Error);
-	}, 0.1f));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
-	{
-		if(Chat)
-		{
-			Chat->DeleteChannel(TestChannelID, false);
-		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));
 	
 	return true;
 }
+
 // ============================================================================
 // HAPPY PATH TESTS (Required Parameters Only)
 // ============================================================================
@@ -1081,8 +1000,8 @@ bool FPubnubChatChannelInviteHappyPathTest::RunTest(const FString& Parameters)
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1199,8 +1118,8 @@ bool FPubnubChatChannelRestrictionsAsyncFullParametersTest::RunTest(const FStrin
 				FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
 				PubnubClient->RemoveChannelMembers(ModerationChannelID, {TargetUserID}, FPubnubMemberInclude::FromValue(false), 1);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1271,8 +1190,8 @@ bool FPubnubChatChannelGetInviteesAsyncFullParametersTest::RunTest(const FString
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1432,8 +1351,8 @@ bool FPubnubChatChannelMessageOpsAsyncFullParametersTest::RunTest(const FString&
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteChannel(DestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteChannel(DestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1550,8 +1469,8 @@ bool FPubnubChatChannelTypingAsyncFullParametersTest::RunTest(const FString& Par
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(OtherUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(OtherUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1644,7 +1563,7 @@ bool FPubnubChatChannelMessageReportsAsyncFullParametersTest::RunTest(const FStr
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1756,8 +1675,8 @@ bool FPubnubChatChannelInviteFullParametersTest::RunTest(const FString& Paramete
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1882,8 +1801,8 @@ bool FPubnubChatChannelInviteAlreadyMemberTest::RunTest(const FString& Parameter
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2041,10 +1960,10 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 				}
 			}
 			
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(InitUserID, false);
-			Chat->DeleteUser(TargetUserID, false);
-			Chat->DeleteUser(SecondUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(InitUserID);
+			Chat->DeleteUser(TargetUserID);
+			Chat->DeleteUser(SecondUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2202,8 +2121,8 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2272,10 +2191,10 @@ bool FPubnubChatChannelInviteMultipleNotInitializedTest::RunTest(const FString& 
 			// Cleanup
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 				if(CreateUserResult.User)
 				{
-					Chat->DeleteUser(TargetUserID, false);
+					Chat->DeleteUser(TargetUserID);
 				}
 			}
 		}
@@ -2332,7 +2251,7 @@ bool FPubnubChatChannelInviteMultipleEmptyArrayTest::RunTest(const FString& Para
 			}
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 			}
 		}
 	}
@@ -2388,7 +2307,7 @@ bool FPubnubChatChannelInviteMultipleAllInvalidUsersTest::RunTest(const FString&
 			}
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 			}
 		}
 	}
@@ -2508,9 +2427,9 @@ bool FPubnubChatChannelInviteMultipleHappyPathTest::RunTest(const FString& Param
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
-		Chat->DeleteUser(TargetUserID2, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2643,10 +2562,10 @@ bool FPubnubChatChannelInviteMultipleFullParametersTest::RunTest(const FString& 
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
-		Chat->DeleteUser(TargetUserID2, false);
-		Chat->DeleteUser(TargetUserID3, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
+		Chat->DeleteUser(TargetUserID3);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2770,9 +2689,9 @@ bool FPubnubChatChannelInviteMultiplePartialInvalidUsersTest::RunTest(const FStr
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
-		Chat->DeleteUser(TargetUserID2, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2945,10 +2864,10 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 				}
 			}
 			
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(InitUserID, false);
-			Chat->DeleteUser(TargetUserID1, false);
-			Chat->DeleteUser(TargetUserID2, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(InitUserID);
+			Chat->DeleteUser(TargetUserID1);
+			Chat->DeleteUser(TargetUserID2);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -3130,9 +3049,9 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID1, false);
-			Chat->DeleteUser(TargetUserID2, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID1);
+			Chat->DeleteUser(TargetUserID2);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -3328,8 +3247,8 @@ bool FPubnubChatCreateDirectConversationHappyPathTest::RunTest(const FString& Pa
 			}
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -3453,8 +3372,8 @@ bool FPubnubChatCreateDirectConversationFullParametersTest::RunTest(const FStrin
 			}
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -3558,7 +3477,7 @@ bool FPubnubChatCreateDirectConversationAutoGeneratedChannelIDTest::RunTest(cons
 						}
 					}
 				}
-				Chat->DeleteChannel(GeneratedChannelID2, false);
+				Chat->DeleteChannel(GeneratedChannelID2);
 			}
 		}
 		
@@ -3589,8 +3508,8 @@ bool FPubnubChatCreateDirectConversationAutoGeneratedChannelIDTest::RunTest(cons
 				}
 			}
 			
-			Chat->DeleteChannel(GeneratedChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(GeneratedChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 	}
 
@@ -3836,8 +3755,8 @@ bool FPubnubChatCreateGroupConversationHappyPathTest::RunTest(const FString& Par
 			}
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -3988,9 +3907,9 @@ bool FPubnubChatCreateGroupConversationFullParametersTest::RunTest(const FString
 			}
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
-		Chat->DeleteUser(TargetUserID2, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -4091,8 +4010,8 @@ bool FPubnubChatCreateGroupConversationAutoGeneratedChannelIDTest::RunTest(const
 				}
 			}
 			
-			Chat->DeleteChannel(GeneratedChannelID, false);
-			Chat->DeleteUser(TargetUserID1, false);
+			Chat->DeleteChannel(GeneratedChannelID);
+			Chat->DeleteUser(TargetUserID1);
 		}
 	}
 
@@ -4209,9 +4128,9 @@ bool FPubnubChatCreateGroupConversationMixedValidInvalidUsersTest::RunTest(const
 			}
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
-		Chat->DeleteUser(TargetUserID2, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -4339,7 +4258,7 @@ bool FPubnubChatGetChannelSuggestionsHappyPathTest::RunTest(const FString& Param
 		// Cleanup: Delete created channel
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4410,7 +4329,7 @@ bool FPubnubChatGetChannelSuggestionsFullParametersTest::RunTest(const FString& 
 		// Cleanup: Delete created channels
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4477,7 +4396,7 @@ bool FPubnubChatGetChannelSuggestionsWithLimitTest::RunTest(const FString& Param
 		// Cleanup: Delete created channels
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4559,7 +4478,7 @@ bool FPubnubChatGetChannelSuggestionsMultipleMatchesTest::RunTest(const FString&
 		// Cleanup: Delete created channels
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4645,7 +4564,7 @@ bool FPubnubChatGetChannelSuggestionsPartialMatchTest::RunTest(const FString& Pa
 		// Cleanup: Delete created channels
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4700,7 +4619,7 @@ bool FPubnubChatGetChannelSuggestionsNoMatchesTest::RunTest(const FString& Param
 		// Cleanup: Delete created channel
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4765,7 +4684,7 @@ bool FPubnubChatGetChannelSuggestionsCaseSensitivityTest::RunTest(const FString&
 		// Cleanup: Delete created channel
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4836,7 +4755,7 @@ bool FPubnubChatGetChannelSuggestionsLimitEnforcementTest::RunTest(const FString
 		// Cleanup: Delete created channels
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -4899,7 +4818,7 @@ bool FPubnubChatGetChannelSuggestionsConsistencyTest::RunTest(const FString& Par
 		// Cleanup: Delete created channel
 		for(const FString& ChannelID : CreatedChannelIDs)
 		{
-			Chat->DeleteChannel(ChannelID, false);
+			Chat->DeleteChannel(ChannelID);
 		}
 	}
 
@@ -5031,9 +4950,9 @@ bool FPubnubChatCreateDirectConversationAsyncFullParametersTest::RunTest(const F
 					}
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5183,10 +5102,10 @@ bool FPubnubChatCreateGroupConversationAsyncFullParametersTest::RunTest(const FS
 					}
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID1, false);
-			Chat->DeleteUser(TargetUserID2, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID1);
+			Chat->DeleteUser(TargetUserID2);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5265,9 +5184,9 @@ bool FPubnubChatGetChannelSuggestionsAsyncFullParametersTest::RunTest(const FStr
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID1, false);
-			Chat->DeleteChannel(TestChannelID2, false);
-			Chat->DeleteUser(InitUserID, false);
+			Chat->DeleteChannel(TestChannelID1);
+			Chat->DeleteChannel(TestChannelID2);
+			Chat->DeleteUser(InitUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5326,7 +5245,7 @@ bool FPubnubChatChannelUpdateNotInitializedTest::RunTest(const FString& Paramete
 		// Cleanup
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 	}
 
@@ -5393,7 +5312,7 @@ bool FPubnubChatChannelUpdateHappyPathTest::RunTest(const FString& Parameters)
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -5475,7 +5394,7 @@ bool FPubnubChatChannelUpdateFullParametersTest::RunTest(const FString& Paramete
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -5565,7 +5484,7 @@ bool FPubnubChatChannelUpdateMultipleTimesTest::RunTest(const FString& Parameter
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -5670,7 +5589,7 @@ bool FPubnubChatChannelPinMessageNotInitializedTest::RunTest(const FString& Para
 				}
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteChannel(TestChannelID);
 				}
 				CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -5729,7 +5648,7 @@ bool FPubnubChatChannelPinMessageNullMessageTest::RunTest(const FString& Paramet
 			// Cleanup
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 			}
 		}
 	}
@@ -5832,8 +5751,8 @@ bool FPubnubChatChannelPinMessageDifferentChannelTest::RunTest(const FString& Pa
 				}
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID1, false);
-					Chat->DeleteChannel(TestChannelID2, false);
+					Chat->DeleteChannel(TestChannelID1);
+					Chat->DeleteChannel(TestChannelID2);
 				}
 				CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -5959,7 +5878,7 @@ bool FPubnubChatChannelPinMessageHappyPathTest::RunTest(const FString& Parameter
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -6099,7 +6018,7 @@ bool FPubnubChatChannelPinMessageTwiceTest::RunTest(const FString& Parameters)
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -6157,7 +6076,7 @@ bool FPubnubChatChannelUnpinMessageNotInitializedTest::RunTest(const FString& Pa
 			// Cleanup
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 			}
 		}
 	}
@@ -6281,7 +6200,7 @@ bool FPubnubChatChannelUnpinMessageHappyPathTest::RunTest(const FString& Paramet
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -6348,7 +6267,7 @@ bool FPubnubChatChannelUnpinMessageNoPinnedMessageTest::RunTest(const FString& P
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -6406,7 +6325,7 @@ bool FPubnubChatChannelGetPinnedMessageNotInitializedTest::RunTest(const FString
 		
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 	}
 
@@ -6455,7 +6374,7 @@ bool FPubnubChatChannelGetPinnedMessageHappyPathTest::RunTest(const FString& Par
 	
 	if(!CreateResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -6546,7 +6465,7 @@ bool FPubnubChatChannelGetPinnedMessageHappyPathTest::RunTest(const FString& Par
 			FPubnubChatOperationResult UnpinResult = CreateResult.Channel->UnpinMessage();
 			TestFalse("UnpinMessage should succeed", UnpinResult.Error);
 			
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -6605,7 +6524,7 @@ bool FPubnubChatChannelGetPinnedMessageNoPinnedMessageTest::RunTest(const FStrin
 	
 	if(!CreateResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -6619,7 +6538,7 @@ bool FPubnubChatChannelGetPinnedMessageNoPinnedMessageTest::RunTest(const FStrin
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -6667,7 +6586,7 @@ bool FPubnubChatChannelGetPinnedMessageThreadMessageTest::RunTest(const FString&
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -6863,7 +6782,7 @@ bool FPubnubChatChannelGetPinnedMessageThreadMessageTest::RunTest(const FString&
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -6950,7 +6869,7 @@ bool FPubnubChatPinMessageToChannelNullMessageTest::RunTest(const FString& Param
 			// Cleanup
 			if(Chat)
 			{
-				Chat->DeleteChannel(TestChannelID, false);
+				Chat->DeleteChannel(TestChannelID);
 			}
 		}
 	}
@@ -7045,7 +6964,7 @@ bool FPubnubChatPinMessageToChannelNullChannelTest::RunTest(const FString& Param
 				}
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteChannel(TestChannelID);
 				}
 				CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -7171,7 +7090,7 @@ bool FPubnubChatPinMessageToChannelHappyPathTest::RunTest(const FString& Paramet
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 	CleanUp();
@@ -7364,7 +7283,7 @@ bool FPubnubChatUnpinMessageFromChannelHappyPathTest::RunTest(const FString& Par
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -7490,7 +7409,7 @@ bool FPubnubChatPinMessageToChannelAsyncFullParametersTest::RunTest(const FStrin
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -7617,7 +7536,7 @@ bool FPubnubChatUnpinMessageFromChannelAsyncFullParametersTest::RunTest(const FS
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -7702,7 +7621,7 @@ bool FPubnubChatChannelUpdateAsyncFullParametersTest::RunTest(const FString& Par
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -7778,7 +7697,7 @@ bool FPubnubChatChannelJoinAsyncFullParametersTest::RunTest(const FString& Param
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -7855,7 +7774,7 @@ bool FPubnubChatChannelSendTextAsyncFullParametersTest::RunTest(const FString& P
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -7925,8 +7844,8 @@ bool FPubnubChatChannelInviteAsyncFullParametersTest::RunTest(const FString& Par
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -8000,9 +7919,9 @@ bool FPubnubChatChannelInviteMultipleAsyncFullParametersTest::RunTest(const FStr
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID1, false);
-			Chat->DeleteUser(TargetUserID2, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID1);
+			Chat->DeleteUser(TargetUserID2);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -8084,7 +8003,7 @@ bool FPubnubChatChannelGetMembersAsyncFullParametersTest::RunTest(const FString&
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -8191,7 +8110,7 @@ bool FPubnubChatChannelGetHistoryAsyncFullParametersTest::RunTest(const FString&
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -8261,7 +8180,7 @@ bool FPubnubChatChannelStreamUpdatesAsyncFullParametersTest::RunTest(const FStri
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -8329,7 +8248,7 @@ bool FPubnubChatChannelStopStreamingUpdatesAsyncFullParametersTest::RunTest(cons
 	{
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

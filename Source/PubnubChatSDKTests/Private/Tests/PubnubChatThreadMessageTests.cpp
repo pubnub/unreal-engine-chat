@@ -110,7 +110,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelHappyPathTest::RunTest(con
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -275,7 +275,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelHappyPathTest::RunTest(con
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -327,7 +327,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelParentChannelNotFoundTest:
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -439,7 +439,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelParentChannelNotFoundTest:
 		}
 		
 		// Delete parent channel
-		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID, false);
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(TestChannelID);
 		TestFalse("DeleteChannel should succeed", DeleteResult.Error);
 		
 		// Wait a bit for deletion to propagate
@@ -517,7 +517,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelPinTwiceTest::RunTest(cons
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -710,7 +710,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelPinTwiceTest::RunTest(cons
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -802,7 +802,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelHappyPathTest::RunTest
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -977,7 +977,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelHappyPathTest::RunTest
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1029,7 +1029,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelNotPinnedTest::RunTest
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1180,7 +1180,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelNotPinnedTest::RunTest
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1228,7 +1228,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelDifferentMessagePinned
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1439,7 +1439,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelDifferentMessagePinned
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1587,7 +1587,7 @@ bool FPubnubChatThreadMessagePinMessageToParentChannelAsyncFullParametersTest::R
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1733,7 +1733,7 @@ bool FPubnubChatThreadMessageUnpinMessageFromParentChannelAsyncFullParametersTes
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

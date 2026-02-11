@@ -318,36 +318,30 @@ public:
 	void UpdateUserAsync(const FString UserID, FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatUserResponseNative OnUserResponseNative = nullptr);
 
 	/**
-	 * Deletes a user or soft-deletes it by marking metadata in custom fields.
+	 * Deletes a user on the server.
 	 * Blocking: performs network requests on the calling thread.
 	 * 
 	 * @param UserID Unique identifier of the user to delete.
-	 * @param Soft When true, updates the user's custom metadata with a deleted flag
-	 *             instead of removing the user object from the server.
 	 * @return Operation result.
 	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
-	FPubnubChatOperationResult DeleteUser(const FString UserID, bool Soft = false);
+	FPubnubChatOperationResult DeleteUser(const FString UserID);
 
 	/**
-	 * Deletes a user asynchronously or soft-deletes it by marking metadata in custom fields.
+	 * Deletes a user asynchronously on the server.
 	 * 
 	 * @param UserID Unique identifier of the user to delete.
 	 * @param OnOperationResponse Callback executed when the operation completes.
-	 * @param Soft When true, updates the user's custom metadata with a deleted flag
-	 *             instead of removing the user object from the server.
 	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
+	void DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Deletes a user asynchronously or soft-deletes it by marking metadata in custom fields.
+	 * Deletes a user asynchronously on the server.
 	 * 
 	 * @param UserID Unique identifier of the user to delete.
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 * @param Soft When true, updates the user's custom metadata with a deleted flag
-	 *             instead of removing the user object from the server.
 	 */
-	void DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
+	void DeleteUserAsync(const FString UserID, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
 	/**
 	 * Returns users whose name starts with the provided text.
@@ -586,36 +580,30 @@ public:
 	void UpdateChannelAsync(const FString ChannelID, FPubnubChatUpdateChannelInputData UpdateChannelData, FOnPubnubChatChannelResponseNative OnChannelResponseNative);
 
 	/**
-	 * Deletes a channel or soft-deletes it by marking metadata in custom fields.
+	 * Deletes a channel on the server.
 	 * Blocking: performs network requests on the calling thread.
 	 *
 	 * @param ChannelID Unique identifier of the channel to delete.
-	 * @param Soft When true, updates the channel's custom metadata with a deleted flag
-	 *             instead of removing the channel object from the server.
 	 * @return Operation result.
 	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
-	FPubnubChatOperationResult DeleteChannel(const FString ChannelID, bool Soft = false);
+	FPubnubChatOperationResult DeleteChannel(const FString ChannelID);
 
 	/**
-	 * Deletes a channel asynchronously or soft-deletes it by marking metadata in custom fields.
+	 * Deletes a channel asynchronously on the server.
 	 *
 	 * @param ChannelID Unique identifier of the channel to delete.
 	 * @param OnOperationResponse Callback executed when the operation completes.
-	 * @param Soft When true, updates the channel's custom metadata with a deleted flag
-	 *             instead of removing the channel object from the server.
 	 */
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
+	void DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Deletes a channel asynchronously or soft-deletes it by marking metadata in custom fields.
+	 * Deletes a channel asynchronously on the server.
 	 *
 	 * @param ChannelID Unique identifier of the channel to delete.
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 * @param Soft When true, updates the channel's custom metadata with a deleted flag
-	 *             instead of removing the channel object from the server.
 	 */
-	void DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
+	void DeleteChannelAsync(const FString ChannelID, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
 	 * Pins a message to a channel.

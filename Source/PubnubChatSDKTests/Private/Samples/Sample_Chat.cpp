@@ -384,7 +384,7 @@ void ASample_Chat::DeleteChannelSample()
 	FOnPubnubChatOperationResponseNative Callback;
 	// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 	Callback.BindUObject(this, &ASample_Chat::OnDeleteChannelResponse);
-	Chat->DeleteChannelAsync(TEXT("Lobby_001"), Callback, false);
+	Chat->DeleteChannelAsync(TEXT("Lobby_001"), Callback);
 }
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class

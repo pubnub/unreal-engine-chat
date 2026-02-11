@@ -141,7 +141,7 @@ bool FPubnubChatCreateThreadChannelDeletedMessageTest::RunTest(const FString& Pa
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -220,7 +220,7 @@ bool FPubnubChatCreateThreadChannelDeletedMessageTest::RunTest(const FString& Pa
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -265,7 +265,7 @@ bool FPubnubChatCreateThreadChannelMessageInThreadTest::RunTest(const FString& P
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -407,7 +407,7 @@ bool FPubnubChatCreateThreadChannelMessageInThreadTest::RunTest(const FString& P
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -452,7 +452,7 @@ bool FPubnubChatCreateThreadChannelThreadAlreadyExistsTest::RunTest(const FStrin
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -572,7 +572,7 @@ bool FPubnubChatCreateThreadChannelThreadAlreadyExistsTest::RunTest(const FStrin
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -621,7 +621,7 @@ bool FPubnubChatCreateThreadChannelHappyPathTest::RunTest(const FString& Paramet
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -699,7 +699,7 @@ bool FPubnubChatCreateThreadChannelHappyPathTest::RunTest(const FString& Paramet
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -759,7 +759,7 @@ bool FPubnubChatCreateThreadChannelLocalOnlyTest::RunTest(const FString& Paramet
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -831,7 +831,7 @@ bool FPubnubChatCreateThreadChannelLocalOnlyTest::RunTest(const FString& Paramet
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -880,7 +880,7 @@ bool FPubnubChatCreateThreadChannelAfterSendTextTest::RunTest(const FString& Par
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -998,7 +998,7 @@ bool FPubnubChatCreateThreadChannelAfterSendTextTest::RunTest(const FString& Par
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1120,7 +1120,7 @@ bool FPubnubChatGetThreadChannelThreadDoesNotExistTest::RunTest(const FString& P
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1181,7 +1181,7 @@ bool FPubnubChatGetThreadChannelThreadDoesNotExistTest::RunTest(const FString& P
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1230,7 +1230,7 @@ bool FPubnubChatGetThreadChannelHappyPathTest::RunTest(const FString& Parameters
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1337,7 +1337,7 @@ bool FPubnubChatGetThreadChannelHappyPathTest::RunTest(const FString& Parameters
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1459,7 +1459,7 @@ bool FPubnubChatRemoveThreadChannelNoThreadTest::RunTest(const FString& Paramete
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1520,7 +1520,7 @@ bool FPubnubChatRemoveThreadChannelNoThreadTest::RunTest(const FString& Paramete
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1569,7 +1569,7 @@ bool FPubnubChatRemoveThreadChannelHappyPathTest::RunTest(const FString& Paramet
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1704,7 +1704,7 @@ bool FPubnubChatRemoveThreadChannelHappyPathTest::RunTest(const FString& Paramet
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1786,7 +1786,7 @@ bool FPubnubChatMessageHasThreadHappyPathTest::RunTest(const FString& Parameters
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -1901,7 +1901,7 @@ bool FPubnubChatMessageHasThreadHappyPathTest::RunTest(const FString& Parameters
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1954,7 +1954,7 @@ bool FPubnubChatMessageHasThreadStateChangesTest::RunTest(const FString& Paramet
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -2092,7 +2092,7 @@ bool FPubnubChatMessageHasThreadStateChangesTest::RunTest(const FString& Paramet
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2107,7 +2107,7 @@ bool FPubnubChatMessageHasThreadStateChangesTest::RunTest(const FString& Paramet
 
 /**
  * Tests that when a message with thread is soft-deleted, the thread is also soft-deleted.
- * Verifies that HasThread still returns true (thread exists but deleted) and GetThread().ThreadChannel->IsDeleted() returns true.
+ * Verifies that HasThread still returns true (thread exists but deleted) and GetThreadChannel returns the thread.
  */
 IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageSoftDeleteWithThreadTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Threads.MessageDelete.4Advanced.SoftDeleteWithThread", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
@@ -2145,7 +2145,7 @@ bool FPubnubChatMessageSoftDeleteWithThreadTest::RunTest(const FString& Paramete
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -2228,14 +2228,6 @@ bool FPubnubChatMessageSoftDeleteWithThreadTest::RunTest(const FString& Paramete
 		FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
 		TestFalse("HasThread should succeed", HasThreadResult.Result.Error);
 		TestTrue("Message should have thread before deletion", HasThreadResult.HasThread);
-		
-		// Verify thread channel is not deleted
-		if(*ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult ThreadIsDeletedResult = (*ThreadChannel)->IsDeleted();
-			TestFalse("ThreadIsDeleted check should succeed", ThreadIsDeletedResult.Result.Error);
-			TestFalse("Thread channel should not be deleted before message deletion", ThreadIsDeletedResult.IsDeleted);
-		}
 	}, 1.0f));
 	
 	// Soft delete the message (should also soft delete the thread)
@@ -2270,25 +2262,9 @@ bool FPubnubChatMessageSoftDeleteWithThreadTest::RunTest(const FString& Paramete
 		FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
 		TestFalse("HasThread should succeed", HasThreadResult.Result.Error);
 		TestTrue("Message should still have thread after soft deletion (thread exists but deleted)", HasThreadResult.HasThread);
-		
-		// Verify thread channel is also soft-deleted
-		if(*ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult ThreadIsDeletedResult = (*ThreadChannel)->IsDeleted();
-			TestFalse("ThreadIsDeleted check should succeed", ThreadIsDeletedResult.Result.Error);
-			TestTrue("Thread channel should be soft-deleted", ThreadIsDeletedResult.IsDeleted);
-		}
-		
-		// Verify GetThread returns the thread and it's deleted
 		FPubnubChatThreadChannelResult GetThreadResult = Chat->GetThreadChannel(*ReceivedMessage);
 		TestFalse("GetThreadChannel should succeed", GetThreadResult.Result.Error);
 		TestNotNull("ThreadChannel should be returned", GetThreadResult.ThreadChannel);
-		if(GetThreadResult.ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult GetThreadIsDeletedResult = GetThreadResult.ThreadChannel->IsDeleted();
-			TestFalse("GetThreadIsDeleted check should succeed", GetThreadIsDeletedResult.Result.Error);
-			TestTrue("GetThread should return deleted thread channel", GetThreadIsDeletedResult.IsDeleted);
-		}
 	}, 1.0f));
 	
 	// Cleanup: Disconnect and delete channel
@@ -2302,7 +2278,7 @@ bool FPubnubChatMessageSoftDeleteWithThreadTest::RunTest(const FString& Paramete
 		{
 			// Hard delete the message and thread for cleanup
 			(*ReceivedMessage)->Delete(false);
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2351,7 +2327,7 @@ bool FPubnubChatMessageHardDeleteWithThreadTest::RunTest(const FString& Paramete
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -2478,7 +2454,7 @@ bool FPubnubChatMessageHardDeleteWithThreadTest::RunTest(const FString& Paramete
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2527,7 +2503,7 @@ bool FPubnubChatMessageRestoreWithThreadTest::RunTest(const FString& Parameters)
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -2634,25 +2610,9 @@ bool FPubnubChatMessageRestoreWithThreadTest::RunTest(const FString& Parameters)
 		FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
 		TestFalse("HasThread should succeed", HasThreadResult.Result.Error);
 		TestTrue("Message should still have thread after soft deletion (thread exists but deleted)", HasThreadResult.HasThread);
-		
-		// Verify thread channel is also soft-deleted
-		if(*ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult ThreadIsDeletedResult = (*ThreadChannel)->IsDeleted();
-			TestFalse("ThreadIsDeleted check should succeed", ThreadIsDeletedResult.Result.Error);
-			TestTrue("Thread channel should be soft-deleted", ThreadIsDeletedResult.IsDeleted);
-		}
-		
-		// Verify GetThread returns the thread and it's deleted
 		FPubnubChatThreadChannelResult GetThreadResult = Chat->GetThreadChannel(*ReceivedMessage);
 		TestFalse("GetThreadChannel should succeed", GetThreadResult.Result.Error);
 		TestNotNull("ThreadChannel should be returned", GetThreadResult.ThreadChannel);
-		if(GetThreadResult.ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult GetThreadIsDeletedResult = GetThreadResult.ThreadChannel->IsDeleted();
-			TestFalse("GetThreadIsDeleted check should succeed", GetThreadIsDeletedResult.Result.Error);
-			TestTrue("GetThread should return deleted thread channel", GetThreadIsDeletedResult.IsDeleted);
-		}
 	}, 1.0f));
 	
 	// Restore the message (should also restore the thread)
@@ -2687,25 +2647,9 @@ bool FPubnubChatMessageRestoreWithThreadTest::RunTest(const FString& Parameters)
 		FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
 		TestFalse("HasThread should succeed", HasThreadResult.Result.Error);
 		TestTrue("Message should have thread after restoration", HasThreadResult.HasThread);
-		
-		// Verify thread channel is also restored
-		if(*ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult ThreadIsDeletedResult = (*ThreadChannel)->IsDeleted();
-			TestFalse("ThreadIsDeleted check should succeed", ThreadIsDeletedResult.Result.Error);
-			TestFalse("Thread channel should not be deleted after restore", ThreadIsDeletedResult.IsDeleted);
-		}
-		
-		// Verify GetThread returns the thread and it's restored (not deleted)
 		FPubnubChatThreadChannelResult GetThreadResult = Chat->GetThreadChannel(*ReceivedMessage);
 		TestFalse("GetThreadChannel should succeed", GetThreadResult.Result.Error);
 		TestNotNull("ThreadChannel should be returned", GetThreadResult.ThreadChannel);
-		if(GetThreadResult.ThreadChannel)
-		{
-			FPubnubChatIsDeletedResult GetThreadIsDeletedResult = GetThreadResult.ThreadChannel->IsDeleted();
-			TestFalse("GetThreadIsDeleted check should succeed", GetThreadIsDeletedResult.Result.Error);
-			TestFalse("GetThread should return restored (not deleted) thread channel", GetThreadIsDeletedResult.IsDeleted);
-		}
 	}, 1.0f));
 	
 	// Cleanup: Disconnect and delete channel
@@ -2723,7 +2667,7 @@ bool FPubnubChatMessageRestoreWithThreadTest::RunTest(const FString& Parameters)
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2805,7 +2749,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryEmptyStartTimetokenTest::RunTest(co
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -2911,7 +2855,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryEmptyStartTimetokenTest::RunTest(co
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -2956,7 +2900,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryEmptyEndTimetokenTest::RunTest(cons
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -3062,7 +3006,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryEmptyEndTimetokenTest::RunTest(cons
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3111,7 +3055,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryHappyPathTest::RunTest(const FStrin
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -3255,7 +3199,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryHappyPathTest::RunTest(const FStrin
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3304,7 +3248,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryFullParametersTest::RunTest(const F
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -3453,7 +3397,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryFullParametersTest::RunTest(const F
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3506,7 +3450,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryEmptyThreadTest::RunTest(const FStr
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -3615,7 +3559,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryEmptyThreadTest::RunTest(const FStr
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3694,7 +3638,7 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelNullMessageTest::RunTest(c
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -3796,7 +3740,7 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelNullMessageTest::RunTest(c
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -3847,11 +3791,11 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelDifferentThreadTest::RunTe
 	{
 		if(CreateChannelResult1.Channel)
 		{
-			Chat->DeleteChannel(TestChannelID + TEXT("_1"), false);
+			Chat->DeleteChannel(TestChannelID + TEXT("_1"));
 		}
 		if(CreateChannelResult2.Channel)
 		{
-			Chat->DeleteChannel(TestChannelID + TEXT("_2"), false);
+			Chat->DeleteChannel(TestChannelID + TEXT("_2"));
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4030,8 +3974,8 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelDifferentThreadTest::RunTe
 					Chat->RemoveThreadChannel(*ReceivedMessage2);
 				}
 			}
-			Chat->DeleteChannel(TestChannelID + TEXT("_1"), false);
-			Chat->DeleteChannel(TestChannelID + TEXT("_2"), false);
+			Chat->DeleteChannel(TestChannelID + TEXT("_1"));
+			Chat->DeleteChannel(TestChannelID + TEXT("_2"));
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4080,7 +4024,7 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelHappyPathTest::RunTest(con
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -4250,7 +4194,7 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelHappyPathTest::RunTest(con
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4309,7 +4253,7 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelTwiceTest::RunTest(const F
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -4498,7 +4442,7 @@ bool FPubnubChatThreadChannelPinMessageToParentChannelTwiceTest::RunTest(const F
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4580,7 +4524,7 @@ bool FPubnubChatThreadChannelUnpinMessageFromParentChannelHappyPathTest::RunTest
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -4750,7 +4694,7 @@ bool FPubnubChatThreadChannelUnpinMessageFromParentChannelHappyPathTest::RunTest
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -4809,7 +4753,7 @@ bool FPubnubChatThreadChannelUnpinMessageFromParentChannelNoPinnedMessageTest::R
 	
 	if(!CreateChannelResult.Channel)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -4911,7 +4855,7 @@ bool FPubnubChatThreadChannelUnpinMessageFromParentChannelNoPinnedMessageTest::R
 			{
 				Chat->RemoveThreadChannel(*ReceivedMessage);
 			}
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5022,7 +4966,7 @@ bool FPubnubChatCreateThreadChannelAsyncFullParametersTest::RunTest(const FStrin
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5147,7 +5091,7 @@ bool FPubnubChatGetThreadChannelAsyncFullParametersTest::RunTest(const FString& 
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5267,7 +5211,7 @@ bool FPubnubChatRemoveThreadChannelAsyncFullParametersTest::RunTest(const FStrin
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5396,7 +5340,7 @@ bool FPubnubChatThreadChannelGetThreadHistoryAsyncFullParametersTest::RunTest(co
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5540,7 +5484,7 @@ bool FPubnubChatThreadChannelPinMessageToParentAsyncFullParametersTest::RunTest(
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -5686,7 +5630,7 @@ bool FPubnubChatThreadChannelUnpinMessageFromParentAsyncFullParametersTest::RunT
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

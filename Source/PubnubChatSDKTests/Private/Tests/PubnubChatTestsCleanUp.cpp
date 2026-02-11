@@ -97,7 +97,7 @@ bool FPubnubChatCleanUpUsersTest::RunTest(const FString& Parameters)
 			if(User)
 			{
 				const FString UserID = User->GetUserID();
-				FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(UserID, false);
+				FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(UserID);
 				
 				if(DeleteResult.Error)
 				{
@@ -244,7 +244,7 @@ bool FPubnubChatCleanUpChannelsTest::RunTest(const FString& Parameters)
 			if(Channel)
 			{
 				const FString ChannelID = Channel->GetChannelID();
-				FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(ChannelID, false);
+				FPubnubChatOperationResult DeleteResult = Chat->DeleteChannel(ChannelID);
 				
 				if(DeleteResult.Error)
 				{

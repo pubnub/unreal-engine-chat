@@ -167,7 +167,7 @@ bool FPubnubChatMarkAllMessagesAsReadHappyPathTest::RunTest(const FString& Param
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -292,7 +292,7 @@ bool FPubnubChatMarkAllMessagesAsReadFullParametersTest::RunTest(const FString& 
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -454,9 +454,9 @@ bool FPubnubChatMarkAllMessagesAsReadMultipleChannelsTest::RunTest(const FString
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID1, false);
-		Chat->DeleteChannel(TestChannelID2, false);
-		Chat->DeleteChannel(TestChannelID3, false);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -608,7 +608,7 @@ bool FPubnubChatMarkAllMessagesAsReadPreservesCustomDataTest::RunTest(const FStr
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -800,9 +800,9 @@ bool FPubnubChatMarkAllMessagesAsReadLocalMatchesServerTest::RunTest(const FStri
 	}
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID1, false);
-		Chat->DeleteChannel(TestChannelID2, false);
-		Chat->DeleteChannel(TestChannelID3, false);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -889,7 +889,7 @@ bool FPubnubChatMarkAllMessagesAsReadAsyncFullParametersTest::RunTest(const FStr
 		}
 		if(Chat)
 		{
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

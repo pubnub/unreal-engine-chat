@@ -66,7 +66,7 @@ void ASample_ChatUser::DeleteUserSample()
 	// Assumes User is a valid UPubnubChatUser (e.g. from GetUser)
 
 	// Delete this user on the server
-	User->DeleteAsync(nullptr, false);
+	User->DeleteAsync(nullptr);
 }
 
 // snippet.is_active

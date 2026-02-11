@@ -43,34 +43,6 @@ FString UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions()
 	return FString::Printf(TEXT("channel.id LIKE \"%s*\""), *Pubnub_Chat_Moderation_Channel_Prefix);
 }
 
-FString UPubnubChatInternalUtilities::GetSoftDeletedObjectPropertyKey()
-{
-	return Pubnub_Chat_Soft_Deleted_Property_Name;
-}
-
-FString UPubnubChatInternalUtilities::AddDeletedPropertyToCustom(const FString CurrentCustom)
-{
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
-	JsonObject->SetBoolField(GetSoftDeletedObjectPropertyKey(), true);
-	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
-}
-
-FString UPubnubChatInternalUtilities::RemoveDeletedPropertyFromCustom(const FString CurrentCustom)
-{
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
-	JsonObject->RemoveField(GetSoftDeletedObjectPropertyKey());
-	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
-}
-
-bool UPubnubChatInternalUtilities::HasDeletedPropertyInCustom(const FString CurrentCustom)
-{
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	UPubnubJsonUtilities::StringToJsonObject(CurrentCustom, JsonObject);
-	return JsonObject->HasField(GetSoftDeletedObjectPropertyKey());
-}
-
 FString UPubnubChatInternalUtilities::ChatMessageToPublishString(const FString ChatMessage)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);

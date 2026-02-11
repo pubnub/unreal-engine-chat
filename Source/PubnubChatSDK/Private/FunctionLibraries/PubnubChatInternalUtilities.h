@@ -30,13 +30,6 @@ public:
 	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
 	static FString GetFilterForChannelID(const FString& ChannelID);
 	static FString GetFilterForChannelsRestrictions();
-	
-	/* SOFT DELETE */
-	
-	static FString GetSoftDeletedObjectPropertyKey();
-	static FString AddDeletedPropertyToCustom(const FString CurrentCustom);
-	static FString RemoveDeletedPropertyFromCustom(const FString CurrentCustom);
-	static bool HasDeletedPropertyInCustom(const FString CurrentCustom);
 
 	
 	/* PUBLISH MESSAGE */

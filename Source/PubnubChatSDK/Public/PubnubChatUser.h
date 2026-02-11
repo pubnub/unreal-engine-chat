@@ -96,79 +96,28 @@ public:
 	void UpdateAsync(FPubnubChatUpdateUserInputData UpdateUserData, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
 	/**
-	 * Deletes this user on the PubNub server (or soft-deletes by marking it in custom metadata).
+	 * Deletes this user on the PubNub server.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
 	 *
-	 * @param Soft When true, updates the user's custom metadata with a deleted flag instead of removing the user from the server (default false).
 	 * @return Operation result.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
-	FPubnubChatOperationResult Delete(bool Soft = false);
-	
+	FPubnubChatOperationResult Delete();
+
 	/**
-	 * Deletes this user asynchronously on the PubNub server (or soft-deletes by marking it in custom metadata).
-	 *
-	 * @param OnOperationResponse Callback executed when the operation completes.
-	 * @param Soft When true, updates the user's custom metadata with a deleted flag instead of removing the user from the server (default false).
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
-	/**
-	 * Deletes this user asynchronously on the PubNub server (or soft-deletes by marking it in custom metadata).
-	 *
-	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 * @param Soft When true, updates the user's custom metadata with a deleted flag instead of removing the user from the server (default false).
-	 */
-	void DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
-	
-	/**
-	 * Restores a soft-deleted user by removing the deleted flag from the user's custom metadata on the server.
-	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
-	 *
-	 * @return Operation result. Success if metadata was updated.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
-	FPubnubChatOperationResult Restore();
-	
-	/**
-	 * Restores a soft-deleted user asynchronously by removing the deleted flag from the user's custom metadata on the server.
+	 * Deletes this user asynchronously on the PubNub server.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void RestoreAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Restores a soft-deleted user asynchronously by removing the deleted flag from the user's custom metadata on the server.
+	 * Deletes this user asynchronously on the PubNub server.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
-	void RestoreAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
-	
-	/**
-	 * Checks whether this user is marked as deleted (soft-deleted) by reading the user metadata from the server.
-	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
-	 *
-	 * @return Operation result and whether the user has the deleted flag in its custom metadata.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
-	FPubnubChatIsDeletedResult IsDeleted();
-	
-	/**
-	 * Checks asynchronously whether this user is marked as deleted (soft-deleted) by reading the user metadata from the server.
-	 * Returns result and whether the user has the deleted flag in its custom metadata.
-	 *
-	 * @param OnIsDeletedResponse Callback executed when the operation completes.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|User")
-	void IsDeletedAsync(FOnPubnubChatIsDeletedResponse OnIsDeletedResponse);
-	/**
-	 * Checks asynchronously whether this user is marked as deleted (soft-deleted) by reading the user metadata from the server.
-	 * Returns result and whether the user has the deleted flag in its custom metadata.
-	 *
-	 * @param OnIsDeletedResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 */
-	void IsDeletedAsync(FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponseNative);
-	
+	void DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
 	/**
 	 * Returns whether this user is considered active based on the last-active timestamp in the local cache.
 	 * Local: does not perform network requests. Compares lastActiveTimestamp from user Custom metadata to the chat's StoreUserActivityInterval.

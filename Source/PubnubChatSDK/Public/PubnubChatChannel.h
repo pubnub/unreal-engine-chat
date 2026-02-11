@@ -487,79 +487,28 @@ public:
 	void IsPresentAsync(const FString UserID, FOnPubnubChatIsPresentResponseNative OnIsPresentResponseNative);
 
 	/**
-	 * Deletes this channel on the PubNub server (or soft-deletes by marking it in custom metadata).
+	 * Deletes this channel on the PubNub server.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
 	 *
-	 * @param Soft When true, updates the channel's custom metadata with a deleted flag instead of removing the channel from the server (default false).
 	 * @return Operation result.
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
-	FPubnubChatOperationResult Delete(bool Soft = false);
-	
+	FPubnubChatOperationResult Delete();
+
 	/**
-	 * Deletes this channel asynchronously on the PubNub server (or soft-deletes by marking it in custom metadata).
-	 *
-	 * @param OnOperationResponse Callback executed when the operation completes.
-	 * @param Soft When true, updates the channel's custom metadata with a deleted flag instead of removing the channel from the server (default false).
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse, bool Soft = false);
-	/**
-	 * Deletes this channel asynchronously on the PubNub server (or soft-deletes by marking it in custom metadata).
-	 *
-	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 * @param Soft When true, updates the channel's custom metadata with a deleted flag instead of removing the channel from the server (default false).
-	 */
-	void DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, bool Soft = false);
-	
-	/**
-	 * Restores a soft-deleted channel by removing the deleted flag from the channel's custom metadata on the server.
-	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
-	 *
-	 * @return Operation result. Success if metadata was updated.
-	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
-	FPubnubChatOperationResult Restore();
-	
-	/**
-	 * Restores a soft-deleted channel asynchronously by removing the deleted flag from the channel's custom metadata on the server.
+	 * Deletes this channel asynchronously on the PubNub server.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void RestoreAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	void DeleteAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Restores a soft-deleted channel asynchronously by removing the deleted flag from the channel's custom metadata on the server.
+	 * Deletes this channel asynchronously on the PubNub server.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
-	void RestoreAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
-	
-	/**
-	 * Checks whether this channel is marked as deleted (soft-deleted) by reading the channel metadata from the server.
-	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
-	 *
-	 * @return Operation result and whether the channel has the deleted flag in its custom metadata.
-	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
-	FPubnubChatIsDeletedResult IsDeleted();
-	
-	/**
-	 * Checks asynchronously whether this channel is marked as deleted (soft-deleted) by reading the channel metadata from the server.
-	 * Returns result and whether the channel has the deleted flag in its custom metadata.
-	 *
-	 * @param OnIsDeletedResponse Callback executed when the operation completes.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
-	void IsDeletedAsync(FOnPubnubChatIsDeletedResponse OnIsDeletedResponse);
-	/**
-	 * Checks asynchronously whether this channel is marked as deleted (soft-deleted) by reading the channel metadata from the server.
-	 * Returns result and whether the channel has the deleted flag in its custom metadata.
-	 *
-	 * @param OnIsDeletedResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 */
-	void IsDeletedAsync(FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponseNative);
-	
+	void DeleteAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
 	/**
 	 * Retrieves members of this channel from the PubNub server. Returns user and membership data for each member.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.

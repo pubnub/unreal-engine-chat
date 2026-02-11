@@ -2657,7 +2657,7 @@ bool FPubnubChatCreateMessageDraftHappyPathTest::RunTest(const FString& Paramete
 			}
 			
 			// Cleanup: Delete created channel
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 	}
 
@@ -2728,7 +2728,7 @@ bool FPubnubChatCreateMessageDraftFullParametersTest::RunTest(const FString& Par
 			}
 			
 			// Cleanup: Delete created channel
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 	}
 
@@ -2799,7 +2799,7 @@ bool FPubnubChatCreateMessageDraftMultipleDraftsTest::RunTest(const FString& Par
 			}
 			
 			// Cleanup: Delete created channel
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 	}
 
@@ -2896,7 +2896,7 @@ bool FPubnubChatMessageDraftSendEmptyDraftTest::RunTest(const FString& Parameter
 			}
 			
 			// Cleanup: Delete created channel
-			Chat->DeleteChannel(TestChannelID, false);
+			Chat->DeleteChannel(TestChannelID);
 		}
 	}
 
@@ -3000,7 +3000,7 @@ bool FPubnubChatMessageDraftSendHappyPathTest::RunTest(const FString& Parameters
 			{
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteChannel(TestChannelID);
 				}
 				CleanUpCurrentChatUser(Chat);
 				CleanUp();
@@ -3116,7 +3116,7 @@ bool FPubnubChatMessageDraftSendFullParametersTest::RunTest(const FString& Param
 			{
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteChannel(TestChannelID);
 				}
 				CleanUpCurrentChatUser(Chat);
 				CleanUp();
@@ -3270,8 +3270,8 @@ bool FPubnubChatMessageDraftSendWithMentionsTest::RunTest(const FString& Paramet
 			{
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID, false);
-					Chat->DeleteChannel(TestMentionChannelID, false);
+					Chat->DeleteChannel(TestChannelID);
+					Chat->DeleteChannel(TestMentionChannelID);
 					Chat->DeleteUser(TestUserID);
 				}
 				CleanUpCurrentChatUser(Chat);
@@ -3425,7 +3425,7 @@ bool FPubnubChatMessageDraftSendComplexMessageTest::RunTest(const FString& Param
 			{
 				if(Chat)
 				{
-					Chat->DeleteChannel(TestChannelID, false);
+					Chat->DeleteChannel(TestChannelID);
 					Chat->DeleteUser(TestUserID);
 				}
 				CleanUpCurrentChatUser(Chat);

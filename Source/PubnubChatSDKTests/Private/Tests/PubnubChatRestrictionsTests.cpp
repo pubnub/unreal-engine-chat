@@ -219,8 +219,8 @@ bool FPubnubChatSetRestrictionsHappyPathBanTest::RunTest(const FString& Paramete
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -304,8 +304,8 @@ bool FPubnubChatSetRestrictionsHappyPathMuteTest::RunTest(const FString& Paramet
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -394,8 +394,8 @@ bool FPubnubChatSetRestrictionsFullParametersTest::RunTest(const FString& Parame
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -490,8 +490,8 @@ bool FPubnubChatSetRestrictionsLiftRestrictionsTest::RunTest(const FString& Para
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -651,8 +651,8 @@ bool FPubnubChatSetRestrictionsEventEmissionTest::RunTest(const FString& Paramet
 					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		
 		CleanUpCurrentChatUser(Chat);
@@ -741,8 +741,8 @@ bool FPubnubChatSetRestrictionsBanAndMuteTest::RunTest(const FString& Parameters
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -834,7 +834,7 @@ bool FPubnubChatChannelGetUserRestrictionsInvalidUserTest::RunTest(const FString
 			TestFalse("ErrorMessage should not be empty", GetResult.Result.ErrorMessage.IsEmpty());
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -920,8 +920,8 @@ bool FPubnubChatChannelGetUserRestrictionsHappyPathTest::RunTest(const FString& 
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1010,8 +1010,8 @@ bool FPubnubChatChannelGetUserRestrictionsFullParametersTest::RunTest(const FStr
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1081,8 +1081,8 @@ bool FPubnubChatChannelGetUserRestrictionsNoRestrictionsTest::RunTest(const FStr
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1224,8 +1224,8 @@ bool FPubnubChatChannelGetUsersRestrictionsHappyPathTest::RunTest(const FString&
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1347,9 +1347,9 @@ bool FPubnubChatChannelGetUsersRestrictionsFullParametersTest::RunTest(const FSt
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restrictions during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID1, false);
-		Chat->DeleteUser(TargetUserID2, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID1);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1411,7 +1411,7 @@ bool FPubnubChatChannelGetUsersRestrictionsEmptyTest::RunTest(const FString& Par
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1463,7 +1463,7 @@ bool FPubnubChatUserGetChannelRestrictionsNotInitializedTest::RunTest(const FStr
 		
 		if(CreateChannelResult.Channel)
 		{
-			Chat->DeleteChannel(SDK_PREFIX + "test_channel", false);
+			Chat->DeleteChannel(SDK_PREFIX + "test_channel");
 		}
 	}
 
@@ -1588,8 +1588,8 @@ bool FPubnubChatUserGetChannelRestrictionsHappyPathTest::RunTest(const FString& 
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1678,8 +1678,8 @@ bool FPubnubChatUserGetChannelRestrictionsFullParametersTest::RunTest(const FStr
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1749,8 +1749,8 @@ bool FPubnubChatUserGetChannelRestrictionsNoRestrictionsTest::RunTest(const FStr
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -1892,8 +1892,8 @@ bool FPubnubChatUserGetChannelsRestrictionsHappyPathTest::RunTest(const FString&
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2020,9 +2020,9 @@ bool FPubnubChatUserGetChannelsRestrictionsFullParametersTest::RunTest(const FSt
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction2 during cleanup: %s"), *RemoveResult2.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID1, false);
-		Chat->DeleteChannel(TestChannelID2, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2084,7 +2084,7 @@ bool FPubnubChatUserGetChannelsRestrictionsEmptyTest::RunTest(const FString& Par
 	// Cleanup
 	if(Chat)
 	{
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2246,8 +2246,8 @@ bool FPubnubChatUserSetRestrictionsHappyPathTest::RunTest(const FString& Paramet
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2333,7 +2333,7 @@ bool FPubnubChatChannelSetRestrictionsEmptyUserIDTest::RunTest(const FString& Pa
 			TestFalse("ErrorMessage should not be empty", SetResult.ErrorMessage.IsEmpty());
 		}
 		
-		Chat->DeleteChannel(TestChannelID, false);
+		Chat->DeleteChannel(TestChannelID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2411,8 +2411,8 @@ bool FPubnubChatChannelSetRestrictionsHappyPathTest::RunTest(const FString& Para
 				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 			}
 		}
-		Chat->DeleteChannel(TestChannelID, false);
-		Chat->DeleteUser(TargetUserID, false);
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
 	}
 
 	CleanUpCurrentChatUser(Chat);
@@ -2503,8 +2503,8 @@ bool FPubnubChatSetRestrictionsAsyncFullParametersTest::RunTest(const FString& P
 					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restriction during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
 				}
 			}
-			Chat->DeleteChannel(TestChannelID, false);
-			Chat->DeleteUser(TargetUserID, false);
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();

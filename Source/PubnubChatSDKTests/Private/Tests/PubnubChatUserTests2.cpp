@@ -105,7 +105,7 @@ bool FPubnubChatUserStreamUpdatesHappyPathTest::RunTest(const FString& Parameter
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -170,7 +170,7 @@ bool FPubnubChatUserStreamUpdatesHappyPathTest::RunTest(const FString& Parameter
 		}
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -306,7 +306,7 @@ bool FPubnubChatUserStreamUpdatesPartialUpdateTest::RunTest(const FString& Param
 		}
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -432,7 +432,7 @@ bool FPubnubChatUserStreamUpdatesMultipleUpdatesTest::RunTest(const FString& Par
 		}
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -509,8 +509,8 @@ bool FPubnubChatUserStreamUpdatesDeleteEventTest::RunTest(const FString& Paramet
 	// Wait for subscription to be ready, then delete user
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestUserID]()
 	{
-		// Hard delete user (Soft = false) - this should trigger a delete event
-		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TestUserID, false);
+		// Delete user - this should trigger a delete event
+		FPubnubChatOperationResult DeleteResult = Chat->DeleteUser(TestUserID);
 		TestFalse("DeleteUser should succeed", DeleteResult.Error);
 	}, 0.5f));
 	
@@ -1018,7 +1018,7 @@ bool FPubnubChatUserStopStreamingUpdatesHappyPathTest::RunTest(const FString& Pa
 	// Cleanup: Delete user
 	if(Chat)
 	{
-		Chat->DeleteUser(TestUserID, false);
+		Chat->DeleteUser(TestUserID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -1146,7 +1146,7 @@ bool FPubnubChatUserStopStreamingUpdatesPreventsUpdatesTest::RunTest(const FStri
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1220,7 +1220,7 @@ bool FPubnubChatUserStopStreamingUpdatesMultipleStopsTest::RunTest(const FString
 	// Cleanup: Delete user
 	if(Chat)
 	{
-		Chat->DeleteUser(TestUserID, false);
+		Chat->DeleteUser(TestUserID);
 	}
 	
 	CleanUpCurrentChatUser(Chat);
@@ -1294,7 +1294,7 @@ bool FPubnubChatUserStreamUpdatesAsyncFullParametersTest::RunTest(const FString&
 		}
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1364,7 +1364,7 @@ bool FPubnubChatUserStopStreamingUpdatesAsyncFullParametersTest::RunTest(const F
 	{
 		if(Chat)
 		{
-			Chat->DeleteUser(TestUserID, false);
+			Chat->DeleteUser(TestUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
