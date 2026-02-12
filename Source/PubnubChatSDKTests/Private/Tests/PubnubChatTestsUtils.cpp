@@ -5,6 +5,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChat.h"
+#include "Engine/Engine.h"
 #include "PubnubChatUser.h"
 #include "Engine/GameInstance.h"
 

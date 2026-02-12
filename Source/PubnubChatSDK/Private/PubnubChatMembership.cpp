@@ -184,7 +184,7 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(co
 		else
 		{
 			//It's not an error, but add it to the result
-			EmitEventResult.AddStep("EmitChatEvent", FPubnubOperationResult(0, false, TEXT("Can't emit chat event, user doesn't have permissions")));
+			EmitEventResult.AddStep("EmitChatEvent", FPubnubOperationResult({0, false, TEXT("Can't emit chat event, user doesn't have permissions")}));
 		}
 
 		FinalResult.Merge(EmitEventResult);

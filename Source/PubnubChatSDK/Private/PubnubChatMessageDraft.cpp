@@ -2,6 +2,7 @@
 
 #include "PubnubChatMessageDraft.h"
 #include "PubnubChatChannel.h"
+#include "Internationalization/Regex.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChat.h"

@@ -3,6 +3,8 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubClient.h"
 #include "PubnubChat.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubSubsystem.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"

@@ -2,7 +2,9 @@
 
 
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "Dom/JsonObject.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
+#include "Internationalization/Regex.h"
 #include "PubnubChatConst.h"
 #include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"

@@ -2,6 +2,8 @@
 
 #include "PubnubChatChannel.h"
 #include "PubnubClient.h"
+#include "Dom/JsonObject.h"
+#include "Engine/World.h"
 #include "PubnubChat.h"
 #include "PubnubChatCallbackStop.h"
 #include "PubnubChatConst.h"

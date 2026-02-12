@@ -1,7 +1,8 @@
-﻿// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2025 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChatAccessManager.h"
 #include "PubnubChatInternalMacros.h"
+#include "Dom/JsonObject.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubClient.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"

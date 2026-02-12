@@ -3,11 +3,13 @@
 #include "PubnubChatSDK/Private/PubnubChatObjectsRepository.h"
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Engine/Engine.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/UObjectGlobals.h"
+#include "UObject/Package.h"
 
 // ============================================================================
 // REPOSITORY UNIT TESTS - Direct Repository Testing (No API Calls)

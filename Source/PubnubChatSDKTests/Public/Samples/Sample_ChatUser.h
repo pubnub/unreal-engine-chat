@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "GameFramework/Actor.h"
 // snippet.includes
 #include "PubnubChat.h"
 #include "PubnubChatUser.h"

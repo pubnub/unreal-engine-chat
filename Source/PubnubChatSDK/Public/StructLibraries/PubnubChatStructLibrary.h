@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TimerManager.h"
 #include "PubnubChatEnumLibrary.h"
 #include "PubnubStructLibrary.h"
 #include "PubnubChatStructLibrary.generated.h"

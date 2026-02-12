@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "GameFramework/Actor.h"
 #include "Sample_ChatSubsystem.generated.h"
 
 UCLASS()

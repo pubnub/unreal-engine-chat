@@ -6,6 +6,7 @@
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/UObjectGlobals.h"
+#include "UObject/Package.h"
 
 // ============================================================================
 // MESSAGE DRAFT UNIT TESTS - Direct MessageDraft Testing (No API Calls)

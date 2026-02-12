@@ -2,6 +2,8 @@
 
 #include "PubnubChatSubsystem.h"
 #include "PubnubChat.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "PubnubChatUser.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "Kismet/GameplayStatics.h"

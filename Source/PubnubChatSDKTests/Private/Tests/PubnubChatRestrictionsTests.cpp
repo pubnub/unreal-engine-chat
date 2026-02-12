@@ -3,6 +3,7 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubChat.h"
 #include "PubnubChatUser.h"
+#include "Dom/JsonObject.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatCallbackStop.h"
 #include "PubnubChatMembership.h"

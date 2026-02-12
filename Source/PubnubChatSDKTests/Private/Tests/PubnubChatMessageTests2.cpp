@@ -5,6 +5,7 @@
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatMembership.h"
+#include "PubnubChatThreadChannel.h"
 #include "PubnubChatCallbackStop.h"
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
@@ -14,6 +15,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Dom/JsonObject.h"
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
