@@ -19,6 +19,7 @@ class PUBNUBCHATSDKTESTS_API ASample_ChatThreadMessage : public AActor
 public:
 
 	// snippet.thread_message_get_parent_id
+	// blueprint._3iklcva
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadMessage")
 	void GetParentChannelIDSample();
 

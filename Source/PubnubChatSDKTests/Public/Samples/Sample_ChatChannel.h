@@ -19,14 +19,17 @@ class PUBNUBCHATSDKTESTS_API ASample_ChatChannel : public AActor
 public:
 
 	// snippet.get_channel_data
+	// blueprint.imqy48uy
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetChannelDataSample();
 
 	// snippet.channel_get_id
+	// blueprint.jb1hkxri
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetChannelIDSample();
 
 	// snippet.channel_update
+	// blueprint.hrzn604-
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void UpdateChannelSample();
 
@@ -34,12 +37,14 @@ public:
 	void OnUpdateChannelResponse(const FPubnubChatOperationResult& Result);
 
 	// snippet.connect
+	// blueprint.viqb9p7m
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void ConnectSample();
 
 	void OnChannelMessageReceived(UPubnubChatMessage* Message);
 
 	// snippet.join
+	// blueprint.qrtbnvp2
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void JoinSample();
 
@@ -49,14 +54,17 @@ public:
 	void OnJoinResponse(const FPubnubChatJoinResult& Result);
 
 	// snippet.disconnect
+	// blueprint.rlwb2va9
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void DisconnectSample();
 
 	// snippet.leave
+	// blueprint.v3m7_pc0
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void LeaveSample();
 
 	// snippet.send_text
+	// blueprint.rg41gb2_
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void SendTextSample();
 
@@ -108,6 +116,7 @@ public:
 	void DeleteSample();
 
 	// snippet.get_members
+	// blueprint.hddmgqh9
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetMembersSample();
 
@@ -122,14 +131,17 @@ public:
 	void OnGetInviteesResponse(const FPubnubChatMembershipsResult& Result);
 
 	// snippet.channel_set_restrictions
+	// blueprint.cfw5ew8g
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void SetRestrictionsSample();
 	
 	// snippet.lift_restrictions
+	// blueprint.7et9fgep
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void LiftRestrictionsSample();
 
 	// snippet.get_user_restrictions
+	// blueprint.w1s61f2f
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetUserRestrictionsSample();
 
@@ -144,6 +156,7 @@ public:
 	void OnGetUsersRestrictionsResponse(const FPubnubChatGetRestrictionsResult& Result);
 
 	// snippet.get_history
+	// blueprint.1lwvd0mh
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetHistorySample();
 
@@ -151,6 +164,7 @@ public:
 	void OnGetHistoryResponse(const FPubnubChatGetHistoryResult& Result);
 
 	// snippet.get_message
+	// blueprint.pnjs_e_h
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetMessageSample();
 
@@ -166,6 +180,7 @@ public:
 	void EmitUserMentionSample();
 
 	// snippet.create_message_draft
+	// blueprint.uy7kmex5
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void CreateMessageDraftSample();
 
@@ -177,6 +192,7 @@ public:
 	void OnGetMessageReportsHistoryResponse(const FPubnubChatEventsResult& Result);
 
 	// snippet.stream_channel_updates
+	// blueprint.ii7uwp9h
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void StreamUpdatesSample();
 

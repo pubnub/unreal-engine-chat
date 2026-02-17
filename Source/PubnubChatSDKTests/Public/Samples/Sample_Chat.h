@@ -18,10 +18,12 @@ class PUBNUBCHATSDKTESTS_API ASample_Chat : public AActor
 public:
 
 	// snippet.get_current_user
+	// blueprint.ps41v4yw
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void GetCurrentUserSample();
 
 	// snippet.create_user
+	// blueprint.b-bl8bam
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void CreateUserSample();
 	
@@ -29,6 +31,7 @@ public:
 	void OnCreateUserResponse(const FPubnubChatUserResult& Result);
 
 	// snippet.chat_get_user
+	// blueprint._5hbneb_
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void GetUserSample();
 
@@ -43,6 +46,7 @@ public:
 	void OnGetUsersResponse(const FPubnubChatGetUsersResult& Result);
 
 	// snippet.chat_update_user
+	// blueprint.bdmj0703
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void UpdateUserSample();
 
@@ -50,6 +54,7 @@ public:
 	void OnUpdateUserResponse(const FPubnubChatUserResult& Result);
 
 	// snippet.chat_delete_user
+	// blueprint.yjntlg2u
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void DeleteUserSample();
 
@@ -64,6 +69,7 @@ public:
 	void OnGetUserSuggestionsResponse(const FPubnubChatGetUserSuggestionsResult& Result);
 
 	// snippet.create_public_conversation
+	// blueprint.ex6bqzof
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void CreatePublicConversationSample();
 
@@ -71,6 +77,7 @@ public:
 	void OnCreatePublicConversationResponse(const FPubnubChatChannelResult& Result);
 
 	// snippet.create_group_conversation
+	// blueprint.cz93qx3q
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void CreateGroupConversationSample();
 
@@ -78,6 +85,7 @@ public:
 	void OnCreateGroupConversationResponse(const FPubnubChatCreateGroupConversationResult& Result);
 
 	// snippet.create_direct_conversation
+	// blueprint.y_mgu55n
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void CreateDirectConversationSample();
 
@@ -85,6 +93,7 @@ public:
 	void OnCreateDirectConversationResponse(const FPubnubChatCreateDirectConversationResult& Result);
 
 	// snippet.chat_get_channel
+	// blueprint.opsk7ay9
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void GetChannelSample();
 
@@ -99,6 +108,7 @@ public:
 	void OnGetChannelsResponse(const FPubnubChatGetChannelsResult& Result);
 
 	// snippet.chat_update_channel
+	// blueprint.xtam_-km
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void UpdateChannelSample();
 
@@ -106,6 +116,7 @@ public:
 	void OnUpdateChannelResponse(const FPubnubChatChannelResult& Result);
 
 	// snippet.delete_channel
+	// blueprint.74i9-7o2
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void DeleteChannelSample();
 
@@ -232,6 +243,7 @@ public:
 	void OnDisconnectSubscriptionsResponse(const FPubnubChatOperationResult& Result);
 
 	// snippet.connection_status_changed
+	// blueprint.a9-bs_-x
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Connection Status")
 	void ConnectionStatusChangedSample();
 
