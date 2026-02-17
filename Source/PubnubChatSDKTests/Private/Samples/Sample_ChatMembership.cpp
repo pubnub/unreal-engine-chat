@@ -18,7 +18,7 @@ void ASample_ChatMembership::GetMembershipDataSample()
 	FString Status = MembershipData.Status;
 }
 
-// snippet.get_user
+// snippet.membership_get_user
 
 // ACTION REQUIRED: Replace ASample_ChatMembership with name of your Actor class
 void ASample_ChatMembership::GetUserSample()
@@ -33,7 +33,7 @@ void ASample_ChatMembership::GetUserSample()
 	UPubnubChatUser* User = Membership->GetUser();
 }
 
-// snippet.get_channel
+// snippet.membership_get_channel
 
 // ACTION REQUIRED: Replace ASample_ChatMembership with name of your Actor class
 void ASample_ChatMembership::GetChannelSample()
@@ -48,7 +48,7 @@ void ASample_ChatMembership::GetChannelSample()
 	UPubnubChatChannel* Channel = Membership->GetChannel();
 }
 
-// snippet.get_user_id
+// snippet.membership_get_user_id
 
 // ACTION REQUIRED: Replace ASample_ChatMembership with name of your Actor class
 void ASample_ChatMembership::GetUserIDSample()
@@ -63,7 +63,7 @@ void ASample_ChatMembership::GetUserIDSample()
 	FString UserID = Membership->GetUserID();
 }
 
-// snippet.get_channel_id
+// snippet.membership_get_channel_id
 
 // ACTION REQUIRED: Replace ASample_ChatMembership with name of your Actor class
 void ASample_ChatMembership::GetChannelIDSample()

@@ -18,15 +18,15 @@ class PUBNUBCHATSDKTESTS_API ASample_ChatThreadMessage : public AActor
 
 public:
 
-	// snippet.get_parent_channel_id
+	// snippet.thread_message_get_parent_id
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadMessage")
 	void GetParentChannelIDSample();
 
-	// snippet.pin_message_to_parent_channel
+	// snippet.thread_message_pin_to_parent
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadMessage")
 	void PinMessageToParentChannelSample();
 
-	// snippet.unpin_message_from_parent_channel
+	// snippet.thread_message_unpin_from_parent
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadMessage")
 	void UnpinMessageFromParentChannelSample();
 

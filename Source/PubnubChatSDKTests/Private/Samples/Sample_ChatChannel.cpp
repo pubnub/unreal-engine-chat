@@ -18,7 +18,7 @@ void ASample_ChatChannel::GetChannelDataSample()
 	FString ChannelName = ChannelData.ChannelName;
 }
 
-// snippet.get_channel_id
+// snippet.channel_get_id
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::GetChannelIDSample()
@@ -33,7 +33,7 @@ void ASample_ChatChannel::GetChannelIDSample()
 	FString ChannelID = Channel->GetChannelID();
 }
 
-// snippet.update_channel
+// snippet.channel_update
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::UpdateChannelSample()
@@ -228,7 +228,7 @@ void ASample_ChatChannel::OnInviteMultipleResponse(const FPubnubChatInviteMultip
 	TArray<UPubnubChatMembership*> Memberships = Result.Memberships;
 }
 
-// snippet.pin_message
+// snippet.channel_pin_message
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::PinMessageSample()
@@ -246,7 +246,7 @@ void ASample_ChatChannel::PinMessageSample()
 	Channel->PinMessageAsync(Message, nullptr);
 }
 
-// snippet.unpin_message
+// snippet.channel_unpin_message
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::UnpinMessageSample()
@@ -286,7 +286,7 @@ void ASample_ChatChannel::OnGetPinnedMessageResponse(const FPubnubChatMessageRes
 	UPubnubChatMessage* PinnedMessage = Result.Message;
 }
 
-// snippet.who_is_present
+// snippet.channel_who_is_present
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::WhoIsPresentSample()
@@ -311,7 +311,7 @@ void ASample_ChatChannel::OnWhoIsPresentResponse(const FPubnubChatWhoIsPresentRe
 	TArray<FString> UserIDs = Result.Users;
 }
 
-// snippet.is_present
+// snippet.channel_is_present
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::IsPresentSample()
@@ -404,7 +404,7 @@ void ASample_ChatChannel::OnGetInviteesResponse(const FPubnubChatMembershipsResu
 	TArray<UPubnubChatMembership*> Memberships = Result.Memberships;
 }
 
-// snippet.set_restrictions
+// snippet.channel_set_restrictions
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::SetRestrictionsSample()
@@ -551,7 +551,7 @@ void ASample_ChatChannel::OnGetMessageResponse(const FPubnubChatMessageResult& R
 	UPubnubChatMessage* Message = Result.Message;
 }
 
-// snippet.forward_message
+// snippet.channel_forward_message
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::ForwardMessageSample()

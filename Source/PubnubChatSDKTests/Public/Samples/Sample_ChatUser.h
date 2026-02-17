@@ -23,15 +23,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void GetUserDataSample();
 
-	// snippet.get_user_id
+	// snippet.user_get_id
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void GetUserIDSample();
 
-	// snippet.update_user
+	// snippet.user_update
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void UpdateUserSample();
 
-	// snippet.delete_user
+	// snippet.user_delete
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void DeleteUserSample();
 
@@ -43,7 +43,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void GetLastActiveTimestampSample();
 
-	// snippet.where_present
+	// snippet.user_where_present
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void WherePresentSample();
 
@@ -64,7 +64,7 @@ public:
 	UFUNCTION()
 	void OnGetMembershipsResponse(const FPubnubChatMembershipsResult& Result);
 
-	// snippet.set_restrictions
+	// snippet.user_set_restrictions
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void SetRestrictionsSample();
 

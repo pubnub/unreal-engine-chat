@@ -52,11 +52,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void IsDeletedSample();
 
-	// snippet.pin_message
+	// snippet.message_pin
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void PinMessageSample();
 
-	// snippet.unpin_message
+	// snippet.message_unpin
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void UnpinMessageSample();
 
@@ -72,7 +72,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void HasUserReactionSample();
 
-	// snippet.forward_message
+	// snippet.message_forward
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void ForwardMessageSample();
 

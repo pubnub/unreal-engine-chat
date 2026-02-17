@@ -2,7 +2,7 @@
 
 #include "Samples/Sample_ChatThreadMessage.h"
 
-// snippet.get_parent_channel_id
+// snippet.thread_message_get_parent_id
 
 // ACTION REQUIRED: Replace ASample_ChatThreadMessage with name of your Actor class
 void ASample_ChatThreadMessage::GetParentChannelIDSample()
@@ -17,7 +17,7 @@ void ASample_ChatThreadMessage::GetParentChannelIDSample()
 	FString ParentChannelID = ThreadMessage->GetParentChannelID();
 }
 
-// snippet.pin_message_to_parent_channel
+// snippet.thread_message_pin_to_parent
 
 // ACTION REQUIRED: Replace ASample_ChatThreadMessage with name of your Actor class
 void ASample_ChatThreadMessage::PinMessageToParentChannelSample()
@@ -32,7 +32,7 @@ void ASample_ChatThreadMessage::PinMessageToParentChannelSample()
 	ThreadMessage->PinMessageToParentChannelAsync(nullptr);
 }
 
-// snippet.unpin_message_from_parent_channel
+// snippet.thread_message_unpin_from_parent
 
 // ACTION REQUIRED: Replace ASample_ChatThreadMessage with name of your Actor class
 void ASample_ChatThreadMessage::UnpinMessageFromParentChannelSample()

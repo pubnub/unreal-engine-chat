@@ -23,19 +23,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void GetMembershipDataSample();
 
-	// snippet.get_user
+	// snippet.membership_get_user
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void GetUserSample();
 
-	// snippet.get_channel
+	// snippet.membership_get_channel
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void GetChannelSample();
 
-	// snippet.get_user_id
+	// snippet.membership_get_user_id
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void GetUserIDSample();
 
-	// snippet.get_channel_id
+	// snippet.membership_get_channel_id
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void GetChannelIDSample();
 

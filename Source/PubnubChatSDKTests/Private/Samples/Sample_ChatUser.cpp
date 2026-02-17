@@ -18,7 +18,7 @@ void ASample_ChatUser::GetUserDataSample()
 	FString UserName = UserData.UserName;
 }
 
-// snippet.get_user_id
+// snippet.user_get_id
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
 void ASample_ChatUser::GetUserIDSample()
@@ -33,7 +33,7 @@ void ASample_ChatUser::GetUserIDSample()
 	FString UserID = User->GetUserID();
 }
 
-// snippet.update_user
+// snippet.user_update
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
 void ASample_ChatUser::UpdateUserSample()
@@ -54,7 +54,7 @@ void ASample_ChatUser::UpdateUserSample()
 	User->UpdateAsync(UpdateData, nullptr);
 }
 
-// snippet.delete_user
+// snippet.user_delete
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
 void ASample_ChatUser::DeleteUserSample()
@@ -99,7 +99,7 @@ void ASample_ChatUser::GetLastActiveTimestampSample()
 	FString LastActiveTimetoken = User->GetLastActiveTimestamp();
 }
 
-// snippet.where_present
+// snippet.user_where_present
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
 void ASample_ChatUser::WherePresentSample()
@@ -177,7 +177,7 @@ void ASample_ChatUser::OnGetMembershipsResponse(const FPubnubChatMembershipsResu
 	TArray<UPubnubChatMembership*> Memberships = Result.Memberships;
 }
 
-// snippet.set_restrictions
+// snippet.user_set_restrictions
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
 void ASample_ChatUser::SetRestrictionsSample()

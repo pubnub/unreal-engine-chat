@@ -127,7 +127,7 @@ void ASample_ChatMessage::IsDeletedSample()
 	bool bIsDeleted = Result.IsDeleted;
 }
 
-// snippet.pin_message
+// snippet.message_pin
 
 // ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
 void ASample_ChatMessage::PinMessageSample()
@@ -142,7 +142,7 @@ void ASample_ChatMessage::PinMessageSample()
 	Message->PinAsync(nullptr);
 }
 
-// snippet.unpin_message
+// snippet.message_unpin
 
 // ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
 void ASample_ChatMessage::UnpinMessageSample()
@@ -210,7 +210,7 @@ void ASample_ChatMessage::HasUserReactionSample()
 	bool bHasReaction = Result.HasReaction;
 }
 
-// snippet.forward_message
+// snippet.message_forward
 
 // ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
 void ASample_ChatMessage::ForwardMessageSample()

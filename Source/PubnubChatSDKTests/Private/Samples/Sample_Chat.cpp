@@ -59,7 +59,7 @@ void ASample_Chat::OnCreateUserResponse(const FPubnubChatUserResult& Result)
 	// Use NewUser; if user already exists, Result.Result.Error will be set and you may call GetUser instead
 }
 
-// snippet.get_user
+// snippet.chat_get_user
 
 #include "PubnubChatUser.h"
 
@@ -116,7 +116,7 @@ void ASample_Chat::OnGetUsersResponse(const FPubnubChatGetUsersResult& Result)
 	// Use Result.Page for pagination (Result.Page.Next / Result.Page.Prev)
 }
 
-// snippet.update_user
+// snippet.chat_update_user
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::UpdateUserSample()
@@ -145,7 +145,7 @@ void ASample_Chat::OnUpdateUserResponse(const FPubnubChatUserResult& Result)
 	UPubnubChatUser* UpdatedUser = Result.User;
 }
 
-// snippet.delete_user
+// snippet.chat_delete_user
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::DeleteUserSample()
@@ -286,7 +286,7 @@ void ASample_Chat::OnCreateDirectConversationResponse(const FPubnubChatCreateDir
 	UPubnubChatChannel* Channel = Result.Channel;
 }
 
-// snippet.get_channel
+// snippet.chat_get_channel
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::GetChannelSample()
@@ -340,7 +340,7 @@ void ASample_Chat::OnGetChannelsResponse(const FPubnubChatGetChannelsResult& Res
 	// Use Result.Page for pagination (Result.Page.Next / Result.Page.Prev)
 }
 
-// snippet.update_channel
+// snippet.chat_update_channel
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::UpdateChannelSample()
@@ -478,7 +478,7 @@ void ASample_Chat::OnGetChannelSuggestionsResponse(const FPubnubChatGetChannelSu
 	}
 }
 
-// snippet.where_present
+// snippet.chat_where_present
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::WherePresentSample()
@@ -506,7 +506,7 @@ void ASample_Chat::OnWherePresentResponse(const FPubnubChatWherePresentResult& R
 	}
 }
 
-// snippet.who_is_present
+// snippet.chat_who_is_present
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::WhoIsPresentSample()
@@ -534,7 +534,7 @@ void ASample_Chat::OnWhoIsPresentResponse(const FPubnubChatWhoIsPresentResult& R
 	}
 }
 
-// snippet.is_present
+// snippet.chat_is_present
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::IsPresentSample()
@@ -559,7 +559,7 @@ void ASample_Chat::OnIsPresentResponse(const FPubnubChatIsPresentResult& Result)
 	bool bUserIsPresent = Result.IsPresent;
 }
 
-// snippet.set_restrictions
+// snippet.chat_set_restrictions
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::SetRestrictionsSample()
@@ -646,7 +646,7 @@ void ASample_Chat::OnGetEventsHistoryResponse(const FPubnubChatEventsResult& Res
 	// Result.IsMore indicates more events exist in the range
 }
 
-// snippet.forward_message
+// snippet.chat_forward_message
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
 void ASample_Chat::ForwardMessageSample()

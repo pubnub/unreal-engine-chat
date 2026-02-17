@@ -20,7 +20,7 @@ class PUBNUBCHATSDKTESTS_API ASample_ChatThreadChannel : public AActor
 
 public:
 
-	// snippet.get_parent_channel_id
+	// snippet.thread_channel_get_parent_id
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadChannel")
 	void GetParentChannelIDSample();
 
@@ -35,11 +35,11 @@ public:
 	UFUNCTION()
 	void OnGetThreadHistoryResponse(const FPubnubChatGetThreadHistoryResult& Result);
 
-	// snippet.pin_message_to_parent_channel
+	// snippet.thread_channel_pin_to_parent
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadChannel")
 	void PinMessageToParentChannelSample();
 
-	// snippet.unpin_message_from_parent_channel
+	// snippet.thread_channel_unpin_from_parent
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatThreadChannel")
 	void UnpinMessageFromParentChannelSample();
 

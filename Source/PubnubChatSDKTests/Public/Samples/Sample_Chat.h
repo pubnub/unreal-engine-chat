@@ -28,7 +28,7 @@ public:
 	UFUNCTION()
 	void OnCreateUserResponse(const FPubnubChatUserResult& Result);
 
-	// snippet.get_user
+	// snippet.chat_get_user
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void GetUserSample();
 
@@ -42,14 +42,14 @@ public:
 	UFUNCTION()
 	void OnGetUsersResponse(const FPubnubChatGetUsersResult& Result);
 
-	// snippet.update_user
+	// snippet.chat_update_user
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void UpdateUserSample();
 
 	UFUNCTION()
 	void OnUpdateUserResponse(const FPubnubChatUserResult& Result);
 
-	// snippet.delete_user
+	// snippet.chat_delete_user
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
 	void DeleteUserSample();
 
@@ -84,7 +84,7 @@ public:
 	UFUNCTION()
 	void OnCreateDirectConversationResponse(const FPubnubChatCreateDirectConversationResult& Result);
 
-	// snippet.get_channel
+	// snippet.chat_get_channel
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void GetChannelSample();
 
@@ -98,7 +98,7 @@ public:
 	UFUNCTION()
 	void OnGetChannelsResponse(const FPubnubChatGetChannelsResult& Result);
 
-	// snippet.update_channel
+	// snippet.chat_update_channel
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
 	void UpdateChannelSample();
 
@@ -133,28 +133,28 @@ public:
 	UFUNCTION()
 	void OnGetChannelSuggestionsResponse(const FPubnubChatGetChannelSuggestionsResult& Result);
 
-	// snippet.where_present
+	// snippet.chat_where_present
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Presence")
 	void WherePresentSample();
 
 	UFUNCTION()
 	void OnWherePresentResponse(const FPubnubChatWherePresentResult& Result);
 
-	// snippet.who_is_present
+	// snippet.chat_who_is_present
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Presence")
 	void WhoIsPresentSample();
 
 	UFUNCTION()
 	void OnWhoIsPresentResponse(const FPubnubChatWhoIsPresentResult& Result);
 
-	// snippet.is_present
+	// snippet.chat_is_present
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Presence")
 	void IsPresentSample();
 
 	UFUNCTION()
 	void OnIsPresentResponse(const FPubnubChatIsPresentResult& Result);
 
-	// snippet.set_restrictions
+	// snippet.chat_set_restrictions
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Moderation")
 	void SetRestrictionsSample();
 
@@ -175,7 +175,7 @@ public:
 	UFUNCTION()
 	void OnGetEventsHistoryResponse(const FPubnubChatEventsResult& Result);
 
-	// snippet.forward_message
+	// snippet.chat_forward_message
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Messages")
 	void ForwardMessageSample();
 

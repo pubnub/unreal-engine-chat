@@ -22,11 +22,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetChannelDataSample();
 
-	// snippet.get_channel_id
+	// snippet.channel_get_id
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetChannelIDSample();
 
-	// snippet.update_channel
+	// snippet.channel_update
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void UpdateChannelSample();
 
@@ -74,11 +74,11 @@ public:
 	UFUNCTION()
 	void OnInviteMultipleResponse(const FPubnubChatInviteMultipleResult& Result);
 
-	// snippet.pin_message
+	// snippet.channel_pin_message
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void PinMessageSample();
 
-	// snippet.unpin_message
+	// snippet.channel_unpin_message
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void UnpinMessageSample();
 
@@ -89,14 +89,14 @@ public:
 	UFUNCTION()
 	void OnGetPinnedMessageResponse(const FPubnubChatMessageResult& Result);
 
-	// snippet.who_is_present
+	// snippet.channel_who_is_present
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void WhoIsPresentSample();
 
 	UFUNCTION()
 	void OnWhoIsPresentResponse(const FPubnubChatWhoIsPresentResult& Result);
 
-	// snippet.is_present
+	// snippet.channel_is_present
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void IsPresentSample();
 
@@ -121,7 +121,7 @@ public:
 	UFUNCTION()
 	void OnGetInviteesResponse(const FPubnubChatMembershipsResult& Result);
 
-	// snippet.set_restrictions
+	// snippet.channel_set_restrictions
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void SetRestrictionsSample();
 	
@@ -157,7 +157,7 @@ public:
 	UFUNCTION()
 	void OnGetMessageResponse(const FPubnubChatMessageResult& Result);
 
-	// snippet.forward_message
+	// snippet.channel_forward_message
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void ForwardMessageSample();
 

@@ -2,7 +2,7 @@
 
 #include "Samples/Sample_ChatThreadChannel.h"
 
-// snippet.get_parent_channel_id
+// snippet.thread_channel_get_parent_id
 
 // ACTION REQUIRED: Replace ASample_ChatThreadChannel with name of your Actor class
 void ASample_ChatThreadChannel::GetParentChannelIDSample()
@@ -63,7 +63,7 @@ void ASample_ChatThreadChannel::OnGetThreadHistoryResponse(const FPubnubChatGetT
 	bool bIsMore = Result.IsMore;
 }
 
-// snippet.pin_message_to_parent_channel
+// snippet.thread_channel_pin_to_parent
 
 // ACTION REQUIRED: Replace ASample_ChatThreadChannel with name of your Actor class
 void ASample_ChatThreadChannel::PinMessageToParentChannelSample()
@@ -81,7 +81,7 @@ void ASample_ChatThreadChannel::PinMessageToParentChannelSample()
 	ThreadChannel->PinMessageToParentChannelAsync(ThreadMessage, nullptr);
 }
 
-// snippet.unpin_message_from_parent_channel
+// snippet.thread_channel_unpin_from_parent
 
 // ACTION REQUIRED: Replace ASample_ChatThreadChannel with name of your Actor class
 void ASample_ChatThreadChannel::UnpinMessageFromParentChannelSample()
