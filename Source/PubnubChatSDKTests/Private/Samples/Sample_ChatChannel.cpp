@@ -419,7 +419,7 @@ void ASample_ChatChannel::SetRestrictionsSample()
 	FString UserID = TEXT("user-abc123");
 
 	// Set restriction (ban in this example) 
-	Channel->SetRestrictionsAsync(UserID, true, false, nullptr);
+	Channel->SetRestrictionsAsync(UserID, true, false, nullptr, TEXT("Cheater"));
 }
 
 // snippet.lift_restrictions
@@ -636,7 +636,7 @@ void ASample_ChatChannel::OnGetMessageReportsHistoryResponse(const FPubnubChatEv
 	TArray<FPubnubChatEvent> Events = Result.Events;
 }
 
-// snippet.stream_updates
+// snippet.stream_channel_updates
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 void ASample_ChatChannel::StreamUpdatesSample()

@@ -173,20 +173,6 @@ public:
 	FPubnubChatIsDeletedResult IsDeleted();
 	
 	/**
-	 * Checks asynchronously whether this message is marked as deleted (soft-deleted) by looking for a Deleted message action in the local cache.
-	 *
-	 * @param OnIsDeletedResponse Callback executed when the operation completes.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
-	void IsDeletedAsync(FOnPubnubChatIsDeletedResponse OnIsDeletedResponse);
-	/**
-	 * Checks asynchronously whether this message is marked as deleted (soft-deleted) by looking for a Deleted message action in the local cache.
-	 *
-	 * @param OnIsDeletedResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 */
-	void IsDeletedAsync(FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponseNative);
-	
-	/**
 	 * Pins this message to its channel. Resolves the channel, then calls PinMessageToChannel on the chat.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
 	 * Fails if the channel for this message does not exist.
@@ -270,22 +256,8 @@ public:
 	 *
 	 * @return Operation result and list of reaction message actions (value, user ID, timetoken, etc.).
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
-	FPubnubChatGetReactionsResult GetReactions();
-	
-	/**
-	 * Returns asynchronously all reactions on this message from the local cache. Same as GetReactions() but runs on the async thread.
-	 *
-	 * @param OnReactionsResponse Callback executed when the operation completes.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
-	void GetReactionsAsync(FOnPubnubChatGetReactionsResponse OnReactionsResponse);
-	/**
-	 * Returns asynchronously all reactions on this message from the local cache. Same as GetReactions() but runs on the async thread.
-	 *
-	 * @param OnReactionsResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 */
-	void GetReactionsAsync(FOnPubnubChatGetReactionsResponseNative OnReactionsResponseNative);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatGetReactionsResult GetReactions() const;
 	
 	/**
 	 * Checks whether the current user has the given reaction on this message. Reads from the local cache.
@@ -294,24 +266,8 @@ public:
 	 * @param Reaction The reaction value to check (e.g. emoji code or string). Must be non-empty.
 	 * @return Operation result and whether the current user has this reaction on this message.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
-	FPubnubChatHasReactionResult HasUserReaction(const FString Reaction);
-	
-	/**
-	 * Checks asynchronously whether the current user has the given reaction on this message. Reads from the local cache.
-	 *
-	 * @param Reaction The reaction value to check (e.g. emoji code or string). Must be non-empty.
-	 * @param OnHasReactionResponse Callback executed when the operation completes.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message")
-	void HasUserReactionAsync(const FString Reaction, FOnPubnubChatHasReactionResponse OnHasReactionResponse);
-	/**
-	 * Checks asynchronously whether the current user has the given reaction on this message. Reads from the local cache.
-	 *
-	 * @param Reaction The reaction value to check (e.g. emoji code or string). Must be non-empty.
-	 * @param OnHasReactionResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 */
-	void HasUserReactionAsync(const FString Reaction, FOnPubnubChatHasReactionResponseNative OnHasReactionResponseNative);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatHasReactionResult HasUserReaction(const FString Reaction) const;
 	
 	/**
 	 * Forwards this message to the given channel. Publishes the message to the target channel with forwarding metadata (original channel, timetoken).
@@ -486,22 +442,8 @@ public:
 	 *
 	 * @return Operation result and whether this message has a thread (HasThread true/false).
 	 */
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
-	FPubnubChatHasThreadResult HasThread();
-	
-	/**
-	 * Checks asynchronously whether this message has a thread by looking for a thread root message action in the local cache.
-	 *
-	 * @param OnHasThreadResponse Callback executed when the operation completes.
-	 */
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Message")
-	void HasThreadAsync(FOnPubnubChatHasThreadResponse OnHasThreadResponse);
-	/**
-	 * Checks asynchronously whether this message has a thread by looking for a thread root message action in the local cache.
-	 *
-	 * @param OnHasThreadResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 */
-	void HasThreadAsync(FOnPubnubChatHasThreadResponseNative OnHasThreadResponseNative);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Pubnub Chat|Message")
+	FPubnubChatHasThreadResult HasThread() const;
 	
 	/**
 	 * Removes the thread from this message: deletes the thread root message action and the thread channel on the server.

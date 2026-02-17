@@ -130,7 +130,7 @@ void ASample_Chat::UpdateUserSample()
 	// Update a user's metadata asynchronously (e.g. player changed display name or status in settings)
 	FPubnubChatUpdateUserInputData UpdateData;
 	UpdateData.UserName = TEXT("NewDisplayName");
-	UpdateData.Status = TEXT("In Match");
+	UpdateData.Status = TEXT("InMatch");
 
 	FOnPubnubChatUserResponseNative Callback;
 	// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class

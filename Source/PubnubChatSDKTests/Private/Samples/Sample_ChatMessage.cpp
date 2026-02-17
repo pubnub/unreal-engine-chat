@@ -186,16 +186,7 @@ void ASample_ChatMessage::GetReactionsSample()
 
 	// Assumes Message is a valid UPubnubChatMessage
 
-	// Callback for when the operation completes (returns reactions)
-	FOnPubnubChatGetReactionsResponseNative Callback;
-	// ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
-	Callback.BindUObject(this, &ASample_ChatMessage::OnGetReactionsResponse);
-	Message->GetReactionsAsync(Callback);
-}
-
-// ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
-void ASample_ChatMessage::OnGetReactionsResponse(const FPubnubChatGetReactionsResult& Result)
-{
+	FPubnubChatGetReactionsResult Result = Message->GetReactions();
 	if (Result.Result.Error) { return; }
 	TArray<FPubnubChatMessageAction> Reactions = Result.Reactions;
 }
@@ -214,16 +205,7 @@ void ASample_ChatMessage::HasUserReactionSample()
 	// Reaction value to check for the current user
 	FString Reaction = TEXT("thumbs_up");
 
-	// Callback for when the operation completes (returns whether user has reaction)
-	FOnPubnubChatHasReactionResponseNative Callback;
-	// ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
-	Callback.BindUObject(this, &ASample_ChatMessage::OnHasUserReactionResponse);
-	Message->HasUserReactionAsync(Reaction, Callback);
-}
-
-// ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
-void ASample_ChatMessage::OnHasUserReactionResponse(const FPubnubChatHasReactionResult& Result)
-{
+	FPubnubChatHasReactionResult Result = Message->HasUserReaction(Reaction);
 	if (Result.Result.Error) { return; }
 	bool bHasReaction = Result.HasReaction;
 }
@@ -264,7 +246,7 @@ void ASample_ChatMessage::ReportMessageSample()
 	Message->ReportAsync(nullptr, Reason);
 }
 
-// snippet.stream_updates
+// snippet.stream_message_updates
 
 // ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
 void ASample_ChatMessage::StreamUpdatesSample()
@@ -356,16 +338,7 @@ void ASample_ChatMessage::HasThreadSample()
 
 	// Assumes Message is a valid UPubnubChatMessage
 
-	// Callback for when the operation completes (returns HasThread)
-	FOnPubnubChatHasThreadResponseNative Callback;
-	// ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
-	Callback.BindUObject(this, &ASample_ChatMessage::OnHasThreadResponse);
-	Message->HasThreadAsync(Callback);
-}
-
-// ACTION REQUIRED: Replace ASample_ChatMessage with name of your Actor class
-void ASample_ChatMessage::OnHasThreadResponse(const FPubnubChatHasThreadResult& Result)
-{
+	FPubnubChatHasThreadResult Result = Message->HasThread();
 	if (Result.Result.Error) { return; }
 	bool bHasThread = Result.HasThread;
 }

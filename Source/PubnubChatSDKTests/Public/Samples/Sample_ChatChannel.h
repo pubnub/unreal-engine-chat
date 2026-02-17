@@ -176,7 +176,7 @@ public:
 	UFUNCTION()
 	void OnGetMessageReportsHistoryResponse(const FPubnubChatEventsResult& Result);
 
-	// snippet.stream_updates
+	// snippet.stream_channel_updates
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void StreamUpdatesSample();
 

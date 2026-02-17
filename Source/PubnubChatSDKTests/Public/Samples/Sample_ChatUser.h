@@ -82,7 +82,7 @@ public:
 	UFUNCTION()
 	void OnGetChannelsRestrictionsResponse(const FPubnubChatGetRestrictionsResult& Result);
 
-	// snippet.stream_updates
+	// snippet.stream_user_updates
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void StreamUpdatesSample();
 

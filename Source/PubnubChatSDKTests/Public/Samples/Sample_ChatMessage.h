@@ -68,15 +68,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void GetReactionsSample();
 
-	UFUNCTION()
-	void OnGetReactionsResponse(const FPubnubChatGetReactionsResult& Result);
-
 	// snippet.has_user_reaction
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void HasUserReactionSample();
-
-	UFUNCTION()
-	void OnHasUserReactionResponse(const FPubnubChatHasReactionResult& Result);
 
 	// snippet.forward_message
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
@@ -86,7 +80,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void ReportMessageSample();
 
-	// snippet.stream_updates
+	// snippet.stream_message_updates
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void StreamUpdatesSample();
 
@@ -109,9 +103,6 @@ public:
 	// snippet.has_thread
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")
 	void HasThreadSample();
-
-	UFUNCTION()
-	void OnHasThreadResponse(const FPubnubChatHasThreadResult& Result);
 
 	// snippet.remove_thread
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMessage")

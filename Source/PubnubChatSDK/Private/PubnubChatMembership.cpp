@@ -62,7 +62,7 @@ FString UPubnubChatMembership::GetChannelID() const
 	return Channel ? Channel->GetChannelID() : TEXT("");
 }
 
-FString UPubnubChatMembership::GetLastReadMessageTimetoken()
+FString UPubnubChatMembership::GetLastReadMessageTimetoken() const
 {
 	return UPubnubChatInternalUtilities::GetLastReadMessageTimetokenFromMembershipData(GetMembershipData());
 }

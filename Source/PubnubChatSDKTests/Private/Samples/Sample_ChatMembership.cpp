@@ -163,7 +163,7 @@ void ASample_ChatMembership::SetLastReadMessageSample()
 	Membership->SetLastReadMessageAsync(Message, nullptr);
 }
 
-// snippet.stream_updates
+// snippet.stream_membership_updates
 
 // ACTION REQUIRED: Replace ASample_ChatMembership with name of your Actor class
 void ASample_ChatMembership::StreamUpdatesSample()

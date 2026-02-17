@@ -99,8 +99,8 @@ public:
 	 *
 	 * @return Last-read message timetoken string, or empty if not set.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Pubnub Membership")
-	FString GetLastReadMessageTimetoken();
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Membership")
+	FString GetLastReadMessageTimetoken() const;
 	
 	/**
 	 * Removes this membership from the channel on the server (the user is removed from the channel's members).

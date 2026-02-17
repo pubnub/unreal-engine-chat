@@ -59,7 +59,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void SetLastReadMessageSample();
 
-	// snippet.stream_updates
+	// snippet.stream_membership_updates
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void StreamUpdatesSample();
 

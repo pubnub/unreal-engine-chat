@@ -273,33 +273,6 @@ FPubnubChatIsDeletedResult UPubnubChatMessage::IsDeleted()
 	return FinalResult;
 }
 
-void UPubnubChatMessage::IsDeletedAsync(FOnPubnubChatIsDeletedResponse OnIsDeletedResponse)
-{
-	FOnPubnubChatIsDeletedResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnIsDeletedResponse](const FPubnubChatIsDeletedResult& IsDeletedResult)
-	{
-		OnIsDeletedResponse.ExecuteIfBound(IsDeletedResult);
-	});
-
-	IsDeletedAsync(NativeCallback);
-}
-
-void UPubnubChatMessage::IsDeletedAsync(FOnPubnubChatIsDeletedResponseNative OnIsDeletedResponseNative)
-{
-	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnIsDeletedResponseNative, FPubnubChatIsDeletedResult());
-	
-	TWeakObjectPtr<UPubnubChatMessage> WeakThis = MakeWeakObjectPtr(this);
-
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnIsDeletedResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		FPubnubChatIsDeletedResult IsDeletedResult = WeakThis.Get()->IsDeleted();
-		UPubnubUtilities::CallPubnubDelegate(OnIsDeletedResponseNative, IsDeletedResult);
-	});
-}
-
 FPubnubChatOperationResult UPubnubChatMessage::Pin()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -464,7 +437,7 @@ void UPubnubChatMessage::ToggleReactionAsync(const FString Reaction, FOnPubnubCh
 	});
 }
 
-FPubnubChatGetReactionsResult UPubnubChatMessage::GetReactions()
+FPubnubChatGetReactionsResult UPubnubChatMessage::GetReactions() const
 {
 	FPubnubChatGetReactionsResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
@@ -477,34 +450,7 @@ FPubnubChatGetReactionsResult UPubnubChatMessage::GetReactions()
 	return FinalResult;
 }
 
-void UPubnubChatMessage::GetReactionsAsync(FOnPubnubChatGetReactionsResponse OnReactionsResponse)
-{
-	FOnPubnubChatGetReactionsResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnReactionsResponse](const FPubnubChatGetReactionsResult& ReactionsResult)
-	{
-		OnReactionsResponse.ExecuteIfBound(ReactionsResult);
-	});
-
-	GetReactionsAsync(NativeCallback);
-}
-
-void UPubnubChatMessage::GetReactionsAsync(FOnPubnubChatGetReactionsResponseNative OnReactionsResponseNative)
-{
-	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnReactionsResponseNative, FPubnubChatGetReactionsResult());
-	
-	TWeakObjectPtr<UPubnubChatMessage> WeakThis = MakeWeakObjectPtr(this);
-
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnReactionsResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		FPubnubChatGetReactionsResult ReactionsResult = WeakThis.Get()->GetReactions();
-		UPubnubUtilities::CallPubnubDelegate(OnReactionsResponseNative, ReactionsResult);
-	});
-}
-
-FPubnubChatHasReactionResult UPubnubChatMessage::HasUserReaction(const FString Reaction)
+FPubnubChatHasReactionResult UPubnubChatMessage::HasUserReaction(const FString Reaction) const
 {
 	FPubnubChatHasReactionResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
@@ -516,33 +462,6 @@ FPubnubChatHasReactionResult UPubnubChatMessage::HasUserReaction(const FString R
 	FPubnubChatMessageAction MessageReaction = UPubnubChatInternalUtilities::GetMessageReactionForUserID(GetReactionsResult.Reactions, Reaction, Chat->CurrentUserID);
 	FinalResult.HasReaction = !MessageReaction.Timetoken.IsEmpty();
 	return FinalResult;
-}
-
-void UPubnubChatMessage::HasUserReactionAsync(const FString Reaction, FOnPubnubChatHasReactionResponse OnHasReactionResponse)
-{
-	FOnPubnubChatHasReactionResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnHasReactionResponse](const FPubnubChatHasReactionResult& HasReactionResult)
-	{
-		OnHasReactionResponse.ExecuteIfBound(HasReactionResult);
-	});
-
-	HasUserReactionAsync(Reaction, NativeCallback);
-}
-
-void UPubnubChatMessage::HasUserReactionAsync(const FString Reaction, FOnPubnubChatHasReactionResponseNative OnHasReactionResponseNative)
-{
-	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnHasReactionResponseNative, FPubnubChatHasReactionResult());
-	
-	TWeakObjectPtr<UPubnubChatMessage> WeakThis = MakeWeakObjectPtr(this);
-
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, Reaction, OnHasReactionResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		FPubnubChatHasReactionResult HasReactionResult = WeakThis.Get()->HasUserReaction(Reaction);
-		UPubnubUtilities::CallPubnubDelegate(OnHasReactionResponseNative, HasReactionResult);
-	});
 }
 
 FPubnubChatOperationResult UPubnubChatMessage::Forward(UPubnubChatChannel* Channel)
@@ -867,7 +786,7 @@ void UPubnubChatMessage::GetThreadAsync(FOnPubnubChatThreadChannelResponseNative
 	});
 }
 
-FPubnubChatHasThreadResult UPubnubChatMessage::HasThread()
+FPubnubChatHasThreadResult UPubnubChatMessage::HasThread() const
 {
 	FPubnubChatHasThreadResult FinalResult;
 	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
@@ -875,33 +794,6 @@ FPubnubChatHasThreadResult UPubnubChatMessage::HasThread()
 	FinalResult.HasThread = UPubnubChatInternalUtilities::HasThreadRootMessageAction(GetMessageData().MessageActions);
 	
 	return FinalResult;
-}
-
-void UPubnubChatMessage::HasThreadAsync(FOnPubnubChatHasThreadResponse OnHasThreadResponse)
-{
-	FOnPubnubChatHasThreadResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnHasThreadResponse](const FPubnubChatHasThreadResult& HasThreadResult)
-	{
-		OnHasThreadResponse.ExecuteIfBound(HasThreadResult);
-	});
-
-	HasThreadAsync(NativeCallback);
-}
-
-void UPubnubChatMessage::HasThreadAsync(FOnPubnubChatHasThreadResponseNative OnHasThreadResponseNative)
-{
-	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnHasThreadResponseNative, FPubnubChatHasThreadResult());
-	
-	TWeakObjectPtr<UPubnubChatMessage> WeakThis = MakeWeakObjectPtr(this);
-
-	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnHasThreadResponseNative]
-	{
-		if (!WeakThis.IsValid())
-		{ return; }
-		
-		FPubnubChatHasThreadResult HasThreadResult = WeakThis.Get()->HasThread();
-		UPubnubUtilities::CallPubnubDelegate(OnHasThreadResponseNative, HasThreadResult);
-	});
 }
 
 FPubnubChatOperationResult UPubnubChatMessage::RemoveThread()

@@ -192,7 +192,7 @@ void ASample_ChatUser::SetRestrictionsSample()
 	FString ChannelID = TEXT("lobby-01");
 
 	// Set or lift ban/mute for this user on the channel
-	User->SetRestrictionsAsync(ChannelID, false, false, nullptr);
+	User->SetRestrictionsAsync(ChannelID, false, true, nullptr, "inappropriate language");
 }
 
 // snippet.get_channel_restrictions
@@ -248,7 +248,7 @@ void ASample_ChatUser::OnGetChannelsRestrictionsResponse(const FPubnubChatGetRes
 	TArray<FPubnubChatRestriction> Restrictions = Result.Restrictions;
 }
 
-// snippet.stream_updates
+// snippet.stream_user_updates
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
 void ASample_ChatUser::StreamUpdatesSample()
