@@ -301,9 +301,9 @@ FPubnubChatOperationResult UPubnubChatMembership::StreamUpdates()
 				//Update repository with new membership data
 				ThisMembership->Chat->ObjectsRepository->UpdateMembershipData(ThisMembership->GetInternalMembershipID(), ChatMembershipData);
 				
-				//Call delegates with Deleted type
-				ThisMembership->OnMembershipUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), ChatMembershipData);
-				ThisMembership->OnMembershipUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), ChatMembershipData);
+				//Call delegates with new data
+				ThisMembership->OnMembershipUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), ChatMembershipData);
+				ThisMembership->OnMembershipUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisMembership->GetChannelID(), ThisMembership->GetUserID(), ChatMembershipData);
 			}
 		}
 	});
