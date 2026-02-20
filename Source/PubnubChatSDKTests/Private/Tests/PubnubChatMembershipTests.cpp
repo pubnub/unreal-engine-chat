@@ -573,7 +573,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenFullParametersTest::RunTest
 		if(CreateResult.Channel)
 		{
 			// Join to create membership with initial data
-			FOnPubnubChatChannelMessageReceived MessageCallback;
+			FOnPubnubChatMessageReceived MessageCallback;
 			FPubnubChatMembershipData InitialMembershipData;
 			InitialMembershipData.Custom = TEXT("{\"role\":\"user\"}");
 			InitialMembershipData.Status = TEXT("active");
@@ -1167,21 +1167,19 @@ bool FPubnubChatMembershipStreamUpdatesHappyPathTest::RunTest(const FString& Par
 	
 	// Shared state for update reception
 	TSharedPtr<bool> bUpdateReceived = MakeShared<bool>(false);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
 	TSharedPtr<FString> ReceivedChannelID = MakeShared<FString>(TEXT(""));
 	TSharedPtr<FString> ReceivedUserID = MakeShared<FString>(TEXT(""));
 	TSharedPtr<FPubnubChatMembershipData> ReceivedMembershipData = MakeShared<FPubnubChatMembershipData>();
 	
 	// Set up delegate to receive membership updates
-	auto UpdateLambda = [this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelID, ReceivedUserID, ReceivedMembershipData](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
+	auto UpdateLambda = [this, bUpdateReceived, ReceivedChannelID, ReceivedUserID, ReceivedMembershipData](FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
 	{
 		*bUpdateReceived = true;
-		*ReceivedUpdateType = UpdateType;
 		*ReceivedChannelID = ChannelID;
 		*ReceivedUserID = UserID;
 		*ReceivedMembershipData = MembershipData;
 	};
-	JoinResult.Membership->OnMembershipUpdateReceivedNative.AddLambda(UpdateLambda);
+	JoinResult.Membership->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Stream updates (no parameters required)
 	FPubnubChatOperationResult StreamUpdatesResult = JoinResult.Membership->StreamUpdates();
@@ -1217,12 +1215,9 @@ bool FPubnubChatMembershipStreamUpdatesHappyPathTest::RunTest(const FString& Par
 	}, MAX_WAIT_TIME));
 	
 	// Verify update was received correctly
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelID, ReceivedUserID, TestChannelID, InitUserID, JoinResult]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedChannelID, ReceivedUserID, TestChannelID, InitUserID, JoinResult]()
 	{
 		TestTrue("Update should have been received", *bUpdateReceived);
-		// Note: There's a bug in the implementation - it broadcasts PCSUT_Deleted for updates
-		// Testing actual behavior: it broadcasts PCSUT_Deleted
-		TestEqual("Received UpdateType should be Deleted (bug in implementation)", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Deleted);
 		TestEqual("Received ChannelID should match", *ReceivedChannelID, TestChannelID);
 		TestEqual("Received UserID should match", *ReceivedUserID, InitUserID);
 		
@@ -1324,11 +1319,11 @@ bool FPubnubChatMembershipStreamUpdatesMultipleUpdatesTest::RunTest(const FStrin
 	TSharedPtr<int32> UpdateCount = MakeShared<int32>(0);
 	
 	// Set up delegate to receive membership updates
-	auto UpdateLambda = [this, UpdateCount](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
+	auto UpdateLambda = [this, UpdateCount](FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
 	{
 		*UpdateCount = *UpdateCount + 1;
 	};
-	JoinResult.Membership->OnMembershipUpdateReceivedNative.AddLambda(UpdateLambda);
+	JoinResult.Membership->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Stream updates
 	FPubnubChatOperationResult StreamUpdatesResult = JoinResult.Membership->StreamUpdates();
@@ -1467,18 +1462,13 @@ bool FPubnubChatMembershipStreamUpdatesDeleteEventTest::RunTest(const FString& P
 	
 	// Shared state for delete event reception
 	TSharedPtr<bool> bDeleteReceived = MakeShared<bool>(false);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
 	
-	// Set up delegate to receive membership updates
-	auto UpdateLambda = [this, bDeleteReceived, ReceivedUpdateType](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
+	// Set up delegate to receive membership removal
+	auto DeletedLambda = [this, bDeleteReceived]()
 	{
-		if(UpdateType == EPubnubChatStreamedUpdateType::PCSUT_Deleted)
-		{
-			*bDeleteReceived = true;
-			*ReceivedUpdateType = UpdateType;
-		}
+		*bDeleteReceived = true;
 	};
-	JoinResult.Membership->OnMembershipUpdateReceivedNative.AddLambda(UpdateLambda);
+	JoinResult.Membership->OnDeletedNative.AddLambda(DeletedLambda);
 	
 	// Stream updates
 	FPubnubChatOperationResult StreamUpdatesResult = JoinResult.Membership->StreamUpdates();
@@ -1497,10 +1487,9 @@ bool FPubnubChatMembershipStreamUpdatesDeleteEventTest::RunTest(const FString& P
 	}, MAX_WAIT_TIME));
 	
 	// Verify delete event was received
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bDeleteReceived, ReceivedUpdateType]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bDeleteReceived]()
 	{
 		TestTrue("Delete event should have been received", *bDeleteReceived);
-		TestEqual("Received UpdateType should be Deleted", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Deleted);
 	}, 0.1f));
 	
 	// Cleanup: Delete channel
@@ -1694,12 +1683,12 @@ bool FPubnubChatMembershipStreamUpdatesPartialUpdateTest::RunTest(const FString&
 	TSharedPtr<FPubnubChatMembershipData> ReceivedMembershipData = MakeShared<FPubnubChatMembershipData>();
 	
 	// Set up delegate to receive membership updates
-	auto UpdateLambda = [this, bUpdateReceived, ReceivedMembershipData](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
+	auto UpdateLambda = [this, bUpdateReceived, ReceivedMembershipData](FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
 	{
 		*bUpdateReceived = true;
 		*ReceivedMembershipData = MembershipData;
 	};
-	JoinResult.Membership->OnMembershipUpdateReceivedNative.AddLambda(UpdateLambda);
+	JoinResult.Membership->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Stream updates
 	FPubnubChatOperationResult StreamUpdatesResult = JoinResult.Membership->StreamUpdates();
@@ -2388,7 +2377,7 @@ bool FPubnubChatMembershipStopStreamingUpdatesPreventsUpdatesTest::RunTest(const
 	TSharedPtr<bool> SecondUpdateReceived = MakeShared<bool>(false);
 	
 	// Set up delegate to receive membership updates
-	auto UpdateLambda = [this, FirstUpdateCount, SecondUpdateReceived](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
+	auto UpdateLambda = [this, FirstUpdateCount, SecondUpdateReceived](FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
 	{
 		// Only count updates with Status = "FirstUpdate"
 		if(MembershipData.Status == TEXT("FirstUpdate"))
@@ -2401,7 +2390,7 @@ bool FPubnubChatMembershipStopStreamingUpdatesPreventsUpdatesTest::RunTest(const
 			*SecondUpdateReceived = true;
 		}
 	};
-	JoinResult.Membership->OnMembershipUpdateReceivedNative.AddLambda(UpdateLambda);
+	JoinResult.Membership->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Start streaming updates
 	FPubnubChatOperationResult StreamUpdatesResult = JoinResult.Membership->StreamUpdates();

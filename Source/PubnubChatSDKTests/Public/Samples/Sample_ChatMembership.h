@@ -73,7 +73,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")
 	void StreamUpdatesSample();
 
-	void OnMembershipUpdateReceived(EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData);
+	void OnMembershipUpdateReceived(FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData);
+	void OnMembershipDeleted();
 
 	// snippet.get_unread_messages_count
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatMembership")

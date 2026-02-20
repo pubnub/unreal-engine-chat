@@ -19,16 +19,18 @@ class UPubnubChatMessage;
 class UPubnubChatCallbackStop;
 class UPubnubChatMessageDraft;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceived, UPubnubChatMessage*, PubnubMessage);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatChannelMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatChannelUpdateReceived, EPubnubChatStreamedUpdateType, UpdateType, FString, ChannelID, FPubnubChatChannelData, ChannelData);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatChannelUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingReceived, const TArray<FString>&, TypingUserIDs);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingReceivedNative, const TArray<FString>& TypingUserIDs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReceived, UPubnubChatMessage*, PubnubMessage);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReceivedNative, UPubnubChatMessage* PubnubMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatChannelUpdated, FString, ChannelID, FPubnubChatChannelData, ChannelData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatChannelUpdatedNative, FString ChannelID, const FPubnubChatChannelData& ChannelData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingChanged, const TArray<FString>&, TypingUserIDs);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingChangedNative, const TArray<FString>& TypingUserIDs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceived, FPubnubChatReadReceipts, ReadReceipts);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceivedNative, const FPubnubChatReadReceipts& ReadReceipts);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportReceived, FPubnubChatEvent, ReportEvent);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportReceivedNative, const FPubnubChatEvent& ReportEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReported, FPubnubChatEvent, ReportEvent);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportedNative, const FPubnubChatEvent& ReportEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatPresenceChanged, const TArray<FString>&, UserIDs);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatPresenceChangedNative, const TArray<FString>& UserIDs);
 
 
 /**
@@ -52,26 +54,26 @@ public:
 	 * @param PubnubMessage The received message object.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatChannelMessageReceived OnMessageReceived;
-	FOnPubnubChatChannelMessageReceivedNative OnMessageReceivedNative;
+	FOnPubnubChatMessageReceived OnMessageReceived;
+	FOnPubnubChatMessageReceivedNative OnMessageReceivedNative;
 	
 	/**
-	 * Broadcast when this channel's metadata is updated or the channel is deleted (e.g. after StreamUpdates is active).
-	 * @param UpdateType Whether the channel was updated (PCSUT_Updated) or deleted (PCSUT_Deleted).
+	 * Broadcast when this channel's metadata is updated (after StreamUpdates is active).
+	 * For channel deletion, use OnDeleted instead.
 	 * @param ChannelID The channel ID (this channel).
-	 * @param ChannelData Updated channel metadata; empty when UpdateType is Deleted.
+	 * @param ChannelData Updated channel metadata.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatChannelUpdateReceived OnChannelUpdateReceived;
-	FOnPubnubChatChannelUpdateReceivedNative OnChannelUpdateReceivedNative;
+	FOnPubnubChatChannelUpdated OnUpdated;
+	FOnPubnubChatChannelUpdatedNative OnUpdatedNative;
 	
 	/**
 	 * Broadcast when typing indicators change on this channel (after StreamTyping is active). Delivers the list of user IDs currently typing.
 	 * @param TypingUserIDs User IDs that are currently typing on this channel.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatTypingReceived OnTypingReceived;
-	FOnPubnubChatTypingReceivedNative OnTypingReceivedNative;
+	FOnPubnubChatTypingChanged OnTypingChanged;
+	FOnPubnubChatTypingChangedNative OnTypingChangedNative;
 	
 	/**
 	 * Broadcast when read receipt events are received on this channel (after StreamReadReceipts is active).
@@ -86,8 +88,25 @@ public:
 	 * @param ReportEvent The report event (user, payload, etc.).
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatMessageReportReceived OnMessageReportReceived;
-	FOnPubnubChatMessageReportReceivedNative OnMessageReportReceivedNative;
+	FOnPubnubChatMessageReported OnMessageReported;
+	FOnPubnubChatMessageReportedNative OnMessageReportedNative;
+
+	/**
+	 * Broadcast when this channel is deleted on the server (after StreamUpdates is active).
+	 * Subscribe to remove the channel from local UI or lists when it is deleted elsewhere.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatObjectDeleted OnDeleted;
+	FOnPubnubChatObjectDeletedNative OnDeletedNative;
+	
+	/**
+	 * Broadcast when the set of users present on this channel changes.
+	 * Presence reflects active subscriptions; use WhoIsPresent() or IsPresent() to query current state.
+	 * @param UserIDs User IDs currently subscribed to this channel.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatPresenceChanged OnPresenceChanged;
+	FOnPubnubChatPresenceChangedNative OnPresenceChangedNative;
 	
 	
 	/* PUBLIC FUNCTIONS */
@@ -798,7 +817,7 @@ public:
 	void EmitUserMentionAsync(const FString UserID, const FString Timetoken, const FString Text, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
-	 * Starts listening for channel metadata updates (and delete events) on this channel. Updates and deletions are delivered via OnChannelUpdateReceived / OnChannelUpdateReceivedNative.
+	 * Starts listening for channel metadata updates (and delete events) on this channel. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * Blocking: subscribes on the calling thread. Blocks until the subscription is established.
 	 * No-op if already streaming updates.
 	 *
@@ -808,7 +827,7 @@ public:
 	FPubnubChatOperationResult StreamUpdates();
 	
 	/**
-	 * Starts listening asynchronously for channel metadata updates (and delete events) on this channel. Updates and deletions are delivered via OnChannelUpdateReceived / OnChannelUpdateReceivedNative.
+	 * Starts listening asynchronously for channel metadata updates (and delete events) on this channel. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * No-op if already streaming updates.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
@@ -816,7 +835,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StreamUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Starts listening asynchronously for channel metadata updates (and delete events) on this channel. Updates and deletions are delivered via OnChannelUpdateReceived / OnChannelUpdateReceivedNative.
+	 * Starts listening asynchronously for channel metadata updates (and delete events) on this channel. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * No-op if already streaming updates.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
@@ -834,7 +853,7 @@ public:
 	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatChannel*>& Channels);
 	
 	/**
-	 * Stops listening for channel metadata updates on this channel. OnChannelUpdateReceived will no longer fire for updates.
+	 * Stops listening for channel metadata updates on this channel. OnUpdated and OnDeleted will no longer fire.
 	 * Blocking: unsubscribes on the calling thread. Blocks for the duration of the operation.
 	 * No-op if not streaming updates.
 	 *
@@ -844,7 +863,7 @@ public:
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
 	/**
-	 * Stops listening asynchronously for channel metadata updates on this channel. OnChannelUpdateReceived will no longer fire for updates.
+	 * Stops listening asynchronously for channel metadata updates on this channel. OnUpdated and OnDeleted will no longer fire.
 	 * No-op if not streaming updates.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
@@ -852,7 +871,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Stops listening asynchronously for channel metadata updates on this channel. OnChannelUpdateReceived will no longer fire for updates.
+	 * Stops listening asynchronously for channel metadata updates on this channel. OnUpdated and OnDeleted will no longer fire.
 	 * No-op if not streaming updates.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).

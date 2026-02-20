@@ -258,7 +258,7 @@ void ASample_ChatMessage::StreamUpdatesSample()
 	// Assumes Message is a valid UPubnubChatMessage
 
 	// Bind to receive message action updates (edits, reactions, deletes)
-	Message->OnMessageUpdateReceivedNative.AddUObject(this, &ASample_ChatMessage::OnMessageUpdateReceived);
+	Message->OnUpdatedNative.AddUObject(this, &ASample_ChatMessage::OnMessageUpdateReceived);
 
 	// Start streaming updates (no result callback needed)
 	Message->StreamUpdatesAsync(nullptr);

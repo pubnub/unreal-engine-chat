@@ -16,8 +16,8 @@ class UPubnubChatUser;
 class UPubnubChatChannel;
 class UPubnubSubscription;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnPubnubChatMembershipUpdateReceived, EPubnubChatStreamedUpdateType, UpdateType, FString, ChannelID, FString, UserID, FPubnubChatMembershipData, MembershipData);
-DECLARE_MULTICAST_DELEGATE_FourParams(FOnPubnubChatMembershipUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatMembershipUpdated, FString, ChannelID, FString, UserID, FPubnubChatMembershipData, MembershipData);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatMembershipUpdatedNative, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData);
 
 /**
  * Represents a user's membership in a channel in the PubNub Chat SDK. Provides access to membership metadata (custom, status, type),
@@ -36,15 +36,23 @@ public:
 	/* DELEGATES */
 
 	/**
-	 * Broadcast when this membership is updated or deleted after StreamUpdates is active.
-	 * @param UpdateType Indicates the change type (e.g. Added, Updated, Deleted).
+	 * Broadcast when this membership's metadata is updated (after StreamUpdates is active).
+	 * For membership deletion, use OnDeleted instead.
 	 * @param ChannelID The channel ID of this membership.
 	 * @param UserID The user ID of this membership.
-	 * @param MembershipData Updated membership data (custom, status, type). Empty when the membership was deleted.
+	 * @param MembershipData Updated membership data (custom, status, type).
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatMembershipUpdateReceived OnMembershipUpdateReceived;
-	FOnPubnubChatMembershipUpdateReceivedNative OnMembershipUpdateReceivedNative;
+	FOnPubnubChatMembershipUpdated OnUpdated;
+	FOnPubnubChatMembershipUpdatedNative OnUpdatedNative;
+	
+	/**
+	 * Broadcast when this membership is deleted on the server (after StreamUpdates is active).
+	 * Subscribe to remove the membership from local UI or lists when it is deleted elsewhere.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatObjectDeleted OnDeleted;
+	FOnPubnubChatObjectDeletedNative OnDeletedNative;
 
 	/* PUBLIC FUNCTIONS */
 
@@ -213,7 +221,7 @@ public:
 	void SetLastReadMessageAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
-	 * Starts listening for membership metadata updates (update/delete) for this membership. Updates are delivered via OnMembershipUpdateReceived / OnMembershipUpdateReceivedNative.
+	 * Starts listening for membership metadata updates (update/delete) for this membership. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * Blocking: subscribes on the calling thread. Blocks until the subscription is established.
 	 * No-op if already streaming updates.
 	 *
@@ -223,7 +231,7 @@ public:
 	FPubnubChatOperationResult StreamUpdates();
 	
 	/**
-	 * Starts listening asynchronously for membership metadata updates (update/delete) for this membership. Updates are delivered via OnMembershipUpdateReceived / OnMembershipUpdateReceivedNative.
+	 * Starts listening asynchronously for membership metadata updates (update/delete) for this membership. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * No-op if already streaming updates.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
@@ -231,7 +239,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StreamUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Starts listening asynchronously for membership metadata updates (update/delete) for this membership. Updates are delivered via OnMembershipUpdateReceived / OnMembershipUpdateReceivedNative.
+	 * Starts listening asynchronously for membership metadata updates (update/delete) for this membership. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * No-op if already streaming updates.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
@@ -249,7 +257,7 @@ public:
 	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatMembership*>& Memberships);
 	
 	/**
-	 * Stops listening for membership metadata updates for this membership. OnMembershipUpdateReceived will no longer fire.
+	 * Stops listening for membership metadata updates for this membership. OnUpdated and OnDeleted will no longer fire.
 	 * Blocking: unsubscribes on the calling thread. Blocks for the duration of the operation.
 	 * No-op if not streaming updates.
 	 *
@@ -259,7 +267,7 @@ public:
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
 	/**
-	 * Stops listening asynchronously for membership metadata updates for this membership. OnMembershipUpdateReceived will no longer fire.
+	 * Stops listening asynchronously for membership metadata updates for this membership. OnUpdated and OnDeleted will no longer fire.
 	 * No-op if not streaming updates. Success if unsubscribe succeeded or was not streaming.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
@@ -267,7 +275,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Membership", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Stops listening asynchronously for membership metadata updates for this membership. OnMembershipUpdateReceived will no longer fire.
+	 * Stops listening asynchronously for membership metadata updates for this membership. OnUpdated and OnDeleted will no longer fire.
 	 * No-op if not streaming updates. Success if unsubscribe succeeded or was not streaming.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).

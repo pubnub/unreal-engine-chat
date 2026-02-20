@@ -9,8 +9,8 @@
 class UPubnubChatMessage;
 class UPubnubChatThreadMessage;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatThreadChannelMessageReceived, UPubnubChatThreadMessage*, ThreadMessage);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatThreadChannelMessageReceivedNative, UPubnubChatThreadMessage* ThreadMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatThreadMessageReceived, UPubnubChatThreadMessage*, ThreadMessage);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatThreadMessageReceivedNative, UPubnubChatThreadMessage* ThreadMessage);
 
 
 /**
@@ -32,8 +32,8 @@ public:
 	 * @param ThreadMessage The received thread message object.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatThreadChannelMessageReceived OnThreadMessageReceived;
-	FOnPubnubChatThreadChannelMessageReceivedNative OnThreadMessageReceivedNative;
+	FOnPubnubChatThreadMessageReceived OnThreadMessageReceived;
+	FOnPubnubChatThreadMessageReceivedNative OnThreadMessageReceivedNative;
 	
 	/* PUBLIC FUNCTIONS */
 	

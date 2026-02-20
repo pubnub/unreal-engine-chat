@@ -610,8 +610,8 @@ FPubnubChatOperationResult UPubnubChatMessage::StreamUpdates()
 				ThisMessage->Chat->ObjectsRepository->UpdateMessageData(ThisMessage->GetInternalMessageID(), ChatMessageData);
 				
 				//Call delegates with new user data
-				ThisMessage->OnMessageUpdateReceived.Broadcast(ThisMessage->Timetoken, ChatMessageData);
-				ThisMessage->OnMessageUpdateReceivedNative.Broadcast(ThisMessage->Timetoken, ChatMessageData);
+				ThisMessage->OnUpdated.Broadcast(ThisMessage->Timetoken, ChatMessageData);
+				ThisMessage->OnUpdatedNative.Broadcast(ThisMessage->Timetoken, ChatMessageData);
 			}
 		}
 	});

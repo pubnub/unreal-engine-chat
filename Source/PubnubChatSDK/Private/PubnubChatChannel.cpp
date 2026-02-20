@@ -1184,9 +1184,9 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamUpdates()
 				//Remove this channel from repository
 				ThisChannel->Chat->ObjectsRepository->RemoveChannelData(ThisChannel->ChannelID);
 				
-				//Call delegates with Deleted type
-				ThisChannel->OnChannelUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisChannel->ChannelID, FPubnubChatChannelData());
-				ThisChannel->OnChannelUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisChannel->ChannelID, FPubnubChatChannelData());
+				//Call OnDeleted delegates
+				ThisChannel->OnDeleted.Broadcast();
+				ThisChannel->OnDeletedNative.Broadcast();
 			}
 			else
 			{
@@ -1198,9 +1198,9 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamUpdates()
 				//Update repository with new channel data
 				ThisChannel->Chat->ObjectsRepository->UpdateChannelData(ThisChannel->ChannelID, ChatChannelData);
 							
-				//Call delegates with new channel data
-				ThisChannel->OnChannelUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisChannel->ChannelID, ChatChannelData);
-				ThisChannel->OnChannelUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisChannel->ChannelID, ChatChannelData);
+				//Call OnUpdated delegates with new channel data
+				ThisChannel->OnUpdated.Broadcast(ThisChannel->ChannelID, ChatChannelData);
+				ThisChannel->OnUpdatedNative.Broadcast(ThisChannel->ChannelID, ChatChannelData);
 			}
 		}
 	});
@@ -1488,8 +1488,8 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamTyping()
 					} //Lock released here
 					
 					//Broadcast updated typing users list (Fix #2: Broadcast delegates when timer expires)
-					ThisChannel->OnTypingReceived.Broadcast(TypingUsersList);
-					ThisChannel->OnTypingReceivedNative.Broadcast(TypingUsersList);
+					ThisChannel->OnTypingChanged.Broadcast(TypingUsersList);
+					ThisChannel->OnTypingChangedNative.Broadcast(TypingUsersList);
 				});
 				FTimerHandle TimerHandle;
 				float TimerDelay = ThisChannel->Chat->ChatConfig.TypingTimeout + 10.0f; // Add 10 MS to be sure that it will really expire
@@ -1504,8 +1504,8 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamTyping()
 		} //Lock released here
 		
 		//Call delegates with typing users (outside of lock)
-		ThisChannel->OnTypingReceived.Broadcast(TypingUsers);
-		ThisChannel->OnTypingReceivedNative.Broadcast(TypingUsers);
+		ThisChannel->OnTypingChanged.Broadcast(TypingUsers);
+		ThisChannel->OnTypingChangedNative.Broadcast(TypingUsers);
 	});
 	
 	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(ChannelID, EPubnubChatEventType::PCET_Typing, OnEventReceived);
@@ -1693,8 +1693,8 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamMessageReports()
 		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
 		{ return; }
 		
-		ThisChannel->OnMessageReportReceived.Broadcast(Event);
-		ThisChannel->OnMessageReportReceivedNative.Broadcast(Event);
+		ThisChannel->OnMessageReported.Broadcast(Event);
+		ThisChannel->OnMessageReportedNative.Broadcast(Event);
 	});
 		
 	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);

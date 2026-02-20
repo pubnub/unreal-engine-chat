@@ -435,9 +435,9 @@ FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 				//Remove this user from repository
 				ThisUser->Chat->ObjectsRepository->RemoveUserData(ThisUser->UserID);
 				
-				//Call delegates with Deleted type
-				ThisUser->OnUserUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisUser->UserID, FPubnubChatUserData());
-				ThisUser->OnUserUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Deleted, ThisUser->UserID, FPubnubChatUserData());
+				//Call OnDeleted delegates
+				ThisUser->OnDeleted.Broadcast();
+				ThisUser->OnDeletedNative.Broadcast();
 			}
 			else
 			{
@@ -449,9 +449,9 @@ FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 				//Update repository with new user data
 				ThisUser->Chat->ObjectsRepository->UpdateUserData(ThisUser->UserID, ChatUserData);
 							
-				//Call delegates with new user data
-				ThisUser->OnUserUpdateReceived.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisUser->UserID, ChatUserData);
-				ThisUser->OnUserUpdateReceivedNative.Broadcast(EPubnubChatStreamedUpdateType::PCSUT_Updated, ThisUser->UserID, ChatUserData);
+				//Call OnUpdated delegates with new user data
+				ThisUser->OnUpdated.Broadcast(ThisUser->UserID, ChatUserData);
+				ThisUser->OnUpdatedNative.Broadcast(ThisUser->UserID, ChatUserData);
 			}
 		}
 	});

@@ -2518,19 +2518,17 @@ bool FPubnubChatChannelStreamUpdatesHappyPathTest::RunTest(const FString& Parame
 	
 	// Shared state for update reception
 	TSharedPtr<bool> bUpdateReceived = MakeShared<bool>(false);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
 	TSharedPtr<FString> ReceivedChannelID = MakeShared<FString>(TEXT(""));
 	TSharedPtr<FPubnubChatChannelData> ReceivedChannelData = MakeShared<FPubnubChatChannelData>();
 	
 	// Set up delegate to receive channel updates
-	auto UpdateLambda = [this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelID, ReceivedChannelData](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda = [this, bUpdateReceived, ReceivedChannelID, ReceivedChannelData](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		*bUpdateReceived = true;
-		*ReceivedUpdateType = UpdateType;
 		*ReceivedChannelID = ChannelID;
 		*ReceivedChannelData = ChannelData;
 	};
-	CreateResult.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda);
+	CreateResult.Channel->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Stream updates (no parameters required)
 	FPubnubChatOperationResult StreamUpdatesResult = CreateResult.Channel->StreamUpdates();
@@ -2553,10 +2551,9 @@ bool FPubnubChatChannelStreamUpdatesHappyPathTest::RunTest(const FString& Parame
 	}, MAX_WAIT_TIME));
 	
 	// Verify update was received correctly
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelID, ReceivedChannelData, TestChannelID, CreateResult]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedChannelID, ReceivedChannelData, TestChannelID, CreateResult]()
 	{
 		TestTrue("Update should have been received", *bUpdateReceived);
-		TestEqual("Received UpdateType should be Updated", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Updated);
 		TestEqual("Received ChannelID should match", *ReceivedChannelID, TestChannelID);
 		TestEqual("Received ChannelName should be updated", ReceivedChannelData->ChannelName, TEXT("UpdatedChannelName"));
 		
@@ -2641,17 +2638,15 @@ bool FPubnubChatChannelStreamUpdatesPartialUpdateTest::RunTest(const FString& Pa
 	
 	// Shared state for update reception
 	TSharedPtr<bool> bUpdateReceived = MakeShared<bool>(false);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
 	TSharedPtr<FPubnubChatChannelData> ReceivedChannelData = MakeShared<FPubnubChatChannelData>();
 	
 	// Set up delegate to receive channel updates
-	auto UpdateLambda = [this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelData](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda = [this, bUpdateReceived, ReceivedChannelData](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		*bUpdateReceived = true;
-		*ReceivedUpdateType = UpdateType;
 		*ReceivedChannelData = ChannelData;
 	};
-	CreateResult.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda);
+	CreateResult.Channel->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Stream updates
 	FPubnubChatOperationResult StreamUpdatesResult = CreateResult.Channel->StreamUpdates();
@@ -2678,10 +2673,9 @@ bool FPubnubChatChannelStreamUpdatesPartialUpdateTest::RunTest(const FString& Pa
 	}, MAX_WAIT_TIME));
 	
 	// Verify partial update was received correctly
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelData, CreateResult]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedChannelData, CreateResult]()
 	{
 		TestTrue("Update should have been received", *bUpdateReceived);
-		TestEqual("Received UpdateType should be Updated", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Updated);
 		
 		// Verify updated fields
 		TestEqual("ChannelName should be updated", ReceivedChannelData->ChannelName, TEXT("UpdatedName"));
@@ -2778,19 +2772,17 @@ bool FPubnubChatChannelStreamUpdatesFullScenarioTest::RunTest(const FString& Par
 	
 	// Shared state for update reception
 	TSharedPtr<bool> bUpdateReceived = MakeShared<bool>(false);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
 	TSharedPtr<FString> ReceivedChannelID = MakeShared<FString>(TEXT(""));
 	TSharedPtr<FPubnubChatChannelData> ReceivedChannelData = MakeShared<FPubnubChatChannelData>();
 	
 	// Step 2: StreamUpdates
-	auto UpdateLambda = [this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelID, ReceivedChannelData](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda = [this, bUpdateReceived, ReceivedChannelID, ReceivedChannelData](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		*bUpdateReceived = true;
-		*ReceivedUpdateType = UpdateType;
 		*ReceivedChannelID = ChannelID;
 		*ReceivedChannelData = ChannelData;
 	};
-	CreateResult.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda);
+	CreateResult.Channel->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	FPubnubChatOperationResult StreamUpdatesResult = CreateResult.Channel->StreamUpdates();
 	TestFalse("StreamUpdates should succeed", StreamUpdatesResult.Error);
@@ -2816,10 +2808,9 @@ bool FPubnubChatChannelStreamUpdatesFullScenarioTest::RunTest(const FString& Par
 		return *bUpdateReceived;
 	}, MAX_WAIT_TIME));
 	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedUpdateType, ReceivedChannelID, ReceivedChannelData, TestChannelID]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bUpdateReceived, ReceivedChannelID, ReceivedChannelData, TestChannelID]()
 	{
 		TestTrue("Update should have been received via delegate", *bUpdateReceived);
-		TestEqual("Received UpdateType should be Updated", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Updated);
 		TestEqual("Received ChannelID should match", *ReceivedChannelID, TestChannelID);
 		
 		// Verify updated fields in delegate data
@@ -2925,17 +2916,15 @@ bool FPubnubChatChannelStreamUpdatesMultipleUpdatesTest::RunTest(const FString& 
 	
 	// Track all received updates
 	TSharedPtr<int32> UpdateCount = MakeShared<int32>(0);
-	TSharedPtr<TArray<EPubnubChatStreamedUpdateType>> ReceivedUpdateTypes = MakeShared<TArray<EPubnubChatStreamedUpdateType>>();
 	TSharedPtr<TArray<FPubnubChatChannelData>> ReceivedUpdates = MakeShared<TArray<FPubnubChatChannelData>>();
 	
 	// Set up delegate to receive channel updates
-	auto UpdateLambda = [this, UpdateCount, ReceivedUpdateTypes, ReceivedUpdates](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda = [this, UpdateCount, ReceivedUpdates](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		*UpdateCount = *UpdateCount + 1;
-		ReceivedUpdateTypes->Add(UpdateType);
 		ReceivedUpdates->Add(ChannelData);
 	};
-	CreateResult.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda);
+	CreateResult.Channel->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Stream updates
 	FPubnubChatOperationResult StreamUpdatesResult = CreateResult.Channel->StreamUpdates();
@@ -2974,16 +2963,9 @@ bool FPubnubChatChannelStreamUpdatesMultipleUpdatesTest::RunTest(const FString& 
 	}, MAX_WAIT_TIME));
 	
 	// Verify all updates were received
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, UpdateCount, ReceivedUpdateTypes, ReceivedUpdates, CreateResult]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, UpdateCount, ReceivedUpdates, CreateResult]()
 	{
 		TestTrue("Should have received at least 2 updates", *UpdateCount >= 2);
-		
-		// Verify all updates have correct type
-		if(ReceivedUpdateTypes->Num() >= 2)
-		{
-			TestEqual("First update type should be Updated", (*ReceivedUpdateTypes)[0], EPubnubChatStreamedUpdateType::PCSUT_Updated);
-			TestEqual("Second update type should be Updated", (*ReceivedUpdateTypes)[1], EPubnubChatStreamedUpdateType::PCSUT_Updated);
-		}
 		
 		// Verify latest update has correct data
 		if(ReceivedUpdates->Num() >= 2)
@@ -3066,17 +3048,13 @@ bool FPubnubChatChannelStreamUpdatesDeleteTest::RunTest(const FString& Parameter
 	
 	// Shared state for deletion reception
 	TSharedPtr<bool> bDeleteReceived = MakeShared<bool>(false);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
-	TSharedPtr<FString> ReceivedChannelID = MakeShared<FString>(TEXT(""));
 	
-	// Set up delegate to receive channel updates
-	auto UpdateLambda = [this, bDeleteReceived, ReceivedUpdateType, ReceivedChannelID](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	// Set up delegate to receive channel removal
+	auto DeletedLambda = [this, bDeleteReceived]()
 	{
 		*bDeleteReceived = true;
-		*ReceivedUpdateType = UpdateType;
-		*ReceivedChannelID = ChannelID;
 	};
-	CreateResult.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda);
+	CreateResult.Channel->OnDeletedNative.AddLambda(DeletedLambda);
 	
 	// Stream updates
 	FPubnubChatOperationResult StreamUpdatesResult = CreateResult.Channel->StreamUpdates();
@@ -3096,11 +3074,9 @@ bool FPubnubChatChannelStreamUpdatesDeleteTest::RunTest(const FString& Parameter
 	}, MAX_WAIT_TIME));
 	
 	// Verify delete event was received correctly
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bDeleteReceived, ReceivedUpdateType, ReceivedChannelID, TestChannelID]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bDeleteReceived]()
 	{
 		TestTrue("Delete event should have been received", *bDeleteReceived);
-		TestEqual("Received UpdateType should be Deleted", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Deleted);
-		TestEqual("Received ChannelID should match", *ReceivedChannelID, TestChannelID);
 	}, 0.1f));
 	
 	// Cleanup
@@ -3288,15 +3264,13 @@ bool FPubnubChatChannelStopStreamingUpdatesPreventsUpdatesTest::RunTest(const FS
 	
 	// Track received updates
 	TSharedPtr<int32> UpdateCount = MakeShared<int32>(0);
-	TSharedPtr<EPubnubChatStreamedUpdateType> ReceivedUpdateType = MakeShared<EPubnubChatStreamedUpdateType>();
 	
 	// Set up delegate to receive channel updates
-	auto UpdateLambda = [this, UpdateCount, ReceivedUpdateType](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda = [this, UpdateCount](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		*UpdateCount = *UpdateCount + 1;
-		*ReceivedUpdateType = UpdateType;
 	};
-	CreateResult.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda);
+	CreateResult.Channel->OnUpdatedNative.AddLambda(UpdateLambda);
 	
 	// Start streaming updates
 	FPubnubChatOperationResult StreamUpdatesResult = CreateResult.Channel->StreamUpdates();
@@ -3318,10 +3292,9 @@ bool FPubnubChatChannelStopStreamingUpdatesPreventsUpdatesTest::RunTest(const FS
 	}, MAX_WAIT_TIME));
 	
 	// Verify first update was received
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, UpdateCount, ReceivedUpdateType]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, UpdateCount]()
 	{
 		TestTrue("First update should have been received", *UpdateCount >= 1);
-		TestEqual("First update type should be Updated", *ReceivedUpdateType, EPubnubChatStreamedUpdateType::PCSUT_Updated);
 	}, 0.1f));
 	
 	// Stop streaming updates

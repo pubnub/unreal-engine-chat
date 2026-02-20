@@ -14,8 +14,14 @@ class UPubnubClient;
 class UPubnubChat;
 class UPubnubSubscription;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceived, EPubnubChatStreamedUpdateType, UpdateType, FString, UserID, FPubnubChatUserData, UserData);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPubnubChatUserUpdateReceivedNative, EPubnubChatStreamedUpdateType UpdateType, FString UserID, const FPubnubChatUserData& UserData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatUserUpdated, FString, UserID, FPubnubChatUserData, UserData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatUserUpdatedNative, FString UserID, const FPubnubChatUserData& UserData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatUserMentioned, FPubnubChatUserMention, UserMention);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatUserMentionedNative, const FPubnubChatUserMention& UserMention);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatUserInvited, FPubnubChatInviteEvent, InviteEvent);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatUserInvitedNative, const FPubnubChatInviteEvent& InviteEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatUserRestrictionChanged, FPubnubChatRestriction, Restriction);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatUserRestrictionChangedNative, const FPubnubChatRestriction& Restriction);
 
 /**
  * Represents a chat user in the PubNub Chat SDK. Provides access to user metadata, memberships, presence, restrictions, and streaming updates.
@@ -33,14 +39,34 @@ public:
 	/* DELEGATES */
 	
 	/**
-	 * Broadcast when this user's metadata is updated or the user is deleted (e.g. after StreamUpdates is active).
-	 * @param UpdateType Whether the user was updated (PCSUT_Updated) or deleted (PCSUT_Deleted).
+	 * Broadcast when this user's metadata is updated (after StreamUpdates is active).
+	 * For user deletion, use OnDeleted instead.
 	 * @param UserID The user ID (this user).
-	 * @param UserData Updated user metadata; empty when UpdateType is Deleted.
+	 * @param UserData Updated user metadata.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatUserUpdateReceived OnUserUpdateReceived;
-	FOnPubnubChatUserUpdateReceivedNative OnUserUpdateReceivedNative;
+	FOnPubnubChatUserUpdated OnUpdated;
+	FOnPubnubChatUserUpdatedNative OnUpdatedNative;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatUserMentioned OnMentioned;
+	FOnPubnubChatUserMentionedNative OnMentionedNative;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatUserInvited OnInvited;
+	FOnPubnubChatUserInvitedNative OnInvitedNative;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatUserRestrictionChanged OnRestrictionChanged;
+	FOnPubnubChatUserRestrictionChangedNative OnRestrictionChangedNative;
+	
+	/**
+	 * Broadcast when this user is deleted on the server (after StreamUpdates is active).
+	 * Subscribe to remove the user from local UI or lists when they are deleted elsewhere.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatObjectDeleted OnDeleted;
+	FOnPubnubChatObjectDeletedNative OnDeletedNative;
 	
 	/* PUBLIC FUNCTIONS */
 	
@@ -317,7 +343,7 @@ public:
 	void GetChannelsRestrictionsAsync(FOnPubnubChatGetRestrictionsResponseNative OnRestrictionsResponseNative, const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
 	/**
-	 * Starts listening for user metadata updates (and delete events) for this user. Updates and deletions are delivered via OnUserUpdateReceived / OnUserUpdateReceivedNative.
+	 * Starts listening for user metadata updates (and delete events) for this user. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * Blocking: subscribes on the calling thread. Blocks until the subscription is established.
 	 * No-op if already streaming updates.
 	 *
@@ -327,7 +353,7 @@ public:
 	FPubnubChatOperationResult StreamUpdates();
 	
 	/**
-	 * Starts listening asynchronously for user metadata updates (and delete events) for this user. Updates and deletions are delivered via OnUserUpdateReceived / OnUserUpdateReceivedNative.
+	 * Starts listening asynchronously for user metadata updates (and delete events) for this user. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * No-op if already streaming updates.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
@@ -335,7 +361,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StreamUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Starts listening asynchronously for user metadata updates (and delete events) for this user. Updates and deletions are delivered via OnUserUpdateReceived / OnUserUpdateReceivedNative.
+	 * Starts listening asynchronously for user metadata updates (and delete events) for this user. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * No-op if already streaming updates.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
@@ -353,7 +379,7 @@ public:
 	static FPubnubChatOperationResult StreamUpdatesOn(const TArray<UPubnubChatUser*>& Users);
 	
 	/**
-	 * Stops listening for user metadata updates for this user. OnUserUpdateReceived will no longer fire for updates.
+	 * Stops listening for user metadata updates for this user. OnUpdated and OnDeleted will no longer fire.
 	 * Blocking: unsubscribes on the calling thread. Blocks for the duration of the operation.
 	 * No-op if not streaming updates.
 	 *
@@ -363,7 +389,7 @@ public:
 	FPubnubChatOperationResult StopStreamingUpdates();
 	
 	/**
-	 * Stops listening asynchronously for user metadata updates for this user. OnUserUpdateReceived will no longer fire for updates.
+	 * Stops listening asynchronously for user metadata updates for this user. OnUpdated and OnDeleted will no longer fire.
 	 * No-op if not streaming updates.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
@@ -371,7 +397,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Stops listening asynchronously for user metadata updates for this user. OnUserUpdateReceived will no longer fire for updates.
+	 * Stops listening asynchronously for user metadata updates for this user. OnUpdated and OnDeleted will no longer fire.
 	 * No-op if not streaming updates.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).

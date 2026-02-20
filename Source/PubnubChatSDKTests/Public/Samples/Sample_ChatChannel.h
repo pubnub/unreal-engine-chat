@@ -196,7 +196,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void StreamUpdatesSample();
 
-	void OnChannelUpdateReceived(EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData);
+	void OnChannelUpdateReceived(FString ChannelID, const FPubnubChatChannelData& ChannelData);
+	void OnChannelDeleted();
 
 	// snippet.stream_typing
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")

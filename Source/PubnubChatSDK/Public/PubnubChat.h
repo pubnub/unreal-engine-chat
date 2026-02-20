@@ -28,6 +28,8 @@ class FPubnubFunctionThread;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatDestroyed, FString, UserID);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatDestroyedNative, FString UserID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPubnubChatObjectDeleted);
+DECLARE_MULTICAST_DELEGATE(FOnPubnubChatObjectDeletedNative);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChanged, EPubnubChatConnectionStatus, Status, const FPubnubChatConnectionStatusData&, StatusData);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatConnectionStatusChangedNative, EPubnubChatConnectionStatus Status, const FPubnubChatConnectionStatusData& StatusData);
 

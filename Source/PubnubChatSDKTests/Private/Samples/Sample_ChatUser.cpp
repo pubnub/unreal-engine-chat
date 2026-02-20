@@ -259,8 +259,9 @@ void ASample_ChatUser::StreamUpdatesSample()
 
 	// Assumes User is a valid UPubnubChatUser (e.g. from GetUser)
 
-	// Bind to receive user metadata updates and delete events
-	User->OnUserUpdateReceivedNative.AddUObject(this, &ASample_ChatUser::OnUserUpdateReceived);
+	// Bind to receive user metadata updates and deletion events
+	User->OnUpdatedNative.AddUObject(this, &ASample_ChatUser::OnUserUpdateReceived);
+	User->OnDeletedNative.AddUObject(this, &ASample_ChatUser::OnUserDeleted);
 
 	// Start streaming updates (no result callback needed)
 	User->StreamUpdatesAsync(nullptr);
@@ -270,9 +271,14 @@ void ASample_ChatUser::StreamUpdatesSample()
 }
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
-void ASample_ChatUser::OnUserUpdateReceived(EPubnubChatStreamedUpdateType UpdateType, FString UserID, const FPubnubChatUserData& UserData)
+void ASample_ChatUser::OnUserUpdateReceived(FString UserID, const FPubnubChatUserData& UserData)
 {
-	/* e.g. refresh user UI when UpdateType is PCSUT_Updated; remove user when PCSUT_Deleted */
+	/* e.g. refresh user UI with updated metadata */
+}
+
+void ASample_ChatUser::OnUserDeleted()
+{
+	/* e.g. remove user from list */
 }
 
 // snippet.end

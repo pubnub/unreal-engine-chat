@@ -1009,7 +1009,7 @@ bool FPubnubChatChannelStreamTypingHappyPathTest::RunTest(const FString& Paramet
 		*bTypingReceived = true;
 		*ReceivedTypingUsers = TypingUserIDs;
 	};
-	CreateResult.Channel->OnTypingReceivedNative.AddLambda(TypingLambda);
+	CreateResult.Channel->OnTypingChangedNative.AddLambda(TypingLambda);
 	
 	// Stream typing (happy path)
 	FPubnubChatOperationResult StreamTypingResult = CreateResult.Channel->StreamTyping();
@@ -1178,7 +1178,7 @@ bool FPubnubChatChannelStreamTypingMultipleUsersTest::RunTest(const FString& Par
 		(*TypingEventCount)++;
 		*LastReceivedTypingUsers = TypingUserIDs;
 	};
-	CreateResult.Channel->OnTypingReceivedNative.AddLambda(TypingLambda);
+	CreateResult.Channel->OnTypingChangedNative.AddLambda(TypingLambda);
 	
 	// Stream typing
 	FPubnubChatOperationResult StreamTypingResult = CreateResult.Channel->StreamTyping();
@@ -1347,7 +1347,7 @@ bool FPubnubChatChannelStreamTypingTimerExpirationTest::RunTest(const FString& P
 			*bTypingExpired = true;
 		}
 	};
-	CreateResult.Channel->OnTypingReceivedNative.AddLambda(TypingLambda);
+	CreateResult.Channel->OnTypingChangedNative.AddLambda(TypingLambda);
 	
 	// Stream typing
 	FPubnubChatOperationResult StreamTypingResult = CreateResult.Channel->StreamTyping();
@@ -1511,7 +1511,7 @@ bool FPubnubChatChannelStreamTypingStopTypingEventTest::RunTest(const FString& P
 		(*TypingEventCount)++;
 		*LastReceivedTypingUsers = TypingUserIDs;
 	};
-	CreateResult.Channel->OnTypingReceivedNative.AddLambda(TypingLambda);
+	CreateResult.Channel->OnTypingChangedNative.AddLambda(TypingLambda);
 	
 	// Stream typing
 	FPubnubChatOperationResult StreamTypingResult = CreateResult.Channel->StreamTyping();
@@ -2032,7 +2032,7 @@ bool FPubnubChatChannelStreamMessageReportsHappyPathTest::RunTest(const FString&
 		*bReportReceived = true;
 		*ReceivedReportEvent = Event;
 	};
-	CreateResult.Channel->OnMessageReportReceivedNative.AddLambda(ReportLambda);
+	CreateResult.Channel->OnMessageReportedNative.AddLambda(ReportLambda);
 	
 	// Connect channel
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
@@ -2194,7 +2194,7 @@ bool FPubnubChatChannelStreamMessageReportsMultipleReportsTest::RunTest(const FS
 		(*ReportEventCount)++;
 		ReceivedReportEvents->Add(Event);
 	};
-	CreateResult.Channel->OnMessageReportReceivedNative.AddLambda(ReportLambda);
+	CreateResult.Channel->OnMessageReportedNative.AddLambda(ReportLambda);
 	
 	// Connect channel
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
@@ -2346,7 +2346,7 @@ bool FPubnubChatChannelStreamMessageReportsWithReasonTest::RunTest(const FString
 		*bReportReceived = true;
 		*ReceivedReportEvent = Event;
 	};
-	CreateResult.Channel->OnMessageReportReceivedNative.AddLambda(ReportLambda);
+	CreateResult.Channel->OnMessageReportedNative.AddLambda(ReportLambda);
 	
 	// Connect channel
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
@@ -2697,7 +2697,7 @@ bool FPubnubChatChannelStopStreamingMessageReportsStopsReceivingTest::RunTest(co
 	{
 		(*ReportEventCount)++;
 	};
-	CreateResult.Channel->OnMessageReportReceivedNative.AddLambda(ReportLambda);
+	CreateResult.Channel->OnMessageReportedNative.AddLambda(ReportLambda);
 	
 	// Connect channel
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
@@ -4103,21 +4103,21 @@ bool FPubnubChatChannelStreamUpdatesOnMultipleUpdatesTest::RunTest(const FString
 	TSharedPtr<FPubnubChatChannelData> ReceivedChannelData2 = MakeShared<FPubnubChatChannelData>();
 	
 	// Set up delegates to receive channel updates
-	auto UpdateLambda1 = [this, UpdateCount1, bUpdate1Received, ReceivedChannelData1](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda1 = [this, UpdateCount1, bUpdate1Received, ReceivedChannelData1](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		(*UpdateCount1)++;
 		*bUpdate1Received = true;
 		*ReceivedChannelData1 = ChannelData;
 	};
-	CreateResult1.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda1);
+	CreateResult1.Channel->OnUpdatedNative.AddLambda(UpdateLambda1);
 	
-	auto UpdateLambda2 = [this, UpdateCount2, bUpdate2Received, ReceivedChannelData2](EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+	auto UpdateLambda2 = [this, UpdateCount2, bUpdate2Received, ReceivedChannelData2](FString ChannelID, const FPubnubChatChannelData& ChannelData)
 	{
 		(*UpdateCount2)++;
 		*bUpdate2Received = true;
 		*ReceivedChannelData2 = ChannelData;
 	};
-	CreateResult2.Channel->OnChannelUpdateReceivedNative.AddLambda(UpdateLambda2);
+	CreateResult2.Channel->OnUpdatedNative.AddLambda(UpdateLambda2);
 	
 	// Call StreamUpdatesOn with both channels
 	TArray<UPubnubChatChannel*> ChannelsArray;

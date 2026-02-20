@@ -134,3 +134,18 @@ struct FPubnubChatGetUserSuggestionsResult
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	TArray<UPubnubChatUser*> Users;
 };
+
+USTRUCT(BlueprintType)
+struct FPubnubChatUserMention
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString MessageTimetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString ParentChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString MentionedByUserID = "";
+};

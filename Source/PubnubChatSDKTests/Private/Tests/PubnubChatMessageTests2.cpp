@@ -1143,7 +1143,7 @@ bool FPubnubChatMessageStreamUpdatesHappyPathTest::RunTest(const FString& Parame
 			return;
 		}
 		
-		(*ReceivedMessage)->OnMessageUpdateReceivedNative.AddLambda(UpdateLambda);
+		(*ReceivedMessage)->OnUpdatedNative.AddLambda(UpdateLambda);
 		
 		FPubnubChatOperationResult StreamUpdatesResult = (*ReceivedMessage)->StreamUpdates();
 		TestFalse("StreamUpdates should succeed", StreamUpdatesResult.Error);
@@ -1321,7 +1321,7 @@ bool FPubnubChatMessageStreamUpdatesMultipleUpdatesTest::RunTest(const FString& 
 			return;
 		}
 		
-		(*ReceivedMessage)->OnMessageUpdateReceivedNative.AddLambda(UpdateLambda);
+		(*ReceivedMessage)->OnUpdatedNative.AddLambda(UpdateLambda);
 		
 		FPubnubChatOperationResult StreamUpdatesResult = (*ReceivedMessage)->StreamUpdates();
 		TestFalse("StreamUpdates should succeed", StreamUpdatesResult.Error);
@@ -1533,7 +1533,7 @@ bool FPubnubChatMessageStreamUpdatesAlreadyStreamingTest::RunTest(const FString&
 			return;
 		}
 		
-		(*ReceivedMessage)->OnMessageUpdateReceivedNative.AddLambda(UpdateLambda);
+		(*ReceivedMessage)->OnUpdatedNative.AddLambda(UpdateLambda);
 		
 		FPubnubChatOperationResult StreamUpdatesResult = (*ReceivedMessage)->StreamUpdates();
 		TestFalse("First StreamUpdates should succeed", StreamUpdatesResult.Error);
@@ -1689,7 +1689,7 @@ bool FPubnubChatMessageStreamUpdatesSoftDeleteTest::RunTest(const FString& Param
 			return;
 		}
 		
-		(*ReceivedMessage)->OnMessageUpdateReceivedNative.AddLambda(UpdateLambda);
+		(*ReceivedMessage)->OnUpdatedNative.AddLambda(UpdateLambda);
 		
 		FPubnubChatOperationResult StreamUpdatesResult = (*ReceivedMessage)->StreamUpdates();
 		TestFalse("StreamUpdates should succeed", StreamUpdatesResult.Error);
@@ -2423,7 +2423,7 @@ bool FPubnubChatMessageStopStreamingUpdatesHappyPathTest::RunTest(const FString&
 			return;
 		}
 		
-		(*ReceivedMessage)->OnMessageUpdateReceivedNative.AddLambda(UpdateLambda);
+		(*ReceivedMessage)->OnUpdatedNative.AddLambda(UpdateLambda);
 		
 		FPubnubChatOperationResult StreamUpdatesResult = (*ReceivedMessage)->StreamUpdates();
 		TestFalse("StreamUpdates should succeed", StreamUpdatesResult.Error);
@@ -2723,7 +2723,7 @@ bool FPubnubChatMessageStopStreamingUpdatesMultipleCyclesTest::RunTest(const FSt
 			return;
 		}
 		
-		(*ReceivedMessage)->OnMessageUpdateReceivedNative.AddLambda(UpdateLambda);
+		(*ReceivedMessage)->OnUpdatedNative.AddLambda(UpdateLambda);
 		
 		FPubnubChatOperationResult StreamUpdatesResult = (*ReceivedMessage)->StreamUpdates();
 		TestFalse("First StreamUpdates should succeed", StreamUpdatesResult.Error);

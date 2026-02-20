@@ -174,8 +174,9 @@ void ASample_ChatMembership::StreamUpdatesSample()
 
 	// Assumes Membership is a valid UPubnubChatMembership
 
-	// Bind to receive membership updates (update/delete)
-	Membership->OnMembershipUpdateReceivedNative.AddUObject(this, &ASample_ChatMembership::OnMembershipUpdateReceived);
+	// Bind to receive membership updates and deletion events
+	Membership->OnUpdatedNative.AddUObject(this, &ASample_ChatMembership::OnMembershipUpdateReceived);
+	Membership->OnDeletedNative.AddUObject(this, &ASample_ChatMembership::OnMembershipDeleted);
 
 	// Start streaming updates (no result callback needed)
 	Membership->StreamUpdatesAsync(nullptr);
@@ -185,9 +186,14 @@ void ASample_ChatMembership::StreamUpdatesSample()
 }
 
 // ACTION REQUIRED: Replace ASample_ChatMembership with name of your Actor class
-void ASample_ChatMembership::OnMembershipUpdateReceived(EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
+void ASample_ChatMembership::OnMembershipUpdateReceived(FString ChannelID, FString UserID, const FPubnubChatMembershipData& MembershipData)
 {
-	/* e.g. refresh membership UI when UpdateType is PCSUT_Updated; remove membership when PCSUT_Deleted */
+	/* e.g. refresh membership UI with updated metadata */
+}
+
+void ASample_ChatMembership::OnMembershipDeleted()
+{
+	/* e.g. remove membership from list */
 }
 
 // snippet.get_unread_messages_count

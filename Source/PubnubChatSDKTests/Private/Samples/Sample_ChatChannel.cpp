@@ -647,8 +647,9 @@ void ASample_ChatChannel::StreamUpdatesSample()
 
 	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
 
-	// Bind to receive channel metadata updates and delete events
-	Channel->OnChannelUpdateReceivedNative.AddUObject(this, &ASample_ChatChannel::OnChannelUpdateReceived);
+	// Bind to receive channel metadata updates and deletion events
+	Channel->OnUpdatedNative.AddUObject(this, &ASample_ChatChannel::OnChannelUpdateReceived);
+	Channel->OnDeletedNative.AddUObject(this, &ASample_ChatChannel::OnChannelDeleted);
 
 	// Start streaming channel updates (no result callback needed)
 	Channel->StreamUpdatesAsync(nullptr);
@@ -658,9 +659,14 @@ void ASample_ChatChannel::StreamUpdatesSample()
 }
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
-void ASample_ChatChannel::OnChannelUpdateReceived(EPubnubChatStreamedUpdateType UpdateType, FString ChannelID, const FPubnubChatChannelData& ChannelData)
+void ASample_ChatChannel::OnChannelUpdateReceived(FString ChannelID, const FPubnubChatChannelData& ChannelData)
 {
-	/* e.g. refresh channel UI when UpdateType is PCSUT_Updated; remove channel from list when PCSUT_Deleted */
+	/* e.g. refresh channel UI with updated metadata */
+}
+
+void ASample_ChatChannel::OnChannelDeleted()
+{
+	/* e.g. remove channel from list */
 }
 
 // snippet.stream_typing
@@ -675,7 +681,7 @@ void ASample_ChatChannel::StreamTypingSample()
 	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
 
 	// Bind to receive typing indicator events (user IDs currently typing)
-	Channel->OnTypingReceivedNative.AddUObject(this, &ASample_ChatChannel::OnTypingReceived);
+	Channel->OnTypingChangedNative.AddUObject(this, &ASample_ChatChannel::OnTypingReceived);
 
 	// Start streaming typing events (not supported on public channels; use for group or direct)
 	Channel->StreamTypingAsync(nullptr);
@@ -729,7 +735,7 @@ void ASample_ChatChannel::StreamMessageReportsSample()
 	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
 
 	// Bind to receive message report events (moderation stream)
-	Channel->OnMessageReportReceivedNative.AddUObject(this, &ASample_ChatChannel::OnMessageReportReceived);
+	Channel->OnMessageReportedNative.AddUObject(this, &ASample_ChatChannel::OnMessageReportReceived);
 
 	// Start streaming message reports
 	Channel->StreamMessageReportsAsync(nullptr);

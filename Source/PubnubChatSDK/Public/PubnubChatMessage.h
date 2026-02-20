@@ -15,8 +15,8 @@ class UPubnubClient;
 class UPubnubChat;
 class UPubnubSubscription;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdateReceived, FString, Timetoken, FPubnubChatMessageData, MessageData);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdateReceivedNative, FString Timetoken, const FPubnubChatMessageData& MessageData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdated, FString, Timetoken, FPubnubChatMessageData, MessageData);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatMessageUpdatedNative, FString Timetoken, const FPubnubChatMessageData& MessageData);
 
 /**
  * Represents a chat message in the PubNub Chat SDK. Provides access to message content, edits, reactions, pin/unpin,
@@ -41,8 +41,8 @@ public:
 	 * @param MessageData Updated message data (text, message actions, etc.).
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
-	FOnPubnubChatMessageUpdateReceived OnMessageUpdateReceived;
-	FOnPubnubChatMessageUpdateReceivedNative OnMessageUpdateReceivedNative;
+	FOnPubnubChatMessageUpdated OnUpdated;
+	FOnPubnubChatMessageUpdatedNative OnUpdatedNative;
 	
 	/* PUBLIC FUNCTIONS */
 	

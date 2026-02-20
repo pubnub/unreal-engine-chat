@@ -96,7 +96,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
 	void StreamUpdatesSample();
 
-	void OnUserUpdateReceived(EPubnubChatStreamedUpdateType UpdateType, FString UserID, const FPubnubChatUserData& UserData);
+	void OnUserUpdateReceived(FString UserID, const FPubnubChatUserData& UserData);
+	void OnUserDeleted();
 
 	// snippet.end
 };

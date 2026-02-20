@@ -270,6 +270,19 @@ struct FPubnubChatEvent
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatInviteEvent
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString ChannelType = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString InvitedByUserID = "";
+};
+
+USTRUCT(BlueprintType)
 struct FPubnubChatEventsResult
 {
 	GENERATED_BODY()
