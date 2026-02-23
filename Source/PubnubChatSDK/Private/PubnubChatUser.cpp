@@ -423,7 +423,7 @@ FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 		
 		UPubnubChatUser* ThisUser = ThisWeak.Get();
 
-		if(!ThisUser->Chat)
+		if(!ThisUser->IsInitialized || !ThisUser->Chat || !ThisUser->IsStreamingUpdates)
 		{return;}
 		
 		//If this is not UserUpdate, just ignore this message

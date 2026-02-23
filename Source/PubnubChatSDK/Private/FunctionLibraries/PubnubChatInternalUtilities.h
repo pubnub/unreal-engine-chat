@@ -63,6 +63,7 @@ public:
 	static FString GetReportMessageEventPayload(const FString& Text, const FString& Reason, const FString& ChannelID, const FString& UserID, const FString& Timetoken);
 	static FString GetTypingEventPayload(const bool IsTyping);
 	static bool GetIsTypingFromEventPayload(const FString& EventPayload);
+	static void UpdateUserIDByPresenceEvent(TArray<FString>& UserIDs, const FString& EventContent);
 	
 	/* MEMBERSHIP */
 	

@@ -595,7 +595,7 @@ FPubnubChatOperationResult UPubnubChatMessage::StreamUpdates()
 		
 		UPubnubChatMessage* ThisMessage = ThisWeak.Get();
 
-		if(!ThisMessage->Chat)
+		if(!ThisMessage->IsInitialized || !ThisMessage->Chat || !ThisMessage->IsStreamingUpdates)
 		{return;}
 		
 		//If this is not MessageUpdate, just ignore this message

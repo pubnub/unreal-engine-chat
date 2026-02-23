@@ -207,7 +207,7 @@ void UPubnubChatThreadChannel::AddOnMessageReceivedLambdaToSubscription(TWeakObj
 				
 		UPubnubChatThreadChannel* ThisThreadChannel = Cast<UPubnubChatThreadChannel>(ThisChannelWeak.Get());
 
-		if(!ThisThreadChannel || !ThisThreadChannel->Chat)
+		if(!ThisThreadChannel || !ThisThreadChannel->IsInitialized || !ThisThreadChannel->Chat || !ThisThreadChannel->IsConnected)
 		{return;}
 				
 		ThisThreadChannel->OnThreadMessageReceived.Broadcast(ThisThreadChannel->Chat->CreateThreadMessageObject(MessageData.Timetoken, MessageData, ThisThreadChannel->ParentChannelID));

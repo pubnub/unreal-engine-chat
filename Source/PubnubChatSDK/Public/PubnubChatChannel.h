@@ -877,6 +877,52 @@ public:
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
 	void StopStreamingUpdatesAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Starts listening for presence updates on this channel.
+	 * Local: sets up client-side listener and subscription dedicated to presence events. No-op if already streaming presence.
+	 *
+	 * @return Operation result. Success if the listener was started.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StreamPresence();
+
+	/**
+	 * Starts listening asynchronously for presence updates on this channel. No-op if already streaming presence.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StreamPresenceAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Starts listening asynchronously for presence updates on this channel. No-op if already streaming presence.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StreamPresenceAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Stops listening for presence updates on this channel.
+	 * Local: stops the listener and unsubscribes presence stream. No-op if not streaming presence.
+	 *
+	 * @return Operation result. Success if the listener was stopped.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StopStreamingPresence();
+
+	/**
+	 * Stops listening asynchronously for presence updates on this channel. No-op if not streaming presence.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StopStreamingPresenceAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Stops listening asynchronously for presence updates on this channel. No-op if not streaming presence.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StopStreamingPresenceAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
 	 * Emits a typing-start event for the current user on this channel. Not supported on public channels; use for group or direct channels.
@@ -1140,6 +1186,8 @@ protected:
 	UPROPERTY()
 	UPubnubSubscription* UpdatesSubscription = nullptr;
 	UPROPERTY()
+	UPubnubSubscription* PresenceSubscription = nullptr;
+	UPROPERTY()
 	UPubnubChatCallbackStop* TypingCallbackStop = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* ReadReceiptsCallbackStop = nullptr;
@@ -1150,8 +1198,11 @@ protected:
 	bool IsStreamingUpdates = false;
 	bool IsConnected = false;
 	bool IsStreamingTyping = false;
+	bool IsStreamingPresence = false;
 	bool IsStreamingReadReceipts = false;
 	bool IsStreamingMessageReports = false;
+	
+	TArray<FString> StreamPresenceUserIDs;
 	
 	FDateTime LastTypingEventTime = FDateTime::MinValue();
 	TMap<FString, FTypingIndicatorData> TypingIndicators;

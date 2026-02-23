@@ -316,6 +316,33 @@ bool UPubnubChatInternalUtilities::GetIsTypingFromEventPayload(const FString& Ev
 	return IsTyping;
 }
 
+void UPubnubChatInternalUtilities::UpdateUserIDByPresenceEvent(TArray<FString>& UserIDs, const FString& EventContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(EventContent, JsonObject);
+	
+	FString PresenceAction;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("action"), PresenceAction))
+	{ return; }
+	
+	FString UserID;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("uuid"), UserID))
+	{ return; }
+	
+	// If new user joined, add him to the list
+	if (PresenceAction == "join")
+	{
+		UserIDs.AddUnique(UserID);
+		return;
+	}
+	
+	// If user left or disconnected remove him from the list
+	if (PresenceAction == "leave" || PresenceAction == "timeout")
+	{
+		UserIDs.Remove(UserID);
+	}
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;

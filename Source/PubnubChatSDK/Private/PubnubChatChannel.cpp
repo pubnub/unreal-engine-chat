@@ -1172,7 +1172,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamUpdates()
 		
 		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
 
-		if(!ThisChannel->Chat)
+		if(!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingUpdates)
 		{return;}
 		
 		//If this is not ChannelUpdate, just ignore this message
@@ -1295,6 +1295,129 @@ void UPubnubChatChannel::StopStreamingUpdatesAsync(FOnPubnubChatOperationRespons
 		{ return; }
 		
 		FPubnubChatOperationResult StopResult = WeakThis.Get()->StopStreamingUpdates();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StopResult);
+	});
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StreamPresence()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Skip if it's already streaming
+	if (IsStreamingPresence)
+	{ return FinalResult; }
+	
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(PresenceSubscription, "Presence subscription is invalid.");
+	
+	FPubnubChatWhoIsPresentResult WhoIsPresentResult = WhoIsPresent();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, WhoIsPresentResult.Result);
+	
+	//Save currently present users
+	StreamPresenceUserIDs = WhoIsPresentResult.Users;
+	
+	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
+	
+	PresenceSubscription->OnPubnubPresenceEventNative.AddLambda([ThisWeak](const FPubnubMessageData& Message)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+
+		if(!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingPresence)
+		{return;}
+		
+		UPubnubChatInternalUtilities::UpdateUserIDByPresenceEvent(ThisChannel->StreamPresenceUserIDs, Message.Message);
+		ThisChannel->OnPresenceChanged.Broadcast(ThisChannel->StreamPresenceUserIDs);
+		ThisChannel->OnPresenceChangedNative.Broadcast(ThisChannel->StreamPresenceUserIDs);
+	});
+
+	FPubnubOperationResult SubscribeResult = PresenceSubscription->Subscribe();
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+
+	IsStreamingPresence = true;
+	return FinalResult;
+}
+
+void UPubnubChatChannel::StreamPresenceAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StreamPresenceAsync(NativeCallback);
+}
+
+void UPubnubChatChannel::StreamPresenceAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatOperationResult StreamPresenceResult = WeakThis.Get()->StreamPresence();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StreamPresenceResult);
+	});
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopStreamingPresence()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	if (!PresenceSubscription)
+	{
+		IsStreamingPresence = false;
+		return FinalResult;
+	}
+
+	//Remove presence related delegates
+	PresenceSubscription->OnPubnubPresenceEventNative.Clear();
+	
+	//Skip if it's not streaming presence
+	if (!IsStreamingPresence)
+	{ return FinalResult; }
+	
+	// Removed cached PresentUsers 
+	StreamPresenceUserIDs.Empty();
+
+	//Unsubscribe and return result
+	FPubnubOperationResult UnsubscribeResult = PresenceSubscription->Unsubscribe();
+	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	IsStreamingPresence = false;
+	return FinalResult;
+}
+
+void UPubnubChatChannel::StopStreamingPresenceAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StopStreamingPresenceAsync(NativeCallback);
+}
+
+void UPubnubChatChannel::StopStreamingPresenceAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatOperationResult StopResult = WeakThis.Get()->StopStreamingPresence();
 		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StopResult);
 	});
 }
@@ -1427,7 +1550,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamTyping()
 		
 		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
 		
-		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingTyping)
 		{ return; }
 		
 		FString UserID = Event.UserID;
@@ -1471,7 +1594,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamTyping()
 			
 					UPubnubChatChannel* ThisChannel = ThisWeak.Get();
 			
-					if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+					if (!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingTyping)
 					{ return; }
 					
 					TArray<FString> TypingUsersList;
@@ -1611,7 +1734,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamReadReceipts()
 		
 		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
 		
-		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingReadReceipts)
 		{ return; }
 
 		FPubnubChatReadReceipt ReadReceipt;
@@ -1738,7 +1861,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamMessageReports()
 		
 		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
 		
-		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingMessageReports)
 		{ return; }
 
 		const FPubnubChatReportEvent ReportEvent = UPubnubChatInternalUtilities::GetReportEventFromChatEvent(Event);
@@ -1897,6 +2020,11 @@ void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat*
 	UpdatesSubscription = ChannelEntity->CreateSubscription();
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(UpdatesSubscription, TEXT("Can't init Channel, Failed to create Updates Subscription"));
 	
+	FPubnubSubscribeSettings PresenceSubscribeSettings;
+	PresenceSubscribeSettings.ReceivePresenceEvents = true;
+	PresenceSubscription = ChannelEntity->CreateSubscription(PresenceSubscribeSettings);
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(PresenceSubscription, TEXT("Can't init Channel, Failed to create Presence Subscription"));
+	
 	// Register this channel object with the repository
 	if (Chat->ObjectsRepository)
 	{
@@ -1948,7 +2076,7 @@ void UPubnubChatChannel::AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr
 			
 		UPubnubChatChannel* ThisChannel = ThisChannelWeak.Get();
 
-		if(!ThisChannel->Chat)
+		if(!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsConnected)
 		{return;}
 			
 		ThisChannel->OnMessageReceived.Broadcast(ThisChannel->Chat->CreateMessageObject(MessageData.Timetoken, MessageData));
@@ -1986,6 +2114,18 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 
 		UpdatesSubscription = nullptr;
 	}
+
+	if (PresenceSubscription)
+	{
+		PresenceSubscription->OnPubnubPresenceEventNative.Clear();
+		if (IsStreamingPresence)
+		{
+			PresenceSubscription->Unsubscribe();
+			IsStreamingPresence = false;
+		}
+
+		PresenceSubscription = nullptr;
+	}
 	
 	if (TypingCallbackStop)
 	{
@@ -2017,6 +2157,7 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 	}
 	
 	IsStreamingTyping = false;
+	IsStreamingPresence = false;
 	IsStreamingReadReceipts = false;
 	IsStreamingMessageReports = false;
 }

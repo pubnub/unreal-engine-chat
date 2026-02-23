@@ -275,7 +275,7 @@ FPubnubChatOperationResult UPubnubChatMembership::StreamUpdates()
 		
 		UPubnubChatMembership* ThisMembership = ThisWeak.Get();
 
-		if(!ThisMembership->Chat)
+		if(!ThisMembership->IsInitialized || !ThisMembership->Chat || !ThisMembership->IsStreamingUpdates)
 		{return;}
 		
 		//If this is not MembershipUpdate, just ignore this message
