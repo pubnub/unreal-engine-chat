@@ -269,17 +269,28 @@ struct FPubnubChatEvent
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Payload = "";
 };
 
+
+USTRUCT(BlueprintType)
+struct FPubnubChatReportEvent
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Text = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString MessageTimetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Reason = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ReportedMessageChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ReportedUserID = "";
+};
+
 USTRUCT(BlueprintType)
 struct FPubnubChatInviteEvent
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString ChannelID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString ChannelType = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString InvitedByUserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Timetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelType = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString InvitedByUserID = "";
 };
 
 USTRUCT(BlueprintType)

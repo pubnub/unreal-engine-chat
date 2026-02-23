@@ -215,6 +215,29 @@ FPubnubChatEvent UPubnubChatInternalUtilities::GetEventFromPubnubHistoryMessageD
 	return Event;
 }
 
+FPubnubChatReportEvent UPubnubChatInternalUtilities::GetReportEventFromChatEvent(const FPubnubChatEvent& Event)
+{
+	FPubnubChatReportEvent ReportEvent;
+	if (Event.Payload.IsEmpty())
+	{
+		return ReportEvent;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!UPubnubJsonUtilities::StringToJsonObject(Event.Payload, JsonObject))
+	{
+		return ReportEvent;
+	}
+	
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("text"), ReportEvent.Text);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("timetoken"), ReportEvent.MessageTimetoken);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("reason"), ReportEvent.Reason);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("channelID"), ReportEvent.ReportedMessageChannelID);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("userId"), ReportEvent.ReportedUserID);
+
+	return ReportEvent;
+}
+
 FString UPubnubChatInternalUtilities::GetReceiptEventPayload(const FString& Timetoken)
 {
 	return FString::Printf(TEXT(R"({"messageTimetoken": "%s"})"), *Timetoken);

@@ -2013,7 +2013,7 @@ bool FPubnubChatChannelStreamMessageReportsHappyPathTest::RunTest(const FString&
 	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	TSharedPtr<bool> bReportReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedReportEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatReportEvent> ReceivedReportEvent = MakeShared<FPubnubChatReportEvent>();
 	
 	// Set up delegate to receive messages
 	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
@@ -2027,7 +2027,7 @@ bool FPubnubChatChannelStreamMessageReportsHappyPathTest::RunTest(const FString&
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	// Set up delegate to receive report events
-	auto ReportLambda = [this, bReportReceived, ReceivedReportEvent](const FPubnubChatEvent& Event)
+	auto ReportLambda = [this, bReportReceived, ReceivedReportEvent](const FPubnubChatReportEvent& Event)
 	{
 		*bReportReceived = true;
 		*ReceivedReportEvent = Event;
@@ -2091,19 +2091,9 @@ bool FPubnubChatChannelStreamMessageReportsHappyPathTest::RunTest(const FString&
 		
 		// Verify event data
 		FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-		TestEqual("Report event ChannelID should match moderation channel", ReceivedReportEvent->ChannelID, ModerationChannelID);
-		TestEqual("Report event Type should be PCET_Report", ReceivedReportEvent->Type, EPubnubChatEventType::PCET_Report);
+		TestEqual("Report event ChannelID should match moderation channel", ReceivedReportEvent->ReportedMessageChannelID, ModerationChannelID);
+		TestEqual("Payload channelId should match", ReceivedReportEvent->ReportedMessageChannelID, TestChannelID);
 		
-		// Verify payload contains expected fields
-		TSharedPtr<FJsonObject> PayloadObject = MakeShareable(new FJsonObject);
-		UPubnubJsonUtilities::StringToJsonObject(ReceivedReportEvent->Payload, PayloadObject);
-		
-		FString TextInPayload;
-		FString ChannelIDInPayload;
-		if(PayloadObject->TryGetStringField(TEXT("text"), TextInPayload) && PayloadObject->TryGetStringField(TEXT("channelId"), ChannelIDInPayload))
-		{
-			TestEqual("Payload channelId should match", ChannelIDInPayload, TestChannelID);
-		}
 	}, 0.1f));
 	
 	// Cleanup
@@ -2176,7 +2166,7 @@ bool FPubnubChatChannelStreamMessageReportsMultipleReportsTest::RunTest(const FS
 	// Shared state for messages and reports
 	TSharedPtr<TArray<UPubnubChatMessage*>> ReceivedMessages = MakeShared<TArray<UPubnubChatMessage*>>();
 	TSharedPtr<int32> ReportEventCount = MakeShared<int32>(0);
-	TSharedPtr<TArray<FPubnubChatEvent>> ReceivedReportEvents = MakeShared<TArray<FPubnubChatEvent>>();
+	TSharedPtr<TArray<FPubnubChatReportEvent>> ReceivedReportEvents = MakeShared<TArray<FPubnubChatReportEvent>>();
 	
 	// Set up delegate to receive messages
 	auto MessageLambda = [this, ReceivedMessages](UPubnubChatMessage* Message)
@@ -2189,7 +2179,7 @@ bool FPubnubChatChannelStreamMessageReportsMultipleReportsTest::RunTest(const FS
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	// Set up delegate to receive report events
-	auto ReportLambda = [this, ReportEventCount, ReceivedReportEvents](const FPubnubChatEvent& Event)
+	auto ReportLambda = [this, ReportEventCount, ReceivedReportEvents](const FPubnubChatReportEvent& Event)
 	{
 		(*ReportEventCount)++;
 		ReceivedReportEvents->Add(Event);
@@ -2253,10 +2243,9 @@ bool FPubnubChatChannelStreamMessageReportsMultipleReportsTest::RunTest(const FS
 		
 		FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
 		
-		for(const FPubnubChatEvent& Event : *ReceivedReportEvents)
+		for(const FPubnubChatReportEvent& Event : *ReceivedReportEvents)
 		{
-			TestEqual("Report event ChannelID should match moderation channel", Event.ChannelID, ModerationChannelID);
-			TestEqual("Report event Type should be PCET_Report", Event.Type, EPubnubChatEventType::PCET_Report);
+			TestEqual("Report event ChannelID should match moderation channel", Event.ReportedMessageChannelID, ModerationChannelID);
 		}
 	}, 0.1f));
 	
@@ -2327,7 +2316,7 @@ bool FPubnubChatChannelStreamMessageReportsWithReasonTest::RunTest(const FString
 	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
 	TSharedPtr<bool> bReportReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedReportEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatReportEvent> ReceivedReportEvent = MakeShared<FPubnubChatReportEvent>();
 	
 	// Set up delegate to receive messages
 	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
@@ -2341,7 +2330,7 @@ bool FPubnubChatChannelStreamMessageReportsWithReasonTest::RunTest(const FString
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	// Set up delegate to receive report events
-	auto ReportLambda = [this, bReportReceived, ReceivedReportEvent](const FPubnubChatEvent& Event)
+	auto ReportLambda = [this, bReportReceived, ReceivedReportEvent](const FPubnubChatReportEvent& Event)
 	{
 		*bReportReceived = true;
 		*ReceivedReportEvent = Event;
@@ -2390,20 +2379,8 @@ bool FPubnubChatChannelStreamMessageReportsWithReasonTest::RunTest(const FString
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bReportReceived, ReceivedReportEvent, TestReason]()
 	{
 		TestTrue("Report event should have been received", *bReportReceived);
+		TestEqual("Payload reason should match", ReceivedReportEvent->Reason, TestReason);
 		
-		// Verify payload contains reason
-		TSharedPtr<FJsonObject> PayloadObject = MakeShareable(new FJsonObject);
-		UPubnubJsonUtilities::StringToJsonObject(ReceivedReportEvent->Payload, PayloadObject);
-		
-		FString ReasonInPayload;
-		if(PayloadObject->TryGetStringField(TEXT("reason"), ReasonInPayload))
-		{
-			TestEqual("Payload reason should match", ReasonInPayload, TestReason);
-		}
-		else
-		{
-			AddError("Payload should contain reason field");
-		}
 	}, 0.1f));
 	
 	// Cleanup
@@ -2693,7 +2670,7 @@ bool FPubnubChatChannelStopStreamingMessageReportsStopsReceivingTest::RunTest(co
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 	
 	// Set up delegate to receive report events
-	auto ReportLambda = [this, ReportEventCount](const FPubnubChatEvent& Event)
+	auto ReportLambda = [this, ReportEventCount](const FPubnubChatReportEvent& Event)
 	{
 		(*ReportEventCount)++;
 	};

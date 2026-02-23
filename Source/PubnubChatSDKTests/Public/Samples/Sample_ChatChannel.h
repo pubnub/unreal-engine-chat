@@ -209,13 +209,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void StreamReadReceiptsSample();
 
-	void OnReadReceiptReceived(const FPubnubChatReadReceipts& ReadReceipts);
+	void OnReadReceiptReceived(const FPubnubChatReadReceipt& ReadReceipts);
 
 	// snippet.stream_message_reports
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void StreamMessageReportsSample();
 
-	void OnMessageReportReceived(const FPubnubChatEvent& ReportEvent);
+	void OnMessageReportReceived(const FPubnubChatReportEvent& ReportEvent);
 
 	// snippet.end
 };

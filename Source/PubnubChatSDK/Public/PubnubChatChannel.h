@@ -25,10 +25,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatChannelUpdated, FStrin
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatChannelUpdatedNative, FString ChannelID, const FPubnubChatChannelData& ChannelData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingChanged, const TArray<FString>&, TypingUserIDs);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatTypingChangedNative, const TArray<FString>& TypingUserIDs);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceived, FPubnubChatReadReceipts, ReadReceipts);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceivedNative, const FPubnubChatReadReceipts& ReadReceipts);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReported, FPubnubChatEvent, ReportEvent);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportedNative, const FPubnubChatEvent& ReportEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceived, FPubnubChatReadReceipt, ReadReceipt);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatReadReceiptReceivedNative, const FPubnubChatReadReceipt& ReadReceipt);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReported, FPubnubChatReportEvent, ReportEvent);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportedNative, const FPubnubChatReportEvent& ReportEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatPresenceChanged, const TArray<FString>&, UserIDs);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatPresenceChangedNative, const TArray<FString>& UserIDs);
 
@@ -1141,6 +1141,8 @@ protected:
 	UPubnubSubscription* UpdatesSubscription = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* TypingCallbackStop = nullptr;
+	UPROPERTY()
+	UPubnubChatCallbackStop* ReadReceiptsCallbackStop = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* MessageReportsCallbackStop = nullptr;
 

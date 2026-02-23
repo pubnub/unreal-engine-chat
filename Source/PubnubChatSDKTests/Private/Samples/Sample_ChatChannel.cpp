@@ -718,7 +718,7 @@ void ASample_ChatChannel::StreamReadReceiptsSample()
 }
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
-void ASample_ChatChannel::OnReadReceiptReceived(const FPubnubChatReadReceipts& ReadReceipts)
+void ASample_ChatChannel::OnReadReceiptReceived(const FPubnubChatReadReceipt& ReadReceipts)
 {
 	/* e.g. update read state per message in chat UI */
 }
@@ -745,7 +745,7 @@ void ASample_ChatChannel::StreamMessageReportsSample()
 }
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
-void ASample_ChatChannel::OnMessageReportReceived(const FPubnubChatEvent& ReportEvent)
+void ASample_ChatChannel::OnMessageReportReceived(const FPubnubChatReportEvent& ReportEvent)
 {
 	/* e.g. handle moderation events (report payload, user, etc.) */
 }

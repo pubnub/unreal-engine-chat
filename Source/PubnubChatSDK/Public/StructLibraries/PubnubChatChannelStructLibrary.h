@@ -238,12 +238,14 @@ struct FPubnubChatUserIDsArray
 };
 
 USTRUCT(BlueprintType)
-struct FPubnubChatReadReceipts
+struct FPubnubChatReadReceipt
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	TMap<FString, FPubnubChatUserIDsArray> ReadReceipts;
+	FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString LastReadTimetoken = "";
 	
 };
 

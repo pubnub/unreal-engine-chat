@@ -1595,10 +1595,49 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamReadReceipts()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	FPubnubChatOperationResult FinalResult;
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Typing is not supported on public channels"));
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Read receipts are not supported on public channels"));
 
+	//Skip if it's already streaming
+	if (IsStreamingReadReceipts)
+	{ return FinalResult; }
 	
-	//TODO:: Finish this function
+	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
+
+	FOnPubnubChatEventReceivedNative OnEventReceived;
+	OnEventReceived.BindLambda([ThisWeak](const FPubnubChatEvent& Event)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+		
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
+		{ return; }
+
+		FPubnubChatReadReceipt ReadReceipt;
+		ReadReceipt.UserID = Event.UserID;
+
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+		if (!UPubnubJsonUtilities::StringToJsonObject(Event.Payload, JsonObject))
+		{
+			return;
+		}
+
+		if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("messageTimetoken"), ReadReceipt.LastReadTimetoken))
+		{
+			return;
+		}
+
+		ThisChannel->OnReadReceiptReceived.Broadcast(ReadReceipt);
+		ThisChannel->OnReadReceiptReceivedNative.Broadcast(ReadReceipt);
+	});
+
+	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(ChannelID, EPubnubChatEventType::PCET_Receipt, OnEventReceived);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ListenForEventsResult.Result);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((ListenForEventsResult.CallbackStop != nullptr), TEXT("Failed to start streaming read receipts"));
+
+	ReadReceiptsCallbackStop = ListenForEventsResult.CallbackStop;
+	IsStreamingReadReceipts = true;
 	
 	return FinalResult;
 }
@@ -1638,8 +1677,17 @@ FPubnubChatOperationResult UPubnubChatChannel::StopStreamingReadReceipts()
 	if (!IsStreamingReadReceipts)
 	{ return FinalResult; }
 	
-	
-	//TODO:: Finish this function
+	if (!ReadReceiptsCallbackStop)
+	{
+		IsStreamingReadReceipts = false;
+		return FinalResult;
+	}
+
+	FPubnubChatOperationResult StopResult = ReadReceiptsCallbackStop->Stop();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, StopResult);
+
+	ReadReceiptsCallbackStop = nullptr;
+	IsStreamingReadReceipts = false;
 	
 	return FinalResult;
 }
@@ -1692,9 +1740,10 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamMessageReports()
 		
 		if (!ThisChannel->IsInitialized || !ThisChannel->Chat)
 		{ return; }
-		
-		ThisChannel->OnMessageReported.Broadcast(Event);
-		ThisChannel->OnMessageReportedNative.Broadcast(Event);
+
+		const FPubnubChatReportEvent ReportEvent = UPubnubChatInternalUtilities::GetReportEventFromChatEvent(Event);
+		ThisChannel->OnMessageReported.Broadcast(ReportEvent);
+		ThisChannel->OnMessageReportedNative.Broadcast(ReportEvent);
 	});
 		
 	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);
@@ -1943,6 +1992,12 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 		TypingCallbackStop->Stop();
 		TypingCallbackStop = nullptr;
 	}
+
+	if (ReadReceiptsCallbackStop)
+	{
+		ReadReceiptsCallbackStop->Stop();
+		ReadReceiptsCallbackStop = nullptr;
+	}
 	
 	// Clean up typing subscription and indicators
 	if (MessageReportsCallbackStop)
@@ -1962,6 +2017,8 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 	}
 	
 	IsStreamingTyping = false;
+	IsStreamingReadReceipts = false;
+	IsStreamingMessageReports = false;
 }
 
 float UPubnubChatChannel::CalculateSendTextRateLimiterDelay()

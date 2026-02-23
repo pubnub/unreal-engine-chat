@@ -54,6 +54,7 @@ public:
 	static EPubnubChatEventMethod GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType);
 	static FPubnubChatEvent GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
 	static FPubnubChatEvent GetEventFromPubnubHistoryMessageData(const FPubnubHistoryMessageData& MessageData);
+	static FPubnubChatReportEvent GetReportEventFromChatEvent(const FPubnubChatEvent& Event);
 	static FString GetReceiptEventPayload(const FString& Timetoken);
 	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
 	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
