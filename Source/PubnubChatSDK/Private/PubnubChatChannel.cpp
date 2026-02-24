@@ -1205,9 +1205,13 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamUpdates()
 		}
 	});
 	
-	//Subscribe with UpdatesSubscription (not ConnectSubscription) to receive channel metadata updates
 	FPubnubOperationResult SubscribeResult = UpdatesSubscription->Subscribe();
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+	FinalResult.AddStep("Subscribe", SubscribeResult);
+	if (SubscribeResult.Error)
+	{
+		UpdatesSubscription->OnPubnubObjectEventNative.Clear();
+		return FinalResult;
+	}
 	
 	IsStreamingUpdates = true;
 	
@@ -1334,7 +1338,13 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamPresence()
 	});
 
 	FPubnubOperationResult SubscribeResult = PresenceSubscription->Subscribe();
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, SubscribeResult, "Subscribe");
+	FinalResult.AddStep("Subscribe", SubscribeResult);
+	if (SubscribeResult.Error)
+	{
+		PresenceSubscription->OnPubnubPresenceEventNative.Clear();
+		StreamPresenceUserIDs.Empty();
+		return FinalResult;
+	}
 
 	IsStreamingPresence = true;
 	return FinalResult;
