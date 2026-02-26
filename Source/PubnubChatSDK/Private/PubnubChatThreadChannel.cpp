@@ -10,6 +10,7 @@
 #include "PubnubChatSubsystem.h"
 #include "PubnubClient.h"
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
+#include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubUtilities.h"
 #include "Threads/PubnubFunctionThread.h"
@@ -196,6 +197,11 @@ FPubnubChatOperationResult UPubnubChatThreadChannel::OnSendText()
 	IsThreadConfirmed = true;
 	
 	return FinalResult;
+}
+
+FString UPubnubChatThreadChannel::CreateMentionEventPayload(FString Timetoken, FString Text)
+{
+	return UPubnubChatInternalUtilities::GetMentionEventPayload(ChannelID, Timetoken, Text, ParentChannelID);
 }
 
 void UPubnubChatThreadChannel::AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak)

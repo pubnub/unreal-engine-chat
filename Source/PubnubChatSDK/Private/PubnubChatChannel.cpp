@@ -1169,7 +1169,7 @@ FPubnubChatOperationResult UPubnubChatChannel::EmitUserMention(const FString Use
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Timetoken);
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Text);
 	
-	FString EventPayload = UPubnubChatInternalUtilities::GetMentionEventPayload(ChannelID, Timetoken, Text);
+	FString EventPayload = CreateMentionEventPayload(Timetoken, Text);
 	return Chat->EmitChatEvent(EPubnubChatEventType::PCET_Mention, UserID, EventPayload);
 }
 
@@ -2254,6 +2254,11 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 FPubnubChatOperationResult UPubnubChatChannel::OnSendText()
 {
 	return FPubnubChatOperationResult();
+}
+
+FString UPubnubChatChannel::CreateMentionEventPayload(FString Timetoken, FString Text)
+{
+	return UPubnubChatInternalUtilities::GetMentionEventPayload(ChannelID, Timetoken, Text);
 }
 
 void UPubnubChatChannel::AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak)

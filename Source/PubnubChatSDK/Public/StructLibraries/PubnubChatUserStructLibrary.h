@@ -140,12 +140,9 @@ struct FPubnubChatUserMention
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString MessageTimetoken = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString ChannelID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString ParentChannelID = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	FString MentionedByUserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString MessageTimetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString ParentChannelID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString MentionedByUserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Text = "";
 };

@@ -4,6 +4,7 @@
 #include "PubnubClient.h"
 #include "PubnubChat.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatCallbackStop.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
 #include "PubnubChatObjectsRepository.h"
@@ -404,6 +405,122 @@ void UPubnubChatUser::GetChannelsRestrictionsAsync(FOnPubnubChatGetRestrictionsR
 	});
 }
 
+FPubnubChatOperationResult UPubnubChatUser::StreamMentions()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Skip if it's already streaming
+	if (IsStreamingMentions)
+	{ return FinalResult; }
+
+	TWeakObjectPtr<UPubnubChatUser> ThisWeak = MakeWeakObjectPtr(this);
+
+	FOnPubnubChatEventReceivedNative OnEventReceived;
+	OnEventReceived.BindLambda([ThisWeak](const FPubnubChatEvent& Event)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+
+		UPubnubChatUser* ThisUser = ThisWeak.Get();
+		if (!ThisUser->IsInitialized || !ThisUser->Chat || !ThisUser->IsStreamingMentions)
+		{ return; }
+
+		FPubnubChatUserMention UserMention = UPubnubChatInternalUtilities::GetUserMentionFromChatEvent(Event);
+		if (UserMention.MessageTimetoken.IsEmpty() || UserMention.ChannelID.IsEmpty())
+		{ return; }
+
+		ThisUser->OnMentioned.Broadcast(UserMention);
+		ThisUser->OnMentionedNative.Broadcast(UserMention);
+	});
+
+	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(UserID, EPubnubChatEventType::PCET_Mention, OnEventReceived);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ListenForEventsResult.Result);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((ListenForEventsResult.CallbackStop != nullptr), TEXT("Failed to start streaming mentions"));
+
+	MentionedCallbackStop = ListenForEventsResult.CallbackStop;
+	IsStreamingMentions = true;
+
+	return FinalResult;
+}
+
+void UPubnubChatUser::StreamMentionsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StreamMentionsAsync(NativeCallback);
+}
+
+void UPubnubChatUser::StreamMentionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+
+	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatOperationResult StreamMentionsResult = WeakThis.Get()->StreamMentions();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StreamMentionsResult);
+	});
+}
+
+FPubnubChatOperationResult UPubnubChatUser::StopStreamingMentions()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	if (!IsStreamingMentions)
+	{ return FinalResult; }
+
+	if (!MentionedCallbackStop)
+	{
+		IsStreamingMentions = false;
+		return FinalResult;
+	}
+
+	FPubnubChatOperationResult StopResult = MentionedCallbackStop->Stop();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, StopResult);
+
+	MentionedCallbackStop = nullptr;
+	IsStreamingMentions = false;
+
+	return FinalResult;
+}
+
+void UPubnubChatUser::StopStreamingMentionsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StopStreamingMentionsAsync(NativeCallback);
+}
+
+void UPubnubChatUser::StopStreamingMentionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+
+	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatOperationResult StopResult = WeakThis.Get()->StopStreamingMentions();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StopResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 {
 	FPubnubChatOperationResult FinalResult;
@@ -610,6 +727,13 @@ void UPubnubChatUser::OnChatDestroyed(FString InUserID)
 
 void UPubnubChatUser::ClearAllSubscriptions()
 {
+	if (MentionedCallbackStop)
+	{
+		MentionedCallbackStop->Stop();
+		MentionedCallbackStop = nullptr;
+	}
+	IsStreamingMentions = false;
+	
 	if (UpdatesSubscription)
 	{
 		UpdatesSubscription->OnPubnubObjectEventNative.Clear();

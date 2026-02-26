@@ -1323,6 +1323,9 @@ protected:
 	//This function is for ThreadChannel which does additional logic during SentText (SendText as UFUNCTION can't be directly overriden)
 	virtual FPubnubChatOperationResult OnSendText();
 	
+	//Function to override because ThreadChannel creates different payload for MentionEvent
+	virtual FString CreateMentionEventPayload(FString Timetoken, FString Text);
+	
 	//Add calling OnMessageReceived to ConnectSubscription. Virtual as Thread Channel will override it to use OnThreadMessageReceived
 	virtual void AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak);
 	

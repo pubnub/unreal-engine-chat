@@ -78,6 +78,7 @@ public:
 	 * @param Count Maximum number of messages to return (default 25).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel")
+	
 	void GetThreadHistoryAsync(const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatGetThreadHistoryResponse OnThreadHistoryResponse, const int Count = 25);
 	/**
 	 * Fetches thread message history asynchronously within a timetoken range from the server. Messages are returned in descending order (newest first).
@@ -108,6 +109,7 @@ public:
 	 * @param OnOperationResponse Callback executed when the operation completes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	
 	void PinMessageToParentChannelAsync(UPubnubChatThreadMessage* ThreadMessage, FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
 	 * Pins the given thread message asynchronously to the parent channel. Fails if the thread message is from another thread channel, or if the parent channel cannot be resolved.
@@ -133,6 +135,7 @@ public:
 	 * @param OnOperationResponse Callback executed when the operation completes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|ThreadChannel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	
 	void UnpinMessageFromParentChannelAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
 	 * Unpins the currently pinned message asynchronously from the parent channel. No-op if the parent channel has no pinned message.
@@ -140,7 +143,7 @@ public:
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
 	void UnpinMessageFromParentChannelAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
-	
+
 private:
 	
 	// Hide Channel OnMessageReceived delegates as in this class we have OnThreadMessageReceived
@@ -158,5 +161,6 @@ private:
 	void InitThreadChannel(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InThreadChannelID, UPubnubChatMessage* InParentMessage, bool InIsThreadConfirmed);
 	
 	virtual FPubnubChatOperationResult OnSendText() override;
+	virtual FString CreateMentionEventPayload(FString Timetoken, FString Text) override;
 	virtual void AddOnMessageReceivedLambdaToSubscription(TWeakObjectPtr<UPubnubChatChannel> ThisChannelWeak) override;
 };

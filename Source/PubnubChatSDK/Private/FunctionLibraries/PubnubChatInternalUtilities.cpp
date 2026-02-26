@@ -238,6 +238,30 @@ FPubnubChatReportEvent UPubnubChatInternalUtilities::GetReportEventFromChatEvent
 	return ReportEvent;
 }
 
+FPubnubChatUserMention UPubnubChatInternalUtilities::GetUserMentionFromChatEvent(const FPubnubChatEvent& Event)
+{
+	FPubnubChatUserMention UserMention;
+	UserMention.MentionedByUserID = Event.UserID;
+
+	if (Event.Payload.IsEmpty())
+	{
+		return UserMention;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!UPubnubJsonUtilities::StringToJsonObject(Event.Payload, JsonObject))
+	{
+		return UserMention;
+	}
+
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("messageTimetoken"), UserMention.MessageTimetoken);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("channel"), UserMention.ChannelID);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("text"), UserMention.Text);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("parentChannel"), UserMention.ParentChannelID);
+
+	return UserMention;
+}
+
 bool UPubnubChatInternalUtilities::IsCustomEventMessage(const FString& MessageContent)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);

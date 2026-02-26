@@ -13,6 +13,7 @@
 class UPubnubClient;
 class UPubnubChat;
 class UPubnubSubscription;
+class UPubnubChatCallbackStop;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatUserUpdated, FString, UserID, FPubnubChatUserData, UserData);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPubnubChatUserUpdatedNative, FString UserID, const FPubnubChatUserData& UserData);
@@ -343,6 +344,54 @@ public:
 	void GetChannelsRestrictionsAsync(FOnPubnubChatGetRestrictionsResponseNative OnRestrictionsResponseNative, const int Limit = 0, FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 	
 	/**
+	 * Starts listening for mention events targeted to this user. Mentions are delivered via OnMentioned / OnMentionedNative.
+	 * Local: sets up client-side listener using Chat::ListenForEvents on this user's channel. No-op if already streaming mentions.
+	 *
+	 * @return Operation result. Success if the listener was started.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StreamMentions();
+
+	/**
+	 * Starts listening asynchronously for mention events targeted to this user. No-op if already streaming mentions.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StreamMentionsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Starts listening asynchronously for mention events targeted to this user. No-op if already streaming mentions.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StreamMentionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Stops listening for mention events targeted to this user. OnMentioned and OnMentionedNative will no longer fire.
+	 * Local: stops the listener. No-op if not streaming mentions.
+	 *
+	 * @return Operation result. Success if the listener was stopped.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StopStreamingMentions();
+
+	/**
+	 * Stops listening asynchronously for mention events targeted to this user.
+	 * No-op if not streaming mentions.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StopStreamingMentionsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Stops listening asynchronously for mention events targeted to this user.
+	 * No-op if not streaming mentions.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StopStreamingMentionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+	
+	/**
 	 * Starts listening for user metadata updates (and delete events) for this user. Updates are delivered via OnUpdated; deletions via OnDeleted.
 	 * Blocking: subscribes on the calling thread. Blocks until the subscription is established.
 	 * No-op if already streaming updates.
@@ -413,8 +462,11 @@ private:
 	FString UserID = "";
 	UPROPERTY()
 	UPubnubSubscription* UpdatesSubscription = nullptr;
+	UPROPERTY()
+	UPubnubChatCallbackStop* MentionedCallbackStop = nullptr;
 
 	bool IsInitialized = false;
+	bool IsStreamingMentions = false;
 	bool IsStreamingUpdates = false;
 
 	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID);

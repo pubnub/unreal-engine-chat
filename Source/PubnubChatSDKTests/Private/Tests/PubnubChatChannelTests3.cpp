@@ -5,6 +5,7 @@
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatMembership.h"
+#include "PubnubChatThreadChannel.h"
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
@@ -21,6 +22,7 @@
 #include "Private/PubnubChatConst.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "Private/FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;
@@ -4825,6 +4827,717 @@ bool FPubnubChatChannelEmitCustomEventFullParametersTest::RunTest(const FString&
 		}
 		CleanUp();
 	}, 0.1f));
+
+	return true;
+}
+
+// ============================================================================
+// EMITUSERMENTION TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_not_init";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		FPubnubChatOperationResult EmitResult = UninitializedChannel->EmitUserMention(TEXT("target"), TEXT("123"), TEXT("hello"));
+		TestTrue("EmitUserMention should fail on uninitialized object", EmitResult.Error);
+		TestFalse("ErrorMessage should not be empty", EmitResult.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionEmptyUserIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_empty_user_init";
+	const FString TestChannelID = SDK_PREFIX + "test_emit_mention_empty_user";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(CreateResult.Channel)
+	{
+		FPubnubChatOperationResult EmitResult = CreateResult.Channel->EmitUserMention(TEXT(""), TEXT("123"), TEXT("hello"));
+		TestTrue("EmitUserMention should fail for empty UserID", EmitResult.Error);
+		TestFalse("ErrorMessage should not be empty", EmitResult.ErrorMessage.IsEmpty());
+	}
+
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionEmptyTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.1Validation.EmptyTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionEmptyTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_empty_tt_init";
+	const FString TestChannelID = SDK_PREFIX + "test_emit_mention_empty_tt";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(CreateResult.Channel)
+	{
+		FPubnubChatOperationResult EmitResult = CreateResult.Channel->EmitUserMention(TEXT("target"), TEXT(""), TEXT("hello"));
+		TestTrue("EmitUserMention should fail for empty Timetoken", EmitResult.Error);
+		TestFalse("ErrorMessage should not be empty", EmitResult.ErrorMessage.IsEmpty());
+	}
+
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionEmptyTextTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.1Validation.EmptyText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionEmptyTextTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_empty_text_init";
+	const FString TestChannelID = SDK_PREFIX + "test_emit_mention_empty_text";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(CreateResult.Channel)
+	{
+		FPubnubChatOperationResult EmitResult = CreateResult.Channel->EmitUserMention(TEXT("target"), TEXT("123"), TEXT(""));
+		TestTrue("EmitUserMention should fail for empty Text", EmitResult.Error);
+		TestFalse("ErrorMessage should not be empty", EmitResult.ErrorMessage.IsEmpty());
+	}
+
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_happy_init";
+	const FString MentionedUserID = SDK_PREFIX + "test_emit_mention_happy_target";
+	const FString TestChannelID = SDK_PREFIX + "test_emit_mention_happy_channel";
+	const FString MentionText = TEXT("mention happy path text");
+	const FString MentionedMessagePayload = TEXT("{\"value\":\"message for mention\"}");
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateMentionedUserResult = Chat->CreateUser(MentionedUserID, FPubnubChatUserData());
+	TestFalse("CreateUser for mentioned user should succeed", CreateMentionedUserResult.Result.Error);
+
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteUser(MentionedUserID);
+		Chat->DeleteUser(InitUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubPublishMessageResult PublishResult = Chat->GetPubnubClient()->PublishMessage(TestChannelID, MentionedMessagePayload);
+	TestFalse("PublishMessage should succeed", PublishResult.Result.Error);
+	const FString MentionedMessageTimetoken = PublishResult.PublishedMessage.Timetoken;
+	TestFalse("Published timetoken should not be empty", MentionedMessageTimetoken.IsEmpty());
+
+	FPubnubChatConfig MentionedChatConfig;
+	FPubnubChatInitChatResult MentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, MentionedUserID, MentionedChatConfig);
+	TestFalse("Mentioned user InitChat should succeed", MentionedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> MentionedChat = MakeShared<UPubnubChat*>(MentionedInitResult.Chat);
+	if(!*MentionedChat)
+	{
+		AddError("Mentioned chat should be initialized");
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(MentionedUserID);
+		Chat->DeleteUser(InitUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<bool> bMentionReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatUserMention> LastMention = MakeShared<FPubnubChatUserMention>();
+
+	(*MentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([bMentionReceived, LastMention](const FPubnubChatUserMention& UserMention)
+	{
+		*bMentionReceived = true;
+		*LastMention = UserMention;
+	});
+
+	FPubnubChatOperationResult StreamResult = (*MentionedChat)->GetCurrentUser()->StreamMentions();
+	TestFalse("StreamMentions should succeed", StreamResult.Error);
+
+	FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText);
+	TestFalse("EmitUserMention should succeed", EmitResult.Error);
+	TestTrue("EmitUserMention should contain at least one step", EmitResult.StepResults.Num() > 0);
+	if (EmitResult.StepResults.Num() > 0)
+	{
+		TestEqual("First step should be PublishMessage", EmitResult.StepResults[0].StepName, FString("PublishMessage"));
+	}
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMentionReceived]() -> bool {
+		return *bMentionReceived;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, LastMention, InitUserID, MentionedMessageTimetoken, TestChannelID]()
+	{
+		TestEqual("Mention MessageTimetoken should match emitted value", LastMention->MessageTimetoken, MentionedMessageTimetoken);
+		TestEqual("Mention ChannelID should match source channel", LastMention->ChannelID, TestChannelID);
+		TestEqual("MentionedByUserID should match emitter", LastMention->MentionedByUserID, InitUserID);
+		TestTrue("ParentChannelID should be empty for EmitUserMention", LastMention->ParentChannelID.IsEmpty());
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, MentionedChat, CreateChannelResult, TestChannelID, InitUserID, MentionedUserID]()
+	{
+		if (*MentionedChat)
+		{
+			(*MentionedChat)->GetCurrentUser()->StopStreamingMentions();
+			(*MentionedChat)->DeleteUser(MentionedUserID);
+			CleanUpCurrentChatUser(*MentionedChat);
+		}
+		if (Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(MentionedUserID);
+			Chat->DeleteUser(InitUserID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_full_init";
+	const FString MentionedUserID = SDK_PREFIX + "test_emit_mention_full_target";
+	const FString TestChannelID = SDK_PREFIX + "test_emit_mention_full_channel";
+	const FString MentionText = TEXT("mention full parameters text");
+	const FString MentionedMessagePayload = TEXT("{\"value\":\"source for full mention\"}");
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateMentionedUserResult = Chat->CreateUser(MentionedUserID, FPubnubChatUserData());
+	TestFalse("CreateUser for mentioned user should succeed", CreateMentionedUserResult.Result.Error);
+
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteUser(MentionedUserID);
+		Chat->DeleteUser(InitUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubPublishMessageResult PublishResult = Chat->GetPubnubClient()->PublishMessage(TestChannelID, MentionedMessagePayload);
+	TestFalse("PublishMessage should succeed", PublishResult.Result.Error);
+	const FString MentionedMessageTimetoken = PublishResult.PublishedMessage.Timetoken;
+
+	FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText);
+	TestFalse("EmitUserMention should succeed", EmitResult.Error);
+	TestTrue("EmitUserMention should contain at least one step", EmitResult.StepResults.Num() > 0);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, MentionedUserID, MentionedMessageTimetoken, TestChannelID, MentionText]()
+	{
+		FPubnubFetchHistorySettings HistorySettings;
+		HistorySettings.MaxPerChannel = 30;
+		HistorySettings.IncludeUserID = true;
+		FPubnubFetchHistoryResult HistoryResult = Chat->GetPubnubClient()->FetchHistory(MentionedUserID, HistorySettings);
+		TestFalse("FetchHistory for mentioned user channel should succeed", HistoryResult.Result.Error);
+
+		bool bFoundMentionEvent = false;
+		for (const FPubnubHistoryMessageData& MessageData : HistoryResult.Messages)
+		{
+			if (!UPubnubChatInternalUtilities::IsThisEventMessage(MessageData.Message))
+			{
+				continue;
+			}
+
+			FPubnubChatEvent Event = UPubnubChatInternalUtilities::GetEventFromPubnubHistoryMessageData(MessageData);
+			if (Event.Type != EPubnubChatEventType::PCET_Mention)
+			{
+				continue;
+			}
+
+			FPubnubChatUserMention Mention = UPubnubChatInternalUtilities::GetUserMentionFromChatEvent(Event);
+			if (Mention.MessageTimetoken == MentionedMessageTimetoken && Mention.ChannelID == TestChannelID)
+			{
+				bFoundMentionEvent = true;
+
+				TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+				const bool bParseOk = UPubnubJsonUtilities::StringToJsonObject(Event.Payload, JsonObject);
+				TestTrue("Mention payload should be valid JSON", bParseOk);
+				if (bParseOk)
+				{
+					FString PayloadText;
+					JsonObject->TryGetStringField(ANSI_TO_TCHAR("text"), PayloadText);
+					TestEqual("Mention payload text should match emitted Text parameter", PayloadText, MentionText);
+				}
+				break;
+			}
+		}
+
+		TestTrue("Mention event should be present in mentioned user history channel", bFoundMentionEvent);
+	}, 1.0f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, InitUserID, MentionedUserID]()
+	{
+		if (Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(MentionedUserID);
+			Chat->DeleteUser(InitUserID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Ensures EmitUserMention is delivered only to the targeted user's mention stream.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionTargetsOnlyRecipientTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.4Advanced.TargetsOnlyRecipient", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionTargetsOnlyRecipientTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_emit_mention_targeted_init";
+	const FString MentionedUserID = SDK_PREFIX + "test_emit_mention_targeted_target";
+	const FString NonMentionedUserID = SDK_PREFIX + "test_emit_mention_targeted_other";
+	const FString TestChannelID = SDK_PREFIX + "test_emit_mention_targeted_channel";
+	const FString MentionText = TEXT("targeted mention text");
+	const FString MentionedMessagePayload = TEXT("{\"value\":\"source for targeted mention\"}");
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	Chat->CreateUser(MentionedUserID, FPubnubChatUserData());
+	Chat->CreateUser(NonMentionedUserID, FPubnubChatUserData());
+
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteUser(NonMentionedUserID);
+		Chat->DeleteUser(MentionedUserID);
+		Chat->DeleteUser(InitUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubPublishMessageResult PublishResult = Chat->GetPubnubClient()->PublishMessage(TestChannelID, MentionedMessagePayload);
+	TestFalse("PublishMessage should succeed", PublishResult.Result.Error);
+	const FString MentionedMessageTimetoken = PublishResult.PublishedMessage.Timetoken;
+
+	FPubnubChatConfig MentionedChatConfig;
+	FPubnubChatInitChatResult MentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, MentionedUserID, MentionedChatConfig);
+	TestFalse("Mentioned user InitChat should succeed", MentionedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> MentionedChat = MakeShared<UPubnubChat*>(MentionedInitResult.Chat);
+
+	FPubnubChatConfig NonMentionedChatConfig;
+	FPubnubChatInitChatResult NonMentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, NonMentionedUserID, NonMentionedChatConfig);
+	TestFalse("Non-mentioned user InitChat should succeed", NonMentionedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> NonMentionedChat = MakeShared<UPubnubChat*>(NonMentionedInitResult.Chat);
+
+	if(!*MentionedChat || !*NonMentionedChat)
+	{
+		AddError("Both additional chats should be initialized");
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(NonMentionedUserID);
+			Chat->DeleteUser(MentionedUserID);
+			Chat->DeleteUser(InitUserID);
+		}
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<int32> MentionedUserCount = MakeShared<int32>(0);
+	TSharedPtr<int32> NonMentionedUserCount = MakeShared<int32>(0);
+
+	(*MentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([MentionedUserCount](const FPubnubChatUserMention& UserMention)
+	{
+		*MentionedUserCount = *MentionedUserCount + 1;
+	});
+	(*NonMentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([NonMentionedUserCount](const FPubnubChatUserMention& UserMention)
+	{
+		*NonMentionedUserCount = *NonMentionedUserCount + 1;
+	});
+
+	TestFalse("Mentioned user StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
+	TestFalse("Non-mentioned user StreamMentions should succeed", (*NonMentionedChat)->GetCurrentUser()->StreamMentions().Error);
+
+	TestFalse(
+		"EmitUserMention should succeed",
+		CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText).Error
+	);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([MentionedUserCount]() -> bool {
+		return *MentionedUserCount >= 1;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, MentionedUserCount, NonMentionedUserCount]()
+	{
+		TestEqual("Mentioned user should receive exactly one mention", *MentionedUserCount, 1);
+		TestEqual("Non-mentioned user should not receive mention", *NonMentionedUserCount, 0);
+	}, 1.0f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, MentionedChat, NonMentionedChat, TestChannelID, InitUserID, MentionedUserID, NonMentionedUserID]()
+	{
+		if(*MentionedChat)
+		{
+			(*MentionedChat)->GetCurrentUser()->StopStreamingMentions();
+			(*MentionedChat)->DeleteUser(MentionedUserID);
+			CleanUpCurrentChatUser(*MentionedChat);
+		}
+		if(*NonMentionedChat)
+		{
+			(*NonMentionedChat)->GetCurrentUser()->StopStreamingMentions();
+			(*NonMentionedChat)->DeleteUser(NonMentionedUserID);
+			CleanUpCurrentChatUser(*NonMentionedChat);
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(NonMentionedUserID);
+			Chat->DeleteUser(MentionedUserID);
+			Chat->DeleteUser(InitUserID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+/**
+ * Ensures EmitUserMention called on a thread channel carries ParentChannelID and thread ChannelID.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelEmitUserMentionFromThreadIncludesParentChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.EmitUserMention.4Advanced.FromThreadIncludesParentChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelEmitUserMentionFromThreadIncludesParentChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString SenderUserID = SDK_PREFIX + "test_emit_mention_thread_sender";
+	const FString MentionedUserID = SDK_PREFIX + "test_emit_mention_thread_target";
+	const FString ParentChannelID = SDK_PREFIX + "test_emit_mention_thread_parent";
+	const FString ParentMessageText = TEXT("parent message for thread mention");
+	const FString MentionText = TEXT("thread mention payload text");
+
+	FPubnubChatConfig SenderConfig;
+	FPubnubChatInitChatResult SenderInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SenderUserID, SenderConfig);
+	TestFalse("Sender InitChat should succeed", SenderInitResult.Result.Error);
+	UPubnubChat* SenderChat = SenderInitResult.Chat;
+	if(!SenderChat)
+	{
+		AddError("Sender chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	TestFalse("Create mentioned user should succeed", SenderChat->CreateUser(MentionedUserID, FPubnubChatUserData()).Result.Error);
+
+	FPubnubChatConfig MentionedConfig;
+	FPubnubChatInitChatResult MentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, MentionedUserID, MentionedConfig);
+	TestFalse("Mentioned InitChat should succeed", MentionedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> MentionedChat = MakeShared<UPubnubChat*>(MentionedInitResult.Chat);
+	if(!*MentionedChat)
+	{
+		AddError("Mentioned chat should be initialized");
+		SenderChat->DeleteUser(MentionedUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateChannelResult = SenderChat->CreatePublicConversation(ParentChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Parent channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		SenderChat->DeleteUser(MentionedUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUpCurrentChatUser(*MentionedChat);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<bool> bParentMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ParentMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda([bParentMessageReceived, ParentMessage](UPubnubChatMessage* Message)
+	{
+		if (Message && !*ParentMessage)
+		{
+			*bParentMessageReceived = true;
+			*ParentMessage = Message;
+		}
+	});
+
+	TestFalse("Connect parent channel should succeed", CreateChannelResult.Channel->Connect().Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, ParentMessageText]()
+	{
+		TestFalse("SendText to parent channel should succeed", CreateChannelResult.Channel->SendText(ParentMessageText).Error);
+	}, 0.5f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bParentMessageReceived]() -> bool {
+		return *bParentMessageReceived;
+	}, MAX_WAIT_TIME));
+
+	TSharedPtr<UPubnubChatThreadChannel*> ThreadChannel = MakeShared<UPubnubChatThreadChannel*>(nullptr);
+	TSharedPtr<bool> bMentionReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatUserMention> ReceivedMention = MakeShared<FPubnubChatUserMention>();
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, ParentMessage, ThreadChannel, bMentionReceived, ReceivedMention]()
+	{
+		if(!*ParentMessage)
+		{
+			AddError("Parent message was not received");
+			return;
+		}
+
+		FPubnubChatThreadChannelResult CreateThreadResult = SenderChat->CreateThreadChannel(*ParentMessage);
+		TestFalse("CreateThreadChannel should succeed", CreateThreadResult.Result.Error);
+		TestNotNull("Thread channel should be created", CreateThreadResult.ThreadChannel);
+		if(!CreateThreadResult.ThreadChannel)
+		{
+			return;
+		}
+		*ThreadChannel = CreateThreadResult.ThreadChannel;
+
+		TestFalse("StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
+		(*MentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([bMentionReceived, ReceivedMention](const FPubnubChatUserMention& Mention)
+		{
+			*bMentionReceived = true;
+			*ReceivedMention = Mention;
+		});
+
+		const FString ParentMessageTimetoken = (*ParentMessage)->GetMessageTimetoken();
+		TestFalse("Parent message timetoken should not be empty", ParentMessageTimetoken.IsEmpty());
+		TestFalse("EmitUserMention from thread channel should succeed", (*ThreadChannel)->EmitUserMention((*MentionedChat)->GetCurrentUser()->GetUserID(), ParentMessageTimetoken, TEXT("thread mention payload text")).Error);
+	}, 0.2f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMentionReceived]() -> bool {
+		return *bMentionReceived;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedMention, ThreadChannel, ParentMessage, SenderUserID, ParentChannelID]()
+	{
+		if(!*ThreadChannel || !*ParentMessage)
+		{
+			AddError("Required test objects are not valid");
+			return;
+		}
+
+		TestEqual("Mention ParentChannelID should match parent channel", ReceivedMention->ParentChannelID, ParentChannelID);
+		TestEqual("Mention ChannelID should match thread channel ID", ReceivedMention->ChannelID, (*ThreadChannel)->GetChannelID());
+		TestEqual("Mention MessageTimetoken should match provided timetoken", ReceivedMention->MessageTimetoken, (*ParentMessage)->GetMessageTimetoken());
+		TestEqual("MentionedByUserID should match sender", ReceivedMention->MentionedByUserID, SenderUserID);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, CreateChannelResult, ParentMessage, ThreadChannel, ParentChannelID, SenderUserID, MentionedUserID]()
+	{
+		if(*MentionedChat)
+		{
+			(*MentionedChat)->GetCurrentUser()->StopStreamingMentions();
+			(*MentionedChat)->DeleteUser(MentionedUserID);
+			CleanUpCurrentChatUser(*MentionedChat);
+		}
+
+		if(*ThreadChannel)
+		{
+			(*ThreadChannel)->Disconnect();
+		}
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+		}
+
+		if(SenderChat)
+		{
+			if(*ParentMessage)
+			{
+				FPubnubChatHasThreadResult HasThreadResult = (*ParentMessage)->HasThread();
+				if(HasThreadResult.HasThread)
+				{
+					SenderChat->RemoveThreadChannel(*ParentMessage);
+				}
+			}
+			SenderChat->DeleteChannel(ParentChannelID);
+			SenderChat->DeleteUser(MentionedUserID);
+			SenderChat->DeleteUser(SenderUserID);
+		}
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+	}, 0.2f));
 
 	return true;
 }
