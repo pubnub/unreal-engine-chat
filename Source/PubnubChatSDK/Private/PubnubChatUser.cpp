@@ -521,6 +521,122 @@ void UPubnubChatUser::StopStreamingMentionsAsync(FOnPubnubChatOperationResponseN
 	});
 }
 
+FPubnubChatOperationResult UPubnubChatUser::StreamInvitations()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Skip if it's already streaming
+	if (IsStreamingInvitations)
+	{ return FinalResult; }
+
+	TWeakObjectPtr<UPubnubChatUser> ThisWeak = MakeWeakObjectPtr(this);
+
+	FOnPubnubChatEventReceivedNative OnEventReceived;
+	OnEventReceived.BindLambda([ThisWeak](const FPubnubChatEvent& Event)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+
+		UPubnubChatUser* ThisUser = ThisWeak.Get();
+		if (!ThisUser->IsInitialized || !ThisUser->Chat || !ThisUser->IsStreamingInvitations)
+		{ return; }
+
+		FPubnubChatInviteEvent InviteEvent = UPubnubChatInternalUtilities::GetInviteEventFromChatEvent(Event);
+		if (InviteEvent.ChannelID.IsEmpty() || InviteEvent.ChannelType.IsEmpty())
+		{ return; }
+
+		ThisUser->OnInvited.Broadcast(InviteEvent);
+		ThisUser->OnInvitedNative.Broadcast(InviteEvent);
+	});
+
+	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(UserID, EPubnubChatEventType::PCET_Invite, OnEventReceived);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ListenForEventsResult.Result);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((ListenForEventsResult.CallbackStop != nullptr), TEXT("Failed to start streaming invitations"));
+
+	InvitedCallbackStop = ListenForEventsResult.CallbackStop;
+	IsStreamingInvitations = true;
+
+	return FinalResult;
+}
+
+void UPubnubChatUser::StreamInvitationsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StreamInvitationsAsync(NativeCallback);
+}
+
+void UPubnubChatUser::StreamInvitationsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+
+	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatOperationResult StreamInvitationsResult = WeakThis.Get()->StreamInvitations();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StreamInvitationsResult);
+	});
+}
+
+FPubnubChatOperationResult UPubnubChatUser::StopStreamingInvitations()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	if (!IsStreamingInvitations)
+	{ return FinalResult; }
+
+	if (!InvitedCallbackStop)
+	{
+		IsStreamingInvitations = false;
+		return FinalResult;
+	}
+
+	FPubnubChatOperationResult StopResult = InvitedCallbackStop->Stop();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, StopResult);
+
+	InvitedCallbackStop = nullptr;
+	IsStreamingInvitations = false;
+
+	return FinalResult;
+}
+
+void UPubnubChatUser::StopStreamingInvitationsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StopStreamingInvitationsAsync(NativeCallback);
+}
+
+void UPubnubChatUser::StopStreamingInvitationsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+
+	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatOperationResult StopResult = WeakThis.Get()->StopStreamingInvitations();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StopResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 {
 	FPubnubChatOperationResult FinalResult;
@@ -733,6 +849,13 @@ void UPubnubChatUser::ClearAllSubscriptions()
 		MentionedCallbackStop = nullptr;
 	}
 	IsStreamingMentions = false;
+
+	if (InvitedCallbackStop)
+	{
+		InvitedCallbackStop->Stop();
+		InvitedCallbackStop = nullptr;
+	}
+	IsStreamingInvitations = false;
 	
 	if (UpdatesSubscription)
 	{

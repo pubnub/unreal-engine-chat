@@ -390,6 +390,54 @@ public:
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
 	void StopStreamingMentionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Starts listening for invite events targeted to this user. Invitations are delivered via OnInvited / OnInvitedNative.
+	 * Local: sets up client-side listener using Chat::ListenForEvents on this user's channel. No-op if already streaming invitations.
+	 *
+	 * @return Operation result. Success if the listener was started.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StreamInvitations();
+
+	/**
+	 * Starts listening asynchronously for invite events targeted to this user. No-op if already streaming invitations.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StreamInvitationsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Starts listening asynchronously for invite events targeted to this user. No-op if already streaming invitations.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StreamInvitationsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Stops listening for invite events targeted to this user. OnInvited and OnInvitedNative will no longer fire.
+	 * Local: stops the listener. No-op if not streaming invitations.
+	 *
+	 * @return Operation result. Success if the listener was stopped.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StopStreamingInvitations();
+
+	/**
+	 * Stops listening asynchronously for invite events targeted to this user.
+	 * No-op if not streaming invitations.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StopStreamingInvitationsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Stops listening asynchronously for invite events targeted to this user.
+	 * No-op if not streaming invitations.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StopStreamingInvitationsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
 	 * Starts listening for user metadata updates (and delete events) for this user. Updates are delivered via OnUpdated; deletions via OnDeleted.
@@ -464,9 +512,12 @@ private:
 	UPubnubSubscription* UpdatesSubscription = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* MentionedCallbackStop = nullptr;
+	UPROPERTY()
+	UPubnubChatCallbackStop* InvitedCallbackStop = nullptr;
 
 	bool IsInitialized = false;
 	bool IsStreamingMentions = false;
+	bool IsStreamingInvitations = false;
 	bool IsStreamingUpdates = false;
 
 	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID);

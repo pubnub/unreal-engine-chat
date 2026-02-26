@@ -1951,5 +1951,657 @@ bool FPubnubChatUserStopStreamingMentionsPreventsEventsTest::RunTest(const FStri
 	return true;
 }
 
+// ============================================================================
+// STREAMINVITATIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamInvitationsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamInvitations.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamInvitationsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_invitations_not_init";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		FPubnubChatOperationResult StreamResult = UninitializedUser->StreamInvitations();
+		TestTrue("StreamInvitations should fail with uninitialized user", StreamResult.Error);
+		TestFalse("ErrorMessage should not be empty", StreamResult.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamInvitationsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamInvitations.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamInvitationsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString SenderUserID = SDK_PREFIX + "test_stream_invitations_happy_sender";
+	const FString InviteeUserID = SDK_PREFIX + "test_stream_invitations_happy_invitee";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_invitations_happy_channel";
+
+	FPubnubChatConfig SenderConfig;
+	FPubnubChatInitChatResult SenderInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SenderUserID, SenderConfig);
+	TestFalse("Sender InitChat should succeed", SenderInitResult.Result.Error);
+	UPubnubChat* SenderChat = SenderInitResult.Chat;
+	if(!SenderChat)
+	{
+		AddError("Sender chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateInviteeResult = SenderChat->CreateUser(InviteeUserID, FPubnubChatUserData());
+	TestFalse("Create invitee user should succeed", CreateInviteeResult.Result.Error);
+	TestNotNull("Invitee user object should be valid", CreateInviteeResult.User);
+	if(!CreateInviteeResult.User)
+	{
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig InviteeConfig;
+	FPubnubChatInitChatResult InviteeInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InviteeUserID, InviteeConfig);
+	TestFalse("Invitee InitChat should succeed", InviteeInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> InviteeChat = MakeShared<UPubnubChat*>(InviteeInitResult.Chat);
+	if(!*InviteeChat)
+	{
+		AddError("Invitee chat should be initialized");
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	ChannelData.Type = TEXT("public");
+	FPubnubChatChannelResult CreateChannelResult = SenderChat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		(*InviteeChat)->DeleteUser(InviteeUserID);
+		CleanUpCurrentChatUser(*InviteeChat);
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<bool> bInviteReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatInviteEvent> ReceivedInviteEvent = MakeShared<FPubnubChatInviteEvent>();
+	(*InviteeChat)->GetCurrentUser()->OnInvitedNative.AddLambda([bInviteReceived, ReceivedInviteEvent](const FPubnubChatInviteEvent& InviteEvent)
+	{
+		*bInviteReceived = true;
+		*ReceivedInviteEvent = InviteEvent;
+	});
+
+	FPubnubChatOperationResult StreamResult = (*InviteeChat)->GetCurrentUser()->StreamInvitations();
+	TestFalse("StreamInvitations should succeed", StreamResult.Error);
+
+	FPubnubChatInviteResult InviteResult = CreateChannelResult.Channel->Invite(CreateInviteeResult.User);
+	TestFalse("Invite should succeed", InviteResult.Result.Error);
+	TestNotNull("Invite should return membership", InviteResult.Membership);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bInviteReceived]() -> bool {
+		return *bInviteReceived;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedInviteEvent, SenderUserID, TestChannelID]()
+	{
+		TestEqual("InvitedByUserID should match sender", ReceivedInviteEvent->InvitedByUserID, SenderUserID);
+		TestEqual("ChannelID should match invited channel", ReceivedInviteEvent->ChannelID, TestChannelID);
+		TestEqual("ChannelType should match channel type", ReceivedInviteEvent->ChannelType, FString("public"));
+		TestFalse("Invite event timetoken should not be empty", ReceivedInviteEvent->Timetoken.IsEmpty());
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, InviteeChat, TestChannelID, SenderUserID, InviteeUserID]()
+	{
+		if(*InviteeChat)
+		{
+			(*InviteeChat)->GetCurrentUser()->StopStreamingInvitations();
+			(*InviteeChat)->DeleteUser(InviteeUserID);
+			CleanUpCurrentChatUser(*InviteeChat);
+		}
+		if(SenderChat)
+		{
+			SenderChat->DeleteChannel(TestChannelID);
+			SenderChat->DeleteUser(InviteeUserID);
+			SenderChat->DeleteUser(SenderUserID);
+		}
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamInvitationsNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamInvitations.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamInvitationsNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString SenderUserID = SDK_PREFIX + "test_stream_invitations_idempotent_sender";
+	const FString InviteeUserID = SDK_PREFIX + "test_stream_invitations_idempotent_invitee";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_invitations_idempotent_channel";
+
+	FPubnubChatConfig SenderConfig;
+	FPubnubChatInitChatResult SenderInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SenderUserID, SenderConfig);
+	TestFalse("Sender InitChat should succeed", SenderInitResult.Result.Error);
+	UPubnubChat* SenderChat = SenderInitResult.Chat;
+	if(!SenderChat)
+	{
+		AddError("Sender chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateInviteeResult = SenderChat->CreateUser(InviteeUserID, FPubnubChatUserData());
+	TestFalse("Create invitee user should succeed", CreateInviteeResult.Result.Error);
+	if(!CreateInviteeResult.User)
+	{
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig InviteeConfig;
+	FPubnubChatInitChatResult InviteeInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InviteeUserID, InviteeConfig);
+	TestFalse("Invitee InitChat should succeed", InviteeInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> InviteeChat = MakeShared<UPubnubChat*>(InviteeInitResult.Chat);
+	if(!*InviteeChat)
+	{
+		AddError("Invitee chat should be initialized");
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	ChannelData.Type = TEXT("public");
+	FPubnubChatChannelResult CreateChannelResult = SenderChat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		(*InviteeChat)->DeleteUser(InviteeUserID);
+		CleanUpCurrentChatUser(*InviteeChat);
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<int32> InviteCount = MakeShared<int32>(0);
+	(*InviteeChat)->GetCurrentUser()->OnInvitedNative.AddLambda([InviteCount](const FPubnubChatInviteEvent& InviteEvent)
+	{
+		*InviteCount = *InviteCount + 1;
+	});
+
+	FPubnubChatOperationResult FirstStreamResult = (*InviteeChat)->GetCurrentUser()->StreamInvitations();
+	FPubnubChatOperationResult SecondStreamResult = (*InviteeChat)->GetCurrentUser()->StreamInvitations();
+	TestFalse("First StreamInvitations should succeed", FirstStreamResult.Error);
+	TestFalse("Second StreamInvitations should also succeed (idempotent)", SecondStreamResult.Error);
+
+	FPubnubChatInviteResult InviteResult = CreateChannelResult.Channel->Invite(CreateInviteeResult.User);
+	TestFalse("Invite should succeed", InviteResult.Result.Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([InviteCount]() -> bool {
+		return *InviteCount >= 1;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, InviteCount]()
+	{
+		TestEqual("Exactly one invite callback should fire for one invite event", *InviteCount, 1);
+	}, 0.8f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, InviteeChat, TestChannelID, SenderUserID, InviteeUserID]()
+	{
+		if(*InviteeChat)
+		{
+			(*InviteeChat)->GetCurrentUser()->StopStreamingInvitations();
+			(*InviteeChat)->DeleteUser(InviteeUserID);
+			CleanUpCurrentChatUser(*InviteeChat);
+		}
+		if(SenderChat)
+		{
+			SenderChat->DeleteChannel(TestChannelID);
+			SenderChat->DeleteUser(InviteeUserID);
+			SenderChat->DeleteUser(SenderUserID);
+		}
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Verifies StreamInvitations handles multiple invite events emitted via InviteMultiple with correct event data.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamInvitationsInviteMultipleTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamInvitations.4Advanced.InviteMultiple", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamInvitationsInviteMultipleTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString SenderUserID = SDK_PREFIX + "test_stream_invitations_multi_sender";
+	const FString InviteeUserID = SDK_PREFIX + "test_stream_invitations_multi_invitee";
+	const FString OtherUserID = SDK_PREFIX + "test_stream_invitations_multi_other";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_invitations_multi_channel";
+
+	FPubnubChatConfig SenderConfig;
+	FPubnubChatInitChatResult SenderInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SenderUserID, SenderConfig);
+	TestFalse("Sender InitChat should succeed", SenderInitResult.Result.Error);
+	UPubnubChat* SenderChat = SenderInitResult.Chat;
+	if(!SenderChat)
+	{
+		AddError("Sender chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult InviteeResult = SenderChat->CreateUser(InviteeUserID, FPubnubChatUserData());
+	FPubnubChatUserResult OtherUserResult = SenderChat->CreateUser(OtherUserID, FPubnubChatUserData());
+	TestFalse("Create invitee should succeed", InviteeResult.Result.Error);
+	TestFalse("Create other user should succeed", OtherUserResult.Result.Error);
+	if(!InviteeResult.User || !OtherUserResult.User)
+	{
+		SenderChat->DeleteUser(OtherUserID);
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig InviteeConfig;
+	FPubnubChatInitChatResult InviteeInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InviteeUserID, InviteeConfig);
+	TestFalse("Invitee InitChat should succeed", InviteeInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> InviteeChat = MakeShared<UPubnubChat*>(InviteeInitResult.Chat);
+	if(!*InviteeChat)
+	{
+		AddError("Invitee chat should be initialized");
+		SenderChat->DeleteUser(OtherUserID);
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	ChannelData.Type = TEXT("public");
+	FPubnubChatChannelResult CreateChannelResult = SenderChat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		(*InviteeChat)->DeleteUser(InviteeUserID);
+		CleanUpCurrentChatUser(*InviteeChat);
+		SenderChat->DeleteUser(OtherUserID);
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<int32> InviteeEventCount = MakeShared<int32>(0);
+	TSharedPtr<FPubnubChatInviteEvent> LastInviteEvent = MakeShared<FPubnubChatInviteEvent>();
+	(*InviteeChat)->GetCurrentUser()->OnInvitedNative.AddLambda([InviteeEventCount, LastInviteEvent](const FPubnubChatInviteEvent& InviteEvent)
+	{
+		*InviteeEventCount = *InviteeEventCount + 1;
+		*LastInviteEvent = InviteEvent;
+	});
+
+	TestFalse("StreamInvitations should succeed", (*InviteeChat)->GetCurrentUser()->StreamInvitations().Error);
+
+	FPubnubChatInviteMultipleResult InviteMultipleResult = CreateChannelResult.Channel->InviteMultiple({InviteeResult.User, OtherUserResult.User});
+	TestFalse("InviteMultiple should succeed", InviteMultipleResult.Result.Error);
+	TestTrue("InviteMultiple should create two memberships", InviteMultipleResult.Memberships.Num() >= 2);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([InviteeEventCount]() -> bool {
+		return *InviteeEventCount >= 1;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, InviteeEventCount, LastInviteEvent, SenderUserID, TestChannelID]()
+	{
+		TestEqual("Invitee should receive exactly one invite event for own invitation", *InviteeEventCount, 1);
+		TestEqual("InvitedByUserID should match sender", LastInviteEvent->InvitedByUserID, SenderUserID);
+		TestEqual("ChannelID should match invited channel", LastInviteEvent->ChannelID, TestChannelID);
+		TestEqual("ChannelType should match channel type", LastInviteEvent->ChannelType, FString("public"));
+	}, 0.8f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, InviteeChat, TestChannelID, SenderUserID, InviteeUserID, OtherUserID]()
+	{
+		if(*InviteeChat)
+		{
+			(*InviteeChat)->GetCurrentUser()->StopStreamingInvitations();
+			(*InviteeChat)->DeleteUser(InviteeUserID);
+			CleanUpCurrentChatUser(*InviteeChat);
+		}
+		if(SenderChat)
+		{
+			SenderChat->DeleteChannel(TestChannelID);
+			SenderChat->DeleteUser(OtherUserID);
+			SenderChat->DeleteUser(InviteeUserID);
+			SenderChat->DeleteUser(SenderUserID);
+		}
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// STOPSTREAMINGINVITATIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingInvitationsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingInvitations.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingInvitationsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_invitations_not_init";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		FPubnubChatOperationResult StopResult = UninitializedUser->StopStreamingInvitations();
+		TestTrue("StopStreamingInvitations should fail with uninitialized user", StopResult.Error);
+		TestFalse("ErrorMessage should not be empty", StopResult.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingInvitationsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingInvitations.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingInvitationsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_invitations_happy";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult StreamResult = Chat->GetCurrentUser()->StreamInvitations();
+	TestFalse("StreamInvitations should succeed", StreamResult.Error);
+
+	FPubnubChatOperationResult StopResult = Chat->GetCurrentUser()->StopStreamingInvitations();
+	TestFalse("StopStreamingInvitations should succeed", StopResult.Error);
+
+	bool bFoundUnsubscribeStep = false;
+	for(const FPubnubChatOperationStepResult& Step : StopResult.StepResults)
+	{
+		if(Step.StepName == TEXT("Unsubscribe"))
+		{
+			bFoundUnsubscribeStep = true;
+			TestFalse("Unsubscribe step should not have error", Step.OperationResult.Error);
+			break;
+		}
+	}
+	TestTrue("StopStreamingInvitations should include Unsubscribe step", bFoundUnsubscribeStep);
+
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingInvitationsNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingInvitations.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingInvitationsNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_invitations_noop";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult StopResult = Chat->GetCurrentUser()->StopStreamingInvitations();
+	TestFalse("StopStreamingInvitations should succeed when not streaming (no-op)", StopResult.Error);
+	TestEqual("No-op stop should not have step results", StopResult.StepResults.Num(), 0);
+
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Verifies StopStreamingInvitations prevents receiving subsequent invitation events.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingInvitationsPreventsEventsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingInvitations.4Advanced.PreventsEvents", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingInvitationsPreventsEventsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString SenderUserID = SDK_PREFIX + "test_stop_invitations_prevent_sender";
+	const FString InviteeUserID = SDK_PREFIX + "test_stop_invitations_prevent_invitee";
+	const FString FirstChannelID = SDK_PREFIX + "test_stop_invitations_prevent_channel_1";
+	const FString SecondChannelID = SDK_PREFIX + "test_stop_invitations_prevent_channel_2";
+
+	FPubnubChatConfig SenderConfig;
+	FPubnubChatInitChatResult SenderInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SenderUserID, SenderConfig);
+	TestFalse("Sender InitChat should succeed", SenderInitResult.Result.Error);
+	UPubnubChat* SenderChat = SenderInitResult.Chat;
+	if(!SenderChat)
+	{
+		AddError("Sender chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateInviteeResult = SenderChat->CreateUser(InviteeUserID, FPubnubChatUserData());
+	TestFalse("Create invitee user should succeed", CreateInviteeResult.Result.Error);
+	if(!CreateInviteeResult.User)
+	{
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig InviteeConfig;
+	FPubnubChatInitChatResult InviteeInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InviteeUserID, InviteeConfig);
+	TestFalse("Invitee InitChat should succeed", InviteeInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> InviteeChat = MakeShared<UPubnubChat*>(InviteeInitResult.Chat);
+	if(!*InviteeChat)
+	{
+		AddError("Invitee chat should be initialized");
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	ChannelData.Type = TEXT("public");
+	FPubnubChatChannelResult FirstCreateChannelResult = SenderChat->CreatePublicConversation(FirstChannelID, ChannelData);
+	FPubnubChatChannelResult SecondCreateChannelResult = SenderChat->CreatePublicConversation(SecondChannelID, ChannelData);
+	TestFalse("First CreatePublicConversation should succeed", FirstCreateChannelResult.Result.Error);
+	TestFalse("Second CreatePublicConversation should succeed", SecondCreateChannelResult.Result.Error);
+	if(!FirstCreateChannelResult.Channel || !SecondCreateChannelResult.Channel)
+	{
+		(*InviteeChat)->DeleteUser(InviteeUserID);
+		CleanUpCurrentChatUser(*InviteeChat);
+		SenderChat->DeleteUser(InviteeUserID);
+		SenderChat->DeleteUser(SenderUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<int32> InviteCount = MakeShared<int32>(0);
+	(*InviteeChat)->GetCurrentUser()->OnInvitedNative.AddLambda([InviteCount](const FPubnubChatInviteEvent& InviteEvent)
+	{
+		*InviteCount = *InviteCount + 1;
+	});
+
+	TestFalse("StreamInvitations should succeed", (*InviteeChat)->GetCurrentUser()->StreamInvitations().Error);
+	TestFalse("First Invite should succeed", FirstCreateChannelResult.Channel->Invite(CreateInviteeResult.User).Result.Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([InviteCount]() -> bool {
+		return *InviteCount >= 1;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, InviteeChat]()
+	{
+		TestFalse("StopStreamingInvitations should succeed", (*InviteeChat)->GetCurrentUser()->StopStreamingInvitations().Error);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SecondCreateChannelResult, CreateInviteeResult]()
+	{
+		TestFalse("Second Invite should succeed", SecondCreateChannelResult.Channel->Invite(CreateInviteeResult.User).Result.Error);
+	}, 0.2f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, InviteCount]()
+	{
+		TestEqual("Invite count should stay unchanged after stop", *InviteCount, 1);
+	}, 1.0f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, InviteeChat, FirstChannelID, SecondChannelID, SenderUserID, InviteeUserID]()
+	{
+		if(*InviteeChat)
+		{
+			(*InviteeChat)->DeleteUser(InviteeUserID);
+			CleanUpCurrentChatUser(*InviteeChat);
+		}
+		if(SenderChat)
+		{
+			SenderChat->DeleteChannel(FirstChannelID);
+			SenderChat->DeleteChannel(SecondChannelID);
+			SenderChat->DeleteUser(InviteeUserID);
+			SenderChat->DeleteUser(SenderUserID);
+		}
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 
