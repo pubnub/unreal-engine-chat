@@ -57,6 +57,7 @@ public:
 	static FPubnubChatReportEvent GetReportEventFromChatEvent(const FPubnubChatEvent& Event);
 	static FPubnubChatUserMention GetUserMentionFromChatEvent(const FPubnubChatEvent& Event);
 	static FPubnubChatInviteEvent GetInviteEventFromChatEvent(const FPubnubChatEvent& Event);
+	static FPubnubChatRestriction GetRestrictionFromModerationEvent(const FPubnubChatEvent& Event, const FString& RestrictedUserID);
 	static bool IsCustomEventMessage(const FString& MessageContent);
 	static FPubnubChatCustomEvent GetCustomEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
 	static FString GetReceiptEventPayload(const FString& Timetoken);

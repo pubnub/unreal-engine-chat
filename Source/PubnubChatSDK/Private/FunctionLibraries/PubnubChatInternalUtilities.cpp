@@ -285,6 +285,41 @@ FPubnubChatInviteEvent UPubnubChatInternalUtilities::GetInviteEventFromChatEvent
 	return InviteEvent;
 }
 
+FPubnubChatRestriction UPubnubChatInternalUtilities::GetRestrictionFromModerationEvent(const FPubnubChatEvent& Event, const FString& RestrictedUserID)
+{
+	FPubnubChatRestriction Restriction;
+	Restriction.UserID = RestrictedUserID;
+
+	if (Event.Payload.IsEmpty())
+	{
+		return Restriction;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!UPubnubJsonUtilities::StringToJsonObject(Event.Payload, JsonObject))
+	{
+		return Restriction;
+	}
+
+	FString ModerationChannelID;
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("channelId"), ModerationChannelID);
+	Restriction.ChannelID = GetChannelIDFromModerationChannel(ModerationChannelID);
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("reason"), Restriction.Reason);
+
+	FString RestrictionType;
+	JsonObject->TryGetStringField(ANSI_TO_TCHAR("restriction"), RestrictionType);
+	if (RestrictionType == "banned")
+	{
+		Restriction.Ban = true;
+	}
+	else if (RestrictionType == "muted")
+	{
+		Restriction.Mute = true;
+	}
+
+	return Restriction;
+}
+
 bool UPubnubChatInternalUtilities::IsCustomEventMessage(const FString& MessageContent)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);

@@ -991,7 +991,7 @@ FPubnubChatOperationResult UPubnubChat::SetRestrictions(FPubnubChatRestriction R
 		FPubnubChannelMembersResult RemoveChannelMembersResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, {Restriction.UserID}, FPubnubMemberInclude::FromValue(false), 1);
 		PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, RemoveChannelMembersResult.Result, "RemoveChannelMembers");
 		
-		RestrictionType = "Lifted";
+		RestrictionType = "lifted";
 	}
 	else
 	{

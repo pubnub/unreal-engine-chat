@@ -2603,5 +2603,672 @@ bool FPubnubChatUserStopStreamingInvitationsPreventsEventsTest::RunTest(const FS
 	return true;
 }
 
+// ============================================================================
+// STREAMRESTRICTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamRestrictionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamRestrictions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamRestrictionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_restrictions_not_init";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		FPubnubChatOperationResult StreamResult = UninitializedUser->StreamRestrictions();
+		TestTrue("StreamRestrictions should fail with uninitialized user", StreamResult.Error);
+		TestFalse("ErrorMessage should not be empty", StreamResult.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamRestrictionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamRestrictions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamRestrictionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString ModeratorUserID = SDK_PREFIX + "test_stream_restrictions_happy_moderator";
+	const FString RestrictedUserID = SDK_PREFIX + "test_stream_restrictions_happy_restricted";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_restrictions_happy_channel";
+	const FString RestrictionReason = TEXT("happy-path-ban");
+
+	FPubnubChatConfig ModeratorConfig;
+	FPubnubChatInitChatResult ModeratorInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, ModeratorUserID, ModeratorConfig);
+	TestFalse("Moderator InitChat should succeed", ModeratorInitResult.Result.Error);
+	UPubnubChat* ModeratorChat = ModeratorInitResult.Chat;
+	if(!ModeratorChat)
+	{
+		AddError("Moderator chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateRestrictedUserResult = ModeratorChat->CreateUser(RestrictedUserID, FPubnubChatUserData());
+	TestFalse("Create restricted user should succeed", CreateRestrictedUserResult.Result.Error);
+
+	FPubnubChatChannelResult CreateChannelResult = ModeratorChat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig RestrictedConfig;
+	FPubnubChatInitChatResult RestrictedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, RestrictedUserID, RestrictedConfig);
+	TestFalse("Restricted InitChat should succeed", RestrictedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> RestrictedChat = MakeShared<UPubnubChat*>(RestrictedInitResult.Chat);
+	if(!*RestrictedChat)
+	{
+		AddError("Restricted chat should be initialized");
+		ModeratorChat->DeleteChannel(TestChannelID);
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<bool> bRestrictionReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatRestriction> ReceivedRestriction = MakeShared<FPubnubChatRestriction>();
+	(*RestrictedChat)->GetCurrentUser()->OnRestrictionChangedNative.AddLambda([bRestrictionReceived, ReceivedRestriction](const FPubnubChatRestriction& Restriction)
+	{
+		*bRestrictionReceived = true;
+		*ReceivedRestriction = Restriction;
+	});
+
+	TestFalse("StreamRestrictions should succeed", (*RestrictedChat)->GetCurrentUser()->StreamRestrictions().Error);
+
+	FPubnubChatRestriction Restriction;
+	Restriction.UserID = RestrictedUserID;
+	Restriction.ChannelID = TestChannelID;
+	Restriction.Ban = true;
+	Restriction.Mute = false;
+	Restriction.Reason = RestrictionReason;
+	TestFalse("Chat->SetRestrictions should succeed", ModeratorChat->SetRestrictions(Restriction).Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bRestrictionReceived]() -> bool {
+		return *bRestrictionReceived;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedRestriction, RestrictedUserID, TestChannelID, RestrictionReason]()
+	{
+		TestEqual("Restriction UserID should match restricted user", ReceivedRestriction->UserID, RestrictedUserID);
+		TestEqual("Restriction ChannelID should match channel", ReceivedRestriction->ChannelID, TestChannelID);
+		TestTrue("Restriction Ban should be true", ReceivedRestriction->Ban);
+		TestFalse("Restriction Mute should be false", ReceivedRestriction->Mute);
+		TestEqual("Restriction Reason should match", ReceivedRestriction->Reason, RestrictionReason);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ModeratorChat, RestrictedChat, TestChannelID, ModeratorUserID, RestrictedUserID]()
+	{
+		if(*RestrictedChat)
+		{
+			(*RestrictedChat)->GetCurrentUser()->StopStreamingRestrictions();
+			(*RestrictedChat)->DeleteUser(RestrictedUserID);
+			CleanUpCurrentChatUser(*RestrictedChat);
+		}
+		if(ModeratorChat)
+		{
+			ModeratorChat->DeleteChannel(TestChannelID);
+			ModeratorChat->DeleteUser(RestrictedUserID);
+			ModeratorChat->DeleteUser(ModeratorUserID);
+		}
+		CleanUpCurrentChatUser(ModeratorChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamRestrictionsNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamRestrictions.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamRestrictionsNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString ModeratorUserID = SDK_PREFIX + "test_stream_restrictions_idempotent_moderator";
+	const FString RestrictedUserID = SDK_PREFIX + "test_stream_restrictions_idempotent_restricted";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_restrictions_idempotent_channel";
+
+	FPubnubChatConfig ModeratorConfig;
+	FPubnubChatInitChatResult ModeratorInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, ModeratorUserID, ModeratorConfig);
+	TestFalse("Moderator InitChat should succeed", ModeratorInitResult.Result.Error);
+	UPubnubChat* ModeratorChat = ModeratorInitResult.Chat;
+	if(!ModeratorChat)
+	{
+		AddError("Moderator chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	TestFalse("Create restricted user should succeed", ModeratorChat->CreateUser(RestrictedUserID, FPubnubChatUserData()).Result.Error);
+	FPubnubChatChannelResult CreateChannelResult = ModeratorChat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig RestrictedConfig;
+	FPubnubChatInitChatResult RestrictedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, RestrictedUserID, RestrictedConfig);
+	TestFalse("Restricted InitChat should succeed", RestrictedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> RestrictedChat = MakeShared<UPubnubChat*>(RestrictedInitResult.Chat);
+	if(!*RestrictedChat)
+	{
+		AddError("Restricted chat should be initialized");
+		ModeratorChat->DeleteChannel(TestChannelID);
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<int32> RestrictionCount = MakeShared<int32>(0);
+	(*RestrictedChat)->GetCurrentUser()->OnRestrictionChangedNative.AddLambda([RestrictionCount](const FPubnubChatRestriction& Restriction)
+	{
+		*RestrictionCount = *RestrictionCount + 1;
+	});
+
+	FPubnubChatOperationResult FirstStreamResult = (*RestrictedChat)->GetCurrentUser()->StreamRestrictions();
+	FPubnubChatOperationResult SecondStreamResult = (*RestrictedChat)->GetCurrentUser()->StreamRestrictions();
+	TestFalse("First StreamRestrictions should succeed", FirstStreamResult.Error);
+	TestFalse("Second StreamRestrictions should also succeed (idempotent)", SecondStreamResult.Error);
+
+	TestFalse("Channel->SetRestrictions should succeed", CreateChannelResult.Channel->SetRestrictions(RestrictedUserID, false, true, TEXT("idempotent-mute")).Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([RestrictionCount]() -> bool {
+		return *RestrictionCount >= 1;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, RestrictionCount]()
+	{
+		TestEqual("Exactly one callback should fire for one restriction event", *RestrictionCount, 1);
+	}, 0.8f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ModeratorChat, RestrictedChat, TestChannelID, ModeratorUserID, RestrictedUserID]()
+	{
+		if(*RestrictedChat)
+		{
+			(*RestrictedChat)->GetCurrentUser()->StopStreamingRestrictions();
+			(*RestrictedChat)->DeleteUser(RestrictedUserID);
+			CleanUpCurrentChatUser(*RestrictedChat);
+		}
+		if(ModeratorChat)
+		{
+			ModeratorChat->DeleteChannel(TestChannelID);
+			ModeratorChat->DeleteUser(RestrictedUserID);
+			ModeratorChat->DeleteUser(ModeratorUserID);
+		}
+		CleanUpCurrentChatUser(ModeratorChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Verifies restriction stream receives correct data for all supported emitters:
+ * Chat->SetRestrictions, Channel->SetRestrictions, and User->SetRestrictions.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStreamRestrictionsAllEmittersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StreamRestrictions.4Advanced.AllEmitters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStreamRestrictionsAllEmittersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString ModeratorUserID = SDK_PREFIX + "test_stream_restrictions_emitters_moderator";
+	const FString RestrictedUserID = SDK_PREFIX + "test_stream_restrictions_emitters_restricted";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_restrictions_emitters_channel";
+
+	const FString ChatReason = TEXT("set-by-chat");
+	const FString ChannelReason = TEXT("set-by-channel");
+	const FString UserReason = TEXT("set-by-user");
+
+	FPubnubChatConfig ModeratorConfig;
+	FPubnubChatInitChatResult ModeratorInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, ModeratorUserID, ModeratorConfig);
+	TestFalse("Moderator InitChat should succeed", ModeratorInitResult.Result.Error);
+	UPubnubChat* ModeratorChat = ModeratorInitResult.Chat;
+	if(!ModeratorChat)
+	{
+		AddError("Moderator chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult RestrictedUserResult = ModeratorChat->CreateUser(RestrictedUserID, FPubnubChatUserData());
+	TestFalse("Create restricted user should succeed", RestrictedUserResult.Result.Error);
+	TestNotNull("Restricted user should be created", RestrictedUserResult.User);
+	if(!RestrictedUserResult.User)
+	{
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateChannelResult = ModeratorChat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig RestrictedConfig;
+	FPubnubChatInitChatResult RestrictedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, RestrictedUserID, RestrictedConfig);
+	TestFalse("Restricted InitChat should succeed", RestrictedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> RestrictedChat = MakeShared<UPubnubChat*>(RestrictedInitResult.Chat);
+	if(!*RestrictedChat)
+	{
+		AddError("Restricted chat should be initialized");
+		ModeratorChat->DeleteChannel(TestChannelID);
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<TArray<FPubnubChatRestriction>> ReceivedRestrictions = MakeShared<TArray<FPubnubChatRestriction>>();
+	(*RestrictedChat)->GetCurrentUser()->OnRestrictionChangedNative.AddLambda([ReceivedRestrictions](const FPubnubChatRestriction& Restriction)
+	{
+		ReceivedRestrictions->Add(Restriction);
+	});
+
+	TestFalse("StreamRestrictions should succeed", (*RestrictedChat)->GetCurrentUser()->StreamRestrictions().Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ModeratorChat, CreateChannelResult, RestrictedUserResult, RestrictedUserID, TestChannelID, ChatReason, ChannelReason, UserReason]()
+	{
+		FPubnubChatRestriction ChatRestriction;
+		ChatRestriction.UserID = RestrictedUserID;
+		ChatRestriction.ChannelID = TestChannelID;
+		ChatRestriction.Ban = true;
+		ChatRestriction.Mute = false;
+		ChatRestriction.Reason = ChatReason;
+		TestFalse("Chat->SetRestrictions should succeed", ModeratorChat->SetRestrictions(ChatRestriction).Error);
+
+		TestFalse("Channel->SetRestrictions should succeed", CreateChannelResult.Channel->SetRestrictions(RestrictedUserID, false, true, ChannelReason).Error);
+
+		TestFalse("User->SetRestrictions should succeed", RestrictedUserResult.User->SetRestrictions(TestChannelID, false, false, UserReason).Error);
+	}, 0.6f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([ReceivedRestrictions]() -> bool {
+		return ReceivedRestrictions->Num() >= 3;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedRestrictions, RestrictedUserID, TestChannelID, ChatReason, ChannelReason, UserReason]()
+	{
+		const auto FindByReason = [ReceivedRestrictions](const FString& Reason) -> const FPubnubChatRestriction*
+		{
+			for (const FPubnubChatRestriction& Restriction : *ReceivedRestrictions)
+			{
+				if (Restriction.Reason == Reason)
+				{
+					return &Restriction;
+				}
+			}
+			return nullptr;
+		};
+
+		const FPubnubChatRestriction* ChatRestriction = FindByReason(ChatReason);
+		const FPubnubChatRestriction* ChannelRestriction = FindByReason(ChannelReason);
+		const FPubnubChatRestriction* UserRestriction = FindByReason(UserReason);
+
+		TestNotNull("Chat emitted restriction should be received", ChatRestriction);
+		TestNotNull("Channel emitted restriction should be received", ChannelRestriction);
+		TestNotNull("User emitted restriction should be received", UserRestriction);
+
+		if (ChatRestriction)
+		{
+			TestEqual("Chat restriction UserID should match", ChatRestriction->UserID, RestrictedUserID);
+			TestEqual("Chat restriction ChannelID should match", ChatRestriction->ChannelID, TestChannelID);
+			TestTrue("Chat restriction Ban should be true", ChatRestriction->Ban);
+			TestFalse("Chat restriction Mute should be false", ChatRestriction->Mute);
+		}
+		if (ChannelRestriction)
+		{
+			TestEqual("Channel restriction UserID should match", ChannelRestriction->UserID, RestrictedUserID);
+			TestEqual("Channel restriction ChannelID should match", ChannelRestriction->ChannelID, TestChannelID);
+			TestFalse("Channel restriction Ban should be false", ChannelRestriction->Ban);
+			TestTrue("Channel restriction Mute should be true", ChannelRestriction->Mute);
+		}
+		if (UserRestriction)
+		{
+			TestEqual("User restriction UserID should match", UserRestriction->UserID, RestrictedUserID);
+			TestEqual("User restriction ChannelID should match", UserRestriction->ChannelID, TestChannelID);
+			TestFalse("User restriction Ban should be false after lift", UserRestriction->Ban);
+			TestFalse("User restriction Mute should be false after lift", UserRestriction->Mute);
+		}
+	}, 0.2f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ModeratorChat, RestrictedChat, TestChannelID, ModeratorUserID, RestrictedUserID]()
+	{
+		if(*RestrictedChat)
+		{
+			(*RestrictedChat)->GetCurrentUser()->StopStreamingRestrictions();
+			(*RestrictedChat)->DeleteUser(RestrictedUserID);
+			CleanUpCurrentChatUser(*RestrictedChat);
+		}
+		if(ModeratorChat)
+		{
+			ModeratorChat->DeleteChannel(TestChannelID);
+			ModeratorChat->DeleteUser(RestrictedUserID);
+			ModeratorChat->DeleteUser(ModeratorUserID);
+		}
+		CleanUpCurrentChatUser(ModeratorChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
+// ============================================================================
+// STOPSTREAMINGRESTRICTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingRestrictionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingRestrictions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingRestrictionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_restrictions_not_init";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		FPubnubChatOperationResult StopResult = UninitializedUser->StopStreamingRestrictions();
+		TestTrue("StopStreamingRestrictions should fail with uninitialized user", StopResult.Error);
+		TestFalse("ErrorMessage should not be empty", StopResult.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingRestrictionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingRestrictions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingRestrictionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_restrictions_happy";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult StreamResult = Chat->GetCurrentUser()->StreamRestrictions();
+	TestFalse("StreamRestrictions should succeed", StreamResult.Error);
+
+	FPubnubChatOperationResult StopResult = Chat->GetCurrentUser()->StopStreamingRestrictions();
+	TestFalse("StopStreamingRestrictions should succeed", StopResult.Error);
+
+	bool bFoundUnsubscribeStep = false;
+	for(const FPubnubChatOperationStepResult& Step : StopResult.StepResults)
+	{
+		if(Step.StepName == TEXT("Unsubscribe"))
+		{
+			bFoundUnsubscribeStep = true;
+			TestFalse("Unsubscribe step should not have error", Step.OperationResult.Error);
+			break;
+		}
+	}
+	TestTrue("StopStreamingRestrictions should include Unsubscribe step", bFoundUnsubscribeStep);
+
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingRestrictionsNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingRestrictions.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingRestrictionsNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_restrictions_noop";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult StopResult = Chat->GetCurrentUser()->StopStreamingRestrictions();
+	TestFalse("StopStreamingRestrictions should succeed when not streaming (no-op)", StopResult.Error);
+	TestEqual("No-op stop should not have step results", StopResult.StepResults.Num(), 0);
+
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Verifies StopStreamingRestrictions prevents receiving subsequent restriction events.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserStopStreamingRestrictionsPreventsEventsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.StopStreamingRestrictions.4Advanced.PreventsEvents", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserStopStreamingRestrictionsPreventsEventsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString ModeratorUserID = SDK_PREFIX + "test_stop_restrictions_prevent_moderator";
+	const FString RestrictedUserID = SDK_PREFIX + "test_stop_restrictions_prevent_restricted";
+	const FString FirstChannelID = SDK_PREFIX + "test_stop_restrictions_prevent_channel_1";
+	const FString SecondChannelID = SDK_PREFIX + "test_stop_restrictions_prevent_channel_2";
+
+	FPubnubChatConfig ModeratorConfig;
+	FPubnubChatInitChatResult ModeratorInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, ModeratorUserID, ModeratorConfig);
+	TestFalse("Moderator InitChat should succeed", ModeratorInitResult.Result.Error);
+	UPubnubChat* ModeratorChat = ModeratorInitResult.Chat;
+	if(!ModeratorChat)
+	{
+		AddError("Moderator chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	TestFalse("Create restricted user should succeed", ModeratorChat->CreateUser(RestrictedUserID, FPubnubChatUserData()).Result.Error);
+
+	FPubnubChatChannelResult FirstCreateChannelResult = ModeratorChat->CreatePublicConversation(FirstChannelID, FPubnubChatChannelData());
+	FPubnubChatChannelResult SecondCreateChannelResult = ModeratorChat->CreatePublicConversation(SecondChannelID, FPubnubChatChannelData());
+	TestFalse("First CreatePublicConversation should succeed", FirstCreateChannelResult.Result.Error);
+	TestFalse("Second CreatePublicConversation should succeed", SecondCreateChannelResult.Result.Error);
+	if(!FirstCreateChannelResult.Channel || !SecondCreateChannelResult.Channel)
+	{
+		ModeratorChat->DeleteChannel(FirstChannelID);
+		ModeratorChat->DeleteChannel(SecondChannelID);
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatConfig RestrictedConfig;
+	FPubnubChatInitChatResult RestrictedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, RestrictedUserID, RestrictedConfig);
+	TestFalse("Restricted InitChat should succeed", RestrictedInitResult.Result.Error);
+	TSharedPtr<UPubnubChat*> RestrictedChat = MakeShared<UPubnubChat*>(RestrictedInitResult.Chat);
+	if(!*RestrictedChat)
+	{
+		AddError("Restricted chat should be initialized");
+		ModeratorChat->DeleteChannel(FirstChannelID);
+		ModeratorChat->DeleteChannel(SecondChannelID);
+		ModeratorChat->DeleteUser(RestrictedUserID);
+		ModeratorChat->DeleteUser(ModeratorUserID);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<int32> RestrictionCount = MakeShared<int32>(0);
+	(*RestrictedChat)->GetCurrentUser()->OnRestrictionChangedNative.AddLambda([RestrictionCount](const FPubnubChatRestriction& Restriction)
+	{
+		*RestrictionCount = *RestrictionCount + 1;
+	});
+
+	TestFalse("StreamRestrictions should succeed", (*RestrictedChat)->GetCurrentUser()->StreamRestrictions().Error);
+	TestFalse("First Channel->SetRestrictions should succeed", FirstCreateChannelResult.Channel->SetRestrictions(RestrictedUserID, true, false, TEXT("first-ban")).Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([RestrictionCount]() -> bool {
+		return *RestrictionCount >= 1;
+	}, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, RestrictedChat]()
+	{
+		TestFalse("StopStreamingRestrictions should succeed", (*RestrictedChat)->GetCurrentUser()->StopStreamingRestrictions().Error);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SecondCreateChannelResult, RestrictedUserID]()
+	{
+		TestFalse("Second Channel->SetRestrictions should succeed", SecondCreateChannelResult.Channel->SetRestrictions(RestrictedUserID, false, true, TEXT("second-mute")).Error);
+	}, 0.2f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, RestrictionCount]()
+	{
+		TestEqual("Restriction callback count should stay unchanged after stop", *RestrictionCount, 1);
+	}, 1.0f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ModeratorChat, RestrictedChat, FirstChannelID, SecondChannelID, ModeratorUserID, RestrictedUserID]()
+	{
+		if(*RestrictedChat)
+		{
+			(*RestrictedChat)->DeleteUser(RestrictedUserID);
+			CleanUpCurrentChatUser(*RestrictedChat);
+		}
+		if(ModeratorChat)
+		{
+			ModeratorChat->DeleteChannel(FirstChannelID);
+			ModeratorChat->DeleteChannel(SecondChannelID);
+			ModeratorChat->DeleteUser(RestrictedUserID);
+			ModeratorChat->DeleteUser(ModeratorUserID);
+		}
+		CleanUpCurrentChatUser(ModeratorChat);
+		CleanUp();
+	}, 0.2f));
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

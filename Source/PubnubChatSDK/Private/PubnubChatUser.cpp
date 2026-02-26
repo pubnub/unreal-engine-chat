@@ -637,6 +637,125 @@ void UPubnubChatUser::StopStreamingInvitationsAsync(FOnPubnubChatOperationRespon
 	});
 }
 
+FPubnubChatOperationResult UPubnubChatUser::StreamRestrictions()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	//Skip if it's already streaming
+	if (IsStreamingRestrictions)
+	{ return FinalResult; }
+
+	const FString ModerationEventChannel = UPubnubChatInternalUtilities::GetModerationEventChannelForUserID(UserID);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!ModerationEventChannel.IsEmpty(), TEXT("Failed to resolve moderation event channel"));
+
+	TWeakObjectPtr<UPubnubChatUser> ThisWeak = MakeWeakObjectPtr(this);
+
+	FOnPubnubChatEventReceivedNative OnEventReceived;
+	OnEventReceived.BindLambda([ThisWeak](const FPubnubChatEvent& Event)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+
+		UPubnubChatUser* ThisUser = ThisWeak.Get();
+		if (!ThisUser->IsInitialized || !ThisUser->Chat || !ThisUser->IsStreamingRestrictions)
+		{ return; }
+
+		FPubnubChatRestriction Restriction = UPubnubChatInternalUtilities::GetRestrictionFromModerationEvent(Event, ThisUser->UserID);
+		if (Restriction.ChannelID.IsEmpty())
+		{ return; }
+
+		ThisUser->OnRestrictionChanged.Broadcast(Restriction);
+		ThisUser->OnRestrictionChangedNative.Broadcast(Restriction);
+	});
+
+	FPubnubChatListenForEventsResult ListenForEventsResult = Chat->ListenForEvents(ModerationEventChannel, EPubnubChatEventType::PCET_Moderation, OnEventReceived);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, ListenForEventsResult.Result);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((ListenForEventsResult.CallbackStop != nullptr), TEXT("Failed to start streaming restrictions"));
+
+	RestrictionCallbackStop = ListenForEventsResult.CallbackStop;
+	IsStreamingRestrictions = true;
+
+	return FinalResult;
+}
+
+void UPubnubChatUser::StreamRestrictionsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StreamRestrictionsAsync(NativeCallback);
+}
+
+void UPubnubChatUser::StreamRestrictionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+
+	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatOperationResult StreamRestrictionsResult = WeakThis.Get()->StreamRestrictions();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StreamRestrictionsResult);
+	});
+}
+
+FPubnubChatOperationResult UPubnubChatUser::StopStreamingRestrictions()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	if (!IsStreamingRestrictions)
+	{ return FinalResult; }
+
+	if (!RestrictionCallbackStop)
+	{
+		IsStreamingRestrictions = false;
+		return FinalResult;
+	}
+
+	FPubnubChatOperationResult StopResult = RestrictionCallbackStop->Stop();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, StopResult);
+
+	RestrictionCallbackStop = nullptr;
+	IsStreamingRestrictions = false;
+
+	return FinalResult;
+}
+
+void UPubnubChatUser::StopStreamingRestrictionsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StopStreamingRestrictionsAsync(NativeCallback);
+}
+
+void UPubnubChatUser::StopStreamingRestrictionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+
+	TWeakObjectPtr<UPubnubChatUser> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatOperationResult StopResult = WeakThis.Get()->StopStreamingRestrictions();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StopResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChatUser::StreamUpdates()
 {
 	FPubnubChatOperationResult FinalResult;
@@ -856,6 +975,13 @@ void UPubnubChatUser::ClearAllSubscriptions()
 		InvitedCallbackStop = nullptr;
 	}
 	IsStreamingInvitations = false;
+
+	if (RestrictionCallbackStop)
+	{
+		RestrictionCallbackStop->Stop();
+		RestrictionCallbackStop = nullptr;
+	}
+	IsStreamingRestrictions = false;
 	
 	if (UpdatesSubscription)
 	{

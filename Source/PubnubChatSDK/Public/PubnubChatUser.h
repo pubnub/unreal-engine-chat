@@ -438,6 +438,59 @@ public:
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
 	void StopStreamingInvitationsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Starts listening for moderation restriction events targeted to this user. Restriction changes are delivered via
+	 * OnRestrictionChanged / OnRestrictionChangedNative.
+	 * Local: sets up client-side listener using Chat::ListenForEvents on this user's moderation event channel.
+	 * No-op if already streaming restrictions.
+	 *
+	 * @return Operation result. Success if the listener was started.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StreamRestrictions();
+
+	/**
+	 * Starts listening asynchronously for moderation restriction events targeted to this user.
+	 * No-op if already streaming restrictions.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StreamRestrictionsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Starts listening asynchronously for moderation restriction events targeted to this user.
+	 * No-op if already streaming restrictions.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StreamRestrictionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Stops listening for moderation restriction events targeted to this user.
+	 * OnRestrictionChanged and OnRestrictionChangedNative will no longer fire.
+	 * Local: stops the listener. No-op if not streaming restrictions.
+	 *
+	 * @return Operation result. Success if the listener was stopped.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatOperationResult StopStreamingRestrictions();
+
+	/**
+	 * Stops listening asynchronously for moderation restriction events targeted to this user.
+	 * No-op if not streaming restrictions.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StopStreamingRestrictionsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Stops listening asynchronously for moderation restriction events targeted to this user.
+	 * No-op if not streaming restrictions.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StopStreamingRestrictionsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
 	 * Starts listening for user metadata updates (and delete events) for this user. Updates are delivered via OnUpdated; deletions via OnDeleted.
@@ -514,10 +567,13 @@ private:
 	UPubnubChatCallbackStop* MentionedCallbackStop = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* InvitedCallbackStop = nullptr;
+	UPROPERTY()
+	UPubnubChatCallbackStop* RestrictionCallbackStop = nullptr;
 
 	bool IsInitialized = false;
 	bool IsStreamingMentions = false;
 	bool IsStreamingInvitations = false;
+	bool IsStreamingRestrictions = false;
 	bool IsStreamingUpdates = false;
 
 	void InitUser(UPubnubClient* InPubnubClient, UPubnubChat* InChat, const FString InUserID);
