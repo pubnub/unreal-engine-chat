@@ -238,6 +238,35 @@ FPubnubChatReportEvent UPubnubChatInternalUtilities::GetReportEventFromChatEvent
 	return ReportEvent;
 }
 
+bool UPubnubChatInternalUtilities::IsCustomEventMessage(const FString& MessageContent)
+{
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!UPubnubJsonUtilities::StringToJsonObject(MessageContent, JsonObject))
+	{
+		return false;
+	}
+
+	FString Type;
+	if (!JsonObject->TryGetStringField(ANSI_TO_TCHAR("type"), Type))
+	{
+		return false;
+	}
+
+	return Type == "custom";
+}
+
+FPubnubChatCustomEvent UPubnubChatInternalUtilities::GetCustomEventFromPubnubMessageData(const FPubnubMessageData& MessageData)
+{
+	FPubnubChatEvent ChatEvent = GetEventFromPubnubMessageData(MessageData);
+	FPubnubChatCustomEvent CustomEvent;
+	CustomEvent.Timetoken = ChatEvent.Timetoken;
+	CustomEvent.UserID = ChatEvent.UserID;
+	CustomEvent.Payload = ChatEvent.Payload;
+	CustomEvent.Type = MessageData.CustomMessageType;
+
+	return CustomEvent;
+}
+
 FString UPubnubChatInternalUtilities::GetReceiptEventPayload(const FString& Timetoken)
 {
 	return FString::Printf(TEXT(R"({"messageTimetoken": "%s"})"), *Timetoken);

@@ -1115,6 +1115,53 @@ void UPubnubChatChannel::ForwardMessageAsync(UPubnubChatMessage* Message, FOnPub
 	});
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::EmitCustomEvent(FString Payload, FString Type, bool StoreInHistory)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Payload);
+	
+	FPubnubPublishSettings PublishSettings;
+	PublishSettings.StoreInHistory = StoreInHistory;
+	PublishSettings.CustomMessageType = Type;
+	
+	//Add event type to the payload
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(Payload, JsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("type"), ANSI_TO_TCHAR("custom"));
+
+	FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject), PublishSettings);
+	FPubnubChatOperationResult FinalResult;
+	FinalResult.AddStep("PublishMessage", PublishResult.Result);
+	return FinalResult;
+}
+
+void UPubnubChatChannel::EmitCustomEventAsync(FString Payload, FOnPubnubChatOperationResponse OnOperationResponse, FString Type, bool StoreInHistory)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	EmitCustomEventAsync(Payload, NativeCallback, Type, StoreInHistory);
+}
+
+void UPubnubChatChannel::EmitCustomEventAsync(FString Payload, FOnPubnubChatOperationResponseNative OnOperationResponseNative, FString Type, bool StoreInHistory)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, Payload = MoveTemp(Payload), OnOperationResponseNative, Type = MoveTemp(Type), StoreInHistory]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatOperationResult EmitResult = WeakThis.Get()->EmitCustomEvent(Payload, Type, StoreInHistory);
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, EmitResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChatChannel::EmitUserMention(const FString UserID, const FString Timetoken, const FString Text)
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -2001,6 +2048,135 @@ void UPubnubChatChannel::GetMessageReportsHistoryAsync(const FString StartTimeto
 	});
 }
 
+FPubnubChatOperationResult UPubnubChatChannel::StreamCustomEvents()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+	
+	//Skip if it's already streaming
+	if (IsStreamingCustomEvents)
+	{ return FinalResult; }
+
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(CustomEventsSubscription, "Custom events subscription is invalid.");
+	
+	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
+
+	auto OnCustomEventMessage = [ThisWeak](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		UPubnubChatChannel* ThisChannel = ThisWeak.Get();
+		
+		if (!ThisChannel->IsInitialized || !ThisChannel->Chat || !ThisChannel->IsStreamingCustomEvents)
+		{ return; }
+
+		if (!UPubnubChatInternalUtilities::IsCustomEventMessage(MessageData.Message))
+		{
+			return;
+		}
+
+		FPubnubChatCustomEvent CustomEvent = UPubnubChatInternalUtilities::GetCustomEventFromPubnubMessageData(MessageData);
+		
+		ThisChannel->OnCustomEventReceived.Broadcast(CustomEvent);
+		ThisChannel->OnCustomEventReceivedNative.Broadcast(CustomEvent);
+	};
+
+	CustomEventsSubscription->OnPubnubMessageNative.AddLambda(OnCustomEventMessage);
+	CustomEventsSubscription->OnPubnubSignalNative.AddLambda(OnCustomEventMessage);
+
+	FPubnubOperationResult SubscribeResult = CustomEventsSubscription->Subscribe();
+	FinalResult.AddStep("Subscribe", SubscribeResult);
+	if (SubscribeResult.Error)
+	{
+		CustomEventsSubscription->OnPubnubMessageNative.Clear();
+		CustomEventsSubscription->OnPubnubSignalNative.Clear();
+		return FinalResult;
+	}
+	
+	IsStreamingCustomEvents = true;
+	
+	return FinalResult;
+}
+
+void UPubnubChatChannel::StreamCustomEventsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StreamCustomEventsAsync(NativeCallback);
+}
+
+void UPubnubChatChannel::StreamCustomEventsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatOperationResult StreamCustomEventsResult = WeakThis.Get()->StreamCustomEvents();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StreamCustomEventsResult);
+	});
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::StopStreamingCustomEvents()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	FPubnubChatOperationResult FinalResult;
+
+	if (!CustomEventsSubscription)
+	{
+		IsStreamingCustomEvents = false;
+		return FinalResult;
+	}
+
+	CustomEventsSubscription->OnPubnubMessageNative.Clear();
+	CustomEventsSubscription->OnPubnubSignalNative.Clear();
+	
+	if (!IsStreamingCustomEvents)
+	{ return FinalResult; }
+
+	FPubnubOperationResult UnsubscribeResult = CustomEventsSubscription->Unsubscribe();
+	FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+	IsStreamingCustomEvents = false;
+	
+	return FinalResult;
+}
+
+void UPubnubChatChannel::StopStreamingCustomEventsAsync(FOnPubnubChatOperationResponse OnOperationResponse)
+{
+	FOnPubnubChatOperationResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
+	{
+		OnOperationResponse.ExecuteIfBound(OperationResult);
+	});
+
+	StopStreamingCustomEventsAsync(NativeCallback);
+}
+
+void UPubnubChatChannel::StopStreamingCustomEventsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, OnOperationResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatOperationResult StopCustomEventsResult = WeakThis.Get()->StopStreamingCustomEvents();
+		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, StopCustomEventsResult);
+	});
+}
+
 UPubnubChatMessageDraft* UPubnubChatChannel::CreateMessageDraft(FPubnubChatMessageDraftConfig MessageDraftConfig)
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(nullptr);
@@ -2034,6 +2210,9 @@ void UPubnubChatChannel::InitChannel(UPubnubClient* InPubnubClient, UPubnubChat*
 	PresenceSubscribeSettings.ReceivePresenceEvents = true;
 	PresenceSubscription = ChannelEntity->CreateSubscription(PresenceSubscribeSettings);
 	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(PresenceSubscription, TEXT("Can't init Channel, Failed to create Presence Subscription"));
+
+	CustomEventsSubscription = ChannelEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(CustomEventsSubscription, TEXT("Can't init Channel, Failed to create Custom Events Subscription"));
 	
 	// Register this channel object with the repository
 	if (Chat->ObjectsRepository)
@@ -2136,6 +2315,19 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 
 		PresenceSubscription = nullptr;
 	}
+
+	if (CustomEventsSubscription)
+	{
+		CustomEventsSubscription->OnPubnubMessageNative.Clear();
+		CustomEventsSubscription->OnPubnubSignalNative.Clear();
+		if (IsStreamingCustomEvents)
+		{
+			CustomEventsSubscription->Unsubscribe();
+			IsStreamingCustomEvents = false;
+		}
+
+		CustomEventsSubscription = nullptr;
+	}
 	
 	if (TypingCallbackStop)
 	{
@@ -2155,7 +2347,7 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 		MessageReportsCallbackStop->Stop();
 		MessageReportsCallbackStop = nullptr;
 	}
-	
+
 	// Invalidate all typing indicator timers and clear the map
 	{
 		FScopeLock Lock(&TypingIndicatorsCriticalSection);
@@ -2170,6 +2362,7 @@ void UPubnubChatChannel::ClearAllSubscriptions()
 	IsStreamingPresence = false;
 	IsStreamingReadReceipts = false;
 	IsStreamingMessageReports = false;
+	IsStreamingCustomEvents = false;
 }
 
 float UPubnubChatChannel::CalculateSendTextRateLimiterDelay()

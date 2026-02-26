@@ -31,6 +31,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReported, FPubnu
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageReportedNative, const FPubnubChatReportEvent& ReportEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatPresenceChanged, const TArray<FString>&, UserIDs);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatPresenceChangedNative, const TArray<FString>& UserIDs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatCustomEventReceived, FPubnubChatCustomEvent, CustomEvent);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPubnubChatCustomEventReceivedNative, const FPubnubChatCustomEvent& CustomEvent);
 
 
 /**
@@ -107,6 +109,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
 	FOnPubnubChatPresenceChanged OnPresenceChanged;
 	FOnPubnubChatPresenceChangedNative OnPresenceChangedNative;
+
+	/**
+	 * Broadcast when a custom chat event is received on this channel (after StreamCustomEvents is active).
+	 * @param CustomEvent Parsed custom event data.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
+	FOnPubnubChatCustomEventReceived OnCustomEventReceived;
+	FOnPubnubChatCustomEventReceivedNative OnCustomEventReceivedNative;
 	
 	
 	/* PUBLIC FUNCTIONS */
@@ -785,6 +795,40 @@ public:
 	void ForwardMessageAsync(UPubnubChatMessage* Message, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
+	 * Publishes a custom event payload to this channel.
+	 * Blocking: performs network request on the calling thread. Blocks for the duration of the operation.
+	 * Always uses Publish (never Signal).
+	 *
+	 * @param Payload Raw payload to publish.
+	 * @param Type Optional custom message type written to PublishSettings.CustomMessageType.
+	 * @param StoreInHistory Whether the message should be stored in history.
+	 * @return Operation result. Success if publish succeeded.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult EmitCustomEvent(FString Payload, FString Type = "", bool StoreInHistory = true);
+	/**
+	 * Publishes a custom event payload to this channel asynchronously.
+	 * Always uses Publish (never Signal).
+	 *
+	 * @param Payload Raw payload to publish.
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 * @param Type Optional custom message type written to PublishSettings.CustomMessageType.
+	 * @param StoreInHistory Whether the message should be stored in history.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void EmitCustomEventAsync(FString Payload, FOnPubnubChatOperationResponse OnOperationResponse, FString Type = "", bool StoreInHistory = true);
+	/**
+	 * Publishes a custom event payload to this channel asynchronously.
+	 * Always uses Publish (never Signal).
+	 *
+	 * @param Payload Raw payload to publish.
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param Type Optional custom message type written to PublishSettings.CustomMessageType.
+	 * @param StoreInHistory Whether the message should be stored in history.
+	 */
+	void EmitCustomEventAsync(FString Payload, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, FString Type = "", bool StoreInHistory = true);
+	
+	/**
 	 * Emits a mention event for a user on a message in this channel (e.g. for @mention notifications).
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
 	 *
@@ -1162,6 +1206,54 @@ public:
 	 * @param Count Maximum number of events to return (default 100).
 	 */
 	void GetMessageReportsHistoryAsync(const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatEventsResponseNative OnEventsResponseNative, const int Count = 100);
+
+	/**
+	 * Starts listening for custom events on this channel. Custom events are delivered via OnCustomEventReceived / OnCustomEventReceivedNative.
+	 * Local: sets up client-side listener using Chat::ListenForEvents. No-op if already streaming custom events.
+	 *
+	 * @return Operation result. Success if the listener was started.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StreamCustomEvents();
+
+	/**
+	 * Starts listening asynchronously for custom events on this channel. No-op if already streaming custom events.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StreamCustomEventsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Starts listening asynchronously for custom events on this channel. No-op if already streaming custom events.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StreamCustomEventsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
+
+	/**
+	 * Stops listening for custom events on this channel. OnCustomEventReceived will no longer fire.
+	 * Local: stops the listener. No-op if not streaming custom events.
+	 *
+	 * @return Operation result. Success if the listener was stopped.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatOperationResult StopStreamingCustomEvents();
+
+	/**
+	 * Stops listening asynchronously for custom events on this channel. OnCustomEventReceived will no longer fire.
+	 * No-op if not streaming custom events.
+	 *
+	 * @param OnOperationResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
+	void StopStreamingCustomEventsAsync(FOnPubnubChatOperationResponse OnOperationResponse);
+	/**
+	 * Stops listening asynchronously for custom events on this channel. OnCustomEventReceived will no longer fire.
+	 * No-op if not streaming custom events.
+	 *
+	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void StopStreamingCustomEventsAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 	
 	/**
 	 * Creates a new message draft object for this channel. Use the draft to build a message (text, mentions, etc.) and send it via the draft's Send().
@@ -1188,6 +1280,8 @@ protected:
 	UPROPERTY()
 	UPubnubSubscription* PresenceSubscription = nullptr;
 	UPROPERTY()
+	UPubnubSubscription* CustomEventsSubscription = nullptr;
+	UPROPERTY()
 	UPubnubChatCallbackStop* TypingCallbackStop = nullptr;
 	UPROPERTY()
 	UPubnubChatCallbackStop* ReadReceiptsCallbackStop = nullptr;
@@ -1201,6 +1295,7 @@ protected:
 	bool IsStreamingPresence = false;
 	bool IsStreamingReadReceipts = false;
 	bool IsStreamingMessageReports = false;
+	bool IsStreamingCustomEvents = false;
 	
 	TArray<FString> StreamPresenceUserIDs;
 	

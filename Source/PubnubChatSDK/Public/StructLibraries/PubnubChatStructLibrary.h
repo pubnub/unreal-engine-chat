@@ -294,6 +294,17 @@ struct FPubnubChatInviteEvent
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatCustomEvent
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Timetoken = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString UserID = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Payload = "";
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") FString Type = "";
+};
+
+USTRUCT(BlueprintType)
 struct FPubnubChatEventsResult
 {
 	GENERATED_BODY()
