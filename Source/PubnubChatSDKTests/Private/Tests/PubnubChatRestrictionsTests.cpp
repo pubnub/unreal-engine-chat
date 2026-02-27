@@ -542,26 +542,19 @@ bool FPubnubChatSetRestrictionsEventEmissionTest::RunTest(const FString& Paramet
 	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID);
 	TestFalse("CreateChannel should succeed", CreateChannelResult.Result.Error);
 	
-	// Get moderation event channel for the target user
-	FString ModerationEventChannel = UPubnubChatInternalUtilities::GetModerationEventChannelForUserID(TargetUserID);
-	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatRestriction> ReceivedRestriction = MakeShared<FPubnubChatRestriction>();
 	
-	// Listen for moderation events
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationEventChannel, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream moderation events via target user restrictions stream
+	CreateUserResult.User->OnRestrictionChangedNative.AddLambda([this, bEventReceived, ReceivedRestriction](const FPubnubChatRestriction& RestrictionEvent)
 	{
 		*bEventReceived = true;
-		*ReceivedEvent = Event;
-		TestEqual("Received event type should be Moderation", Event.Type, EPubnubChatEventType::PCET_Moderation);
-		TestEqual("Received event ChannelID should match moderation event channel", Event.ChannelID, ModerationEventChannel);
+		*ReceivedRestriction = RestrictionEvent;
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationEventChannel, EPubnubChatEventType::PCET_Moderation, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	FPubnubChatOperationResult StreamResult = CreateUserResult.User->StreamRestrictions();
+	TestFalse("StreamRestrictions should succeed", StreamResult.Error);
 	
 	// Wait a bit for subscription to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TargetUserID, TestChannelID, TestReason]()
@@ -584,7 +577,7 @@ bool FPubnubChatSetRestrictionsEventEmissionTest::RunTest(const FString& Paramet
 	}, MAX_WAIT_TIME));
 	
 	// Verify event was received and has correct payload
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedEvent, TestChannelID, TestReason, ModerationEventChannel]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedRestriction, TestChannelID, TestReason]()
 	{
 		if(!*bEventReceived)
 		{
@@ -592,52 +585,19 @@ bool FPubnubChatSetRestrictionsEventEmissionTest::RunTest(const FString& Paramet
 		}
 		else
 		{
-			TestEqual("Received event type should be Moderation", ReceivedEvent->Type, EPubnubChatEventType::PCET_Moderation);
-			TestEqual("Received event ChannelID should match moderation event channel", ReceivedEvent->ChannelID, ModerationEventChannel);
-			
-			// Parse payload to verify it contains correct data
-			TSharedPtr<FJsonObject> PayloadObject = MakeShareable(new FJsonObject);
-			UPubnubJsonUtilities::StringToJsonObject(ReceivedEvent->Payload, PayloadObject);
-			
-			FString ChannelIdInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("channelId"), ChannelIdInPayload))
-			{
-				FString ExpectedModerationChannel = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-				TestEqual("Payload channelId should match moderation channel", ChannelIdInPayload, ExpectedModerationChannel);
-			}
-			else
-			{
-				AddError("Payload should contain channelId field");
-			}
-			
-			FString RestrictionType;
-			if(PayloadObject->TryGetStringField(TEXT("restriction"), RestrictionType))
-			{
-				TestEqual("Restriction type should be 'banned'", RestrictionType, TEXT("banned"));
-			}
-			else
-			{
-				AddError("Payload should contain restriction field");
-			}
-			
-			FString ReasonInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("reason"), ReasonInPayload))
-			{
-				TestEqual("Payload reason should match", ReasonInPayload, TestReason);
-			}
-			else
-			{
-				AddError("Payload should contain reason field");
-			}
+			FString ExpectedModerationChannel = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+			TestEqual("Restriction channelId should match moderation channel", ReceivedRestriction->ChannelID, ExpectedModerationChannel);
+			TestTrue("Restriction should be banned", ReceivedRestriction->Ban);
+			TestEqual("Restriction reason should match", ReceivedRestriction->Reason, TestReason);
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, remove restriction, delete channel and user
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, Chat, TestChannelID, TargetUserID]()
+	// Cleanup: Stop streaming, remove restriction, delete channel and user
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateUserResult, Chat, TestChannelID, TargetUserID]()
 	{
-		if(ListenResult.CallbackStop)
+		if(CreateUserResult.User)
 		{
-			ListenResult.CallbackStop->Stop();
+			CreateUserResult.User->StopStreamingRestrictions();
 		}
 		
 		if(Chat)

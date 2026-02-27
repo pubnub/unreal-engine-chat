@@ -128,18 +128,28 @@ bool FPubnubChatChannelConnectAsyncFullParametersTest::RunTest(const FString& Pa
 		return false;
 	}
 	
-	// Typing is supported on direct conversations, not public channels
-	const FString OtherUserID = SDK_PREFIX + "test_channel_typing_async_full_other";
+	// Connect requires an existing direct conversation partner
+	const FString OtherUserID = SDK_PREFIX + "test_channel_connect_async_full_other";
 	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(OtherUserID, FPubnubChatUserData());
-	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
-	if(!CreateUserResult.User)
+	UPubnubChatUser* OtherUser = nullptr;
+	if(CreateUserResult.Result.Error)
+	{
+		FPubnubChatUserResult GetUserResult = Chat->GetUser(OtherUserID);
+		TestFalse("GetUser should succeed when CreateUser fails", GetUserResult.Result.Error);
+		OtherUser = GetUserResult.User;
+	}
+	else
+	{
+		OtherUser = CreateUserResult.User;
+	}
+	if(!OtherUser)
 	{
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
 	
-	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(OtherUser, TestChannelID);
 	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
 	if(!CreateResult.Channel)
 	{
@@ -165,7 +175,7 @@ bool FPubnubChatChannelConnectAsyncFullParametersTest::RunTest(const FString& Pa
 		TestFalse("ConnectAsync should succeed", CallbackResult->Error);
 	}, 0.1f));
 	
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID, OtherUserID]()
 	{
 		if(CreateResult.Channel)
 		{
@@ -174,6 +184,7 @@ bool FPubnubChatChannelConnectAsyncFullParametersTest::RunTest(const FString& Pa
 		if(Chat)
 		{
 			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(OtherUserID);
 		}
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
@@ -1391,15 +1402,25 @@ bool FPubnubChatChannelTypingAsyncFullParametersTest::RunTest(const FString& Par
 	
 	// Typing is supported on direct conversations, not public channels
 	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(OtherUserID, FPubnubChatUserData());
-	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
-	if(!CreateUserResult.User)
+	UPubnubChatUser* OtherUser = nullptr;
+	if(CreateUserResult.Result.Error)
+	{
+		FPubnubChatUserResult GetUserResult = Chat->GetUser(OtherUserID);
+		TestFalse("GetUser should succeed when CreateUser fails", GetUserResult.Result.Error);
+		OtherUser = GetUserResult.User;
+	}
+	else
+	{
+		OtherUser = CreateUserResult.User;
+	}
+	if(!OtherUser)
 	{
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
 	}
 	
-	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID, FPubnubChatChannelData(), FPubnubChatMembershipData());
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(OtherUser, TestChannelID, FPubnubChatChannelData(), FPubnubChatMembershipData());
 	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
 	if(!CreateResult.Channel)
 	{
@@ -1889,24 +1910,19 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatInviteEvent> ReceivedEvent = MakeShared<FPubnubChatInviteEvent>();
 	
-	// Listen for Invite events on target user's channel
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, SecondUserID, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream invitations for the target user
+	CreateSecondUserResult.User->OnInvitedNative.AddLambda([this, bEventReceived, ReceivedEvent, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
 		*bEventReceived = true;
 		*ReceivedEvent = Event;
-		TestEqual("Received event type should be Invite", Event.Type, EPubnubChatEventType::PCET_Invite);
-		TestEqual("Received event ChannelID should match target user", Event.ChannelID, SecondUserID);
-		TestFalse("Received event Payload should not be empty", Event.Payload.IsEmpty());
-		TestTrue("Received event Payload should contain channelId", Event.Payload.Contains(TestChannelID));
-		TestTrue("Received event Payload should contain channelType", Event.Payload.Contains(TEXT("direct")));
+		TestEqual("Received invite channelId should match", Event.ChannelID, TestChannelID);
+		TestEqual("Received invite channelType should match", Event.ChannelType, TEXT("direct"));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(SecondUserID, EPubnubChatEventType::PCET_Invite, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	FPubnubChatOperationResult StreamResult = CreateSecondUserResult.User->StreamInvitations();
+	TestFalse("StreamInvitations should succeed", StreamResult.Error);
 	
 	// Shared state for invite result (needed for cleanup)
 	TSharedPtr<FPubnubChatInviteResult> InviteResult = MakeShared<FPubnubChatInviteResult>();
@@ -1934,18 +1950,17 @@ bool FPubnubChatChannelInviteNonPublicChannelEventTest::RunTest(const FString& P
 		}
 		else
 		{
-			TestEqual("Received event type should be Invite", ReceivedEvent->Type, EPubnubChatEventType::PCET_Invite);
-			TestTrue("Received event Payload should contain channelId", ReceivedEvent->Payload.Contains(TestChannelID));
-			TestTrue("Received event Payload should contain channelType", ReceivedEvent->Payload.Contains(TEXT("direct")));
+			TestEqual("Received invite channelId should match", ReceivedEvent->ChannelID, TestChannelID);
+			TestEqual("Received invite channelType should match", ReceivedEvent->ChannelType, TEXT("direct"));
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, remove memberships, delete users and channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, Chat, TestChannelID, InitUserID, TargetUserID, SecondUserID]()
+	// Cleanup: Stop streaming, remove memberships, delete users and channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSecondUserResult, Chat, TestChannelID, InitUserID, TargetUserID, SecondUserID]()
 	{
-		if(ListenResult.CallbackStop)
+		if(CreateSecondUserResult.User)
 		{
-			ListenResult.CallbackStop->Stop();
+			CreateSecondUserResult.User->StopStreamingInvitations();
 		}
 		if(Chat)
 		{
@@ -2041,24 +2056,19 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatInviteEvent> ReceivedEvent = MakeShared<FPubnubChatInviteEvent>();
 	
-	// Listen for Invite events on target user's channel
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, TargetUserID, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream invitations for the target user
+	CreateUserResult.User->OnInvitedNative.AddLambda([this, bEventReceived, ReceivedEvent, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
 		*bEventReceived = true;
 		*ReceivedEvent = Event;
-		TestEqual("Received event type should be Invite", Event.Type, EPubnubChatEventType::PCET_Invite);
-		TestEqual("Received event ChannelID should match target user", Event.ChannelID, TargetUserID);
-		TestFalse("Received event Payload should not be empty", Event.Payload.IsEmpty());
-		TestTrue("Received event Payload should contain channelId", Event.Payload.Contains(TestChannelID));
-		TestTrue("Received event Payload should contain channelType", Event.Payload.Contains(TEXT("public")));
+		TestEqual("Received invite channelId should match", Event.ChannelID, TestChannelID);
+		TestEqual("Received invite channelType should match", Event.ChannelType, TEXT("public"));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(TargetUserID, EPubnubChatEventType::PCET_Invite, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	FPubnubChatOperationResult StreamResult = CreateUserResult.User->StreamInvitations();
+	TestFalse("StreamInvitations should succeed", StreamResult.Error);
 	
 	// Shared state for invite result (needed for cleanup)
 	TSharedPtr<FPubnubChatInviteResult> InviteResult = MakeShared<FPubnubChatInviteResult>();
@@ -2086,18 +2096,17 @@ bool FPubnubChatChannelInvitePublicChannelEventTest::RunTest(const FString& Para
 		}
 		else
 		{
-			TestEqual("Received event type should be Invite", ReceivedEvent->Type, EPubnubChatEventType::PCET_Invite);
-			TestTrue("Received event Payload should contain channelId", ReceivedEvent->Payload.Contains(TestChannelID));
-			TestTrue("Received event Payload should contain channelType", ReceivedEvent->Payload.Contains(TEXT("public")));
+			TestEqual("Received invite channelId should match", ReceivedEvent->ChannelID, TestChannelID);
+			TestEqual("Received invite channelType should match", ReceivedEvent->ChannelType, TEXT("public"));
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, remove membership, leave and delete channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, CreateResult, Chat, TestChannelID, TargetUserID, InviteResult]()
+	// Cleanup: Stop streaming, remove membership, leave and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateUserResult, CreateResult, Chat, TestChannelID, TargetUserID, InviteResult]()
 	{
-		if(ListenResult.CallbackStop)
+		if(CreateUserResult.User)
 		{
-			ListenResult.CallbackStop->Stop();
+			CreateUserResult.User->StopStreamingInvitations();
 		}
 		if(Chat)
 		{
@@ -2771,39 +2780,31 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	
 	// Shared state for event reception
 	TSharedPtr<int32> EventsReceivedCount = MakeShared<int32>(0);
-	TSharedPtr<TArray<FPubnubChatEvent>> ReceivedEvents = MakeShared<TArray<FPubnubChatEvent>>();
+	TSharedPtr<TArray<FPubnubChatInviteEvent>> ReceivedEvents = MakeShared<TArray<FPubnubChatInviteEvent>>();
 	
-	// Listen for Invite events on first target user's channel
-	FOnPubnubChatEventReceivedNative EventCallback1;
-	EventCallback1.BindLambda([this, EventsReceivedCount, ReceivedEvents, TargetUserID1, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream invitations for first target user
+	CreateUser1Result.User->OnInvitedNative.AddLambda([this, EventsReceivedCount, ReceivedEvents, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
 		(*EventsReceivedCount)++;
 		ReceivedEvents->Add(Event);
-		TestEqual("Received event type should be Invite", Event.Type, EPubnubChatEventType::PCET_Invite);
-		TestEqual("Received event ChannelID should match target user", Event.ChannelID, TargetUserID1);
-		TestTrue("Received event Payload should contain channelId", Event.Payload.Contains(TestChannelID));
-		TestTrue("Received event Payload should contain channelType", Event.Payload.Contains(TEXT("group")));
+		TestEqual("Received invite channelId should match", Event.ChannelID, TestChannelID);
+		TestEqual("Received invite channelType should match", Event.ChannelType, TEXT("group"));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult1 = Chat->ListenForEvents(TargetUserID1, EPubnubChatEventType::PCET_Invite, EventCallback1);
-	TestFalse("ListenForEvents1 should succeed", ListenResult1.Result.Error);
-	TestNotNull("CallbackStop1 should be created", ListenResult1.CallbackStop);
+	FPubnubChatOperationResult StreamResult1 = CreateUser1Result.User->StreamInvitations();
+	TestFalse("StreamInvitations1 should succeed", StreamResult1.Error);
 	
-	// Listen for Invite events on second target user's channel
-	FOnPubnubChatEventReceivedNative EventCallback2;
-	EventCallback2.BindLambda([this, EventsReceivedCount, ReceivedEvents, TargetUserID2, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream invitations for second target user
+	CreateUser2Result.User->OnInvitedNative.AddLambda([this, EventsReceivedCount, ReceivedEvents, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
 		(*EventsReceivedCount)++;
 		ReceivedEvents->Add(Event);
-		TestEqual("Received event type should be Invite", Event.Type, EPubnubChatEventType::PCET_Invite);
-		TestEqual("Received event ChannelID should match target user", Event.ChannelID, TargetUserID2);
-		TestTrue("Received event Payload should contain channelId", Event.Payload.Contains(TestChannelID));
-		TestTrue("Received event Payload should contain channelType", Event.Payload.Contains(TEXT("group")));
+		TestEqual("Received invite channelId should match", Event.ChannelID, TestChannelID);
+		TestEqual("Received invite channelType should match", Event.ChannelType, TEXT("group"));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult2 = Chat->ListenForEvents(TargetUserID2, EPubnubChatEventType::PCET_Invite, EventCallback2);
-	TestFalse("ListenForEvents2 should succeed", ListenResult2.Result.Error);
-	TestNotNull("CallbackStop2 should be created", ListenResult2.CallbackStop);
+	FPubnubChatOperationResult StreamResult2 = CreateUser2Result.User->StreamInvitations();
+	TestFalse("StreamInvitations2 should succeed", StreamResult2.Error);
 	
 	// Shared state for invite result (needed for cleanup)
 	TSharedPtr<FPubnubChatInviteMultipleResult> InviteResult = MakeShared<FPubnubChatInviteMultipleResult>();
@@ -2836,16 +2837,16 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, remove memberships, delete users and channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult1, ListenResult2, Chat, TestChannelID, InitUserID, TargetUserID1, TargetUserID2, InviteResult]()
+	// Cleanup: Stop streaming, remove memberships, delete users and channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateUser1Result, CreateUser2Result, Chat, TestChannelID, InitUserID, TargetUserID1, TargetUserID2, InviteResult]()
 	{
-		if(ListenResult1.CallbackStop)
+		if(CreateUser1Result.User)
 		{
-			ListenResult1.CallbackStop->Stop();
+			CreateUser1Result.User->StopStreamingInvitations();
 		}
-		if(ListenResult2.CallbackStop)
+		if(CreateUser2Result.User)
 		{
-			ListenResult2.CallbackStop->Stop();
+			CreateUser2Result.User->StopStreamingInvitations();
 		}
 		if(Chat)
 		{
@@ -2950,39 +2951,31 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 	
 	// Shared state for event reception
 	TSharedPtr<int32> EventsReceivedCount = MakeShared<int32>(0);
-	TSharedPtr<TArray<FPubnubChatEvent>> ReceivedEvents = MakeShared<TArray<FPubnubChatEvent>>();
+	TSharedPtr<TArray<FPubnubChatInviteEvent>> ReceivedEvents = MakeShared<TArray<FPubnubChatInviteEvent>>();
 	
-	// Listen for Invite events on first target user's channel
-	FOnPubnubChatEventReceivedNative EventCallback1;
-	EventCallback1.BindLambda([this, EventsReceivedCount, ReceivedEvents, TargetUserID1, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream invitations for first target user
+	CreateUser1Result.User->OnInvitedNative.AddLambda([this, EventsReceivedCount, ReceivedEvents, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
 		(*EventsReceivedCount)++;
 		ReceivedEvents->Add(Event);
-		TestEqual("Received event type should be Invite", Event.Type, EPubnubChatEventType::PCET_Invite);
-		TestEqual("Received event ChannelID should match target user", Event.ChannelID, TargetUserID1);
-		TestTrue("Received event Payload should contain channelId", Event.Payload.Contains(TestChannelID));
-		TestTrue("Received event Payload should contain channelType", Event.Payload.Contains(TEXT("public")));
+		TestEqual("Received invite channelId should match", Event.ChannelID, TestChannelID);
+		TestEqual("Received invite channelType should match", Event.ChannelType, TEXT("public"));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult1 = Chat->ListenForEvents(TargetUserID1, EPubnubChatEventType::PCET_Invite, EventCallback1);
-	TestFalse("ListenForEvents1 should succeed", ListenResult1.Result.Error);
-	TestNotNull("CallbackStop1 should be created", ListenResult1.CallbackStop);
+	FPubnubChatOperationResult StreamResult1 = CreateUser1Result.User->StreamInvitations();
+	TestFalse("StreamInvitations1 should succeed", StreamResult1.Error);
 	
-	// Listen for Invite events on second target user's channel
-	FOnPubnubChatEventReceivedNative EventCallback2;
-	EventCallback2.BindLambda([this, EventsReceivedCount, ReceivedEvents, TargetUserID2, TestChannelID](const FPubnubChatEvent& Event)
+	// Stream invitations for second target user
+	CreateUser2Result.User->OnInvitedNative.AddLambda([this, EventsReceivedCount, ReceivedEvents, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
 		(*EventsReceivedCount)++;
 		ReceivedEvents->Add(Event);
-		TestEqual("Received event type should be Invite", Event.Type, EPubnubChatEventType::PCET_Invite);
-		TestEqual("Received event ChannelID should match target user", Event.ChannelID, TargetUserID2);
-		TestTrue("Received event Payload should contain channelId", Event.Payload.Contains(TestChannelID));
-		TestTrue("Received event Payload should contain channelType", Event.Payload.Contains(TEXT("public")));
+		TestEqual("Received invite channelId should match", Event.ChannelID, TestChannelID);
+		TestEqual("Received invite channelType should match", Event.ChannelType, TEXT("public"));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult2 = Chat->ListenForEvents(TargetUserID2, EPubnubChatEventType::PCET_Invite, EventCallback2);
-	TestFalse("ListenForEvents2 should succeed", ListenResult2.Result.Error);
-	TestNotNull("CallbackStop2 should be created", ListenResult2.CallbackStop);
+	FPubnubChatOperationResult StreamResult2 = CreateUser2Result.User->StreamInvitations();
+	TestFalse("StreamInvitations2 should succeed", StreamResult2.Error);
 	
 	// Shared state for invite result (needed for cleanup)
 	TSharedPtr<FPubnubChatInviteMultipleResult> InviteResult = MakeShared<FPubnubChatInviteMultipleResult>();
@@ -3015,16 +3008,16 @@ bool FPubnubChatChannelInviteMultiplePublicChannelEventTest::RunTest(const FStri
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, remove memberships, leave and delete channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult1, ListenResult2, CreateResult, Chat, TestChannelID, TargetUserID1, TargetUserID2, InviteResult]()
+	// Cleanup: Stop streaming, remove memberships, leave and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateUser1Result, CreateUser2Result, CreateResult, Chat, TestChannelID, TargetUserID1, TargetUserID2, InviteResult]()
 	{
-		if(ListenResult1.CallbackStop)
+		if(CreateUser1Result.User)
 		{
-			ListenResult1.CallbackStop->Stop();
+			CreateUser1Result.User->StopStreamingInvitations();
 		}
-		if(ListenResult2.CallbackStop)
+		if(CreateUser2Result.User)
 		{
-			ListenResult2.CallbackStop->Stop();
+			CreateUser2Result.User->StopStreamingInvitations();
 		}
 		if(Chat)
 		{

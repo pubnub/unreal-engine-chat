@@ -1044,68 +1044,6 @@ void UPubnubChat::SetRestrictionsAsync(FPubnubChatRestriction Restriction, FOnPu
 	});
 }
 
-FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod)
-{
-	FPubnubChatOperationResult FinalResult;
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Payload);
-
-	//Add event type to the payload
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	UPubnubJsonUtilities::StringToJsonObject(Payload, JsonObject);
-	JsonObject->SetStringField(ANSI_TO_TCHAR("type"), UPubnubChatInternalConverters::ChatEventTypeToString(EventType));
-
-	//If event method is default, get dedicated method for this event type
-	if(EventMethod == EPubnubChatEventMethod::PCEM_Default)
-	{
-		EventMethod = UPubnubChatInternalUtilities::GetDefaultChatEventMethodForEventType(EventType);
-	}
-
-	//Use Publish or Signal for sending event depending on specified method
-	if(EventMethod == EPubnubChatEventMethod::PCEM_Publish)
-	{
-		FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject));
-		FinalResult.AddStep("PublishMessage", PublishResult.Result);
-	}
-	else
-	{
-		FPubnubSignalResult SignalResult =  PubnubClient->Signal(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject));
-		FinalResult.AddStep("Signal", SignalResult.Result);
-	}
-
-	return FinalResult;
-}
-
-void UPubnubChat::EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponse OnOperationResponse, EPubnubChatEventMethod EventMethod)
-{
-	FOnPubnubChatOperationResponseNative NativeCallback;
-	NativeCallback.BindLambda([OnOperationResponse](const FPubnubChatOperationResult& OperationResult)
-	{
-		OnOperationResponse.ExecuteIfBound(OperationResult);
-	});
-
-	EmitChatEventAsync(EventType, ChannelID, Payload, NativeCallback, EventMethod);
-}
-
-void UPubnubChat::EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponseNative OnOperationResponseNative, EPubnubChatEventMethod EventMethod)
-{
-	PUBNUB_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_OPERATION_RESULT(OnOperationResponseNative);
-	
-	TWeakObjectPtr<UPubnubChat> WeakThis = MakeWeakObjectPtr<UPubnubChat>(this);
-
-	AsyncFunctionsThread->AddFunctionToQueue( [WeakThis, EventType, ChannelID, Payload, EventMethod, OnOperationResponseNative]
-	{
-		if(!WeakThis.IsValid())
-		{return;}
-		
-		FPubnubChatOperationResult EmitChatEventResult = WeakThis.Get()->EmitChatEvent(EventType, ChannelID, Payload, EventMethod);
-
-		//Execute provided delegate with results
-		UPubnubUtilities::CallPubnubDelegate(OnOperationResponseNative, EmitChatEventResult);
-	});
-}
-
 FPubnubChatEventsResult UPubnubChat::GetEventsHistory(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, const int Count)
 {
 	FPubnubChatEventsResult FinalResult;
@@ -1163,90 +1101,6 @@ void UPubnubChat::GetEventsHistoryAsync(const FString ChannelID, const FString S
 		//Execute provided delegate with results
 		UPubnubUtilities::CallPubnubDelegate(OnEventsResponseNative, GetEventsHistoryResult);
 	});
-}
-
-FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback)
-{
-	FOnPubnubChatEventReceivedNative EventCallbackNative;
-	EventCallbackNative.BindLambda([EventCallback](FPubnubChatEvent Event)
-	{
-		EventCallback.ExecuteIfBound(Event);
-	});
-	return ListenForEvents(ChannelID, EventType, EventCallbackNative);
-}
-
-FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative)
-{
-	FPubnubChatListenForEventsResult FinalResult;
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
-
-
-	UPubnubChannelEntity* ChannelEntity = PubnubClient->CreateChannelEntity(ChannelID);
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, ChannelEntity, TEXT("Can't ListenForEvents, Failed to create ChannelEntity"));
-
-	UPubnubSubscription* Subscription = ChannelEntity->CreateSubscription();
-	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, Subscription, TEXT("Can't ListenForEvents, Failed to create Subscription"));
-
-	ListenForEventsSubscriptions.Add(Subscription);
-	
-	TWeakObjectPtr<UPubnubChat> ThisWeak = MakeWeakObjectPtr(this);
-	
-	//Create listener for events
-	auto EventLambda = [ThisWeak, EventType, EventCallbackNative](const FPubnubMessageData& MessageData)
-	{
-		if(!ThisWeak.IsValid())
-		{return;}
-		
-		//Just skip if this is not an event
-		if (!UPubnubChatInternalUtilities::IsThisEventMessage(MessageData.Message))
-		{return;}
-
-		FPubnubChatEvent Event = UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(MessageData);
-		
-		//Execute callback only if received event matches the type that we are listening for
-		if(Event.Type == EventType)
-		{
-			EventCallbackNative.ExecuteIfBound(Event);
-		}
-	};
-
-	//Events can be received as messages and signals, so we need to bind to both of them
-	Subscription->OnPubnubMessageNative.AddLambda(EventLambda);
-	Subscription->OnPubnubSignalNative.AddLambda(EventLambda);
-
-	//Subscribe with this channel Subscription
-	FPubnubOperationResult SubscribeResult = Subscription->Subscribe();
-	FinalResult.Result.AddStep("Subscribe", SubscribeResult);
-
-	//Create CallbackStop with function to unsubscribe (stop listening for events)
-	UPubnubChatCallbackStop* CallbackStop = NewObject<UPubnubChatCallbackStop>(this);
-	auto DisconnectLambda = [ThisWeak, Subscription]()->FPubnubChatOperationResult
-	{
-		if(!ThisWeak.IsValid())
-		{return FPubnubChatOperationResult::CreateError("Chat is already destroyed");}
-		
-		UPubnubChat* ThisChat = ThisWeak.Get();
-
-		if(!ThisChat->IsInitialized)
-		{return FPubnubChatOperationResult::CreateError("Chat is already deinitialized");}
-
-		if(!Subscription)
-		{return FPubnubChatOperationResult::CreateError("This subscription is already destroyed");}
-
-		ThisChat->ListenForEventsSubscriptions.Remove(Subscription);
-		Subscription->OnPubnubMessageNative.Clear();
-		Subscription->OnPubnubSignalNative.Clear();
-
-		FPubnubChatOperationResult FinalResult;
-		FPubnubOperationResult UnsubscribeResult = Subscription->Unsubscribe();
-		FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
-		return FinalResult;
-	};
-	CallbackStop->InitCallbackStop(DisconnectLambda);
-	
-	FinalResult.CallbackStop = CallbackStop;
-	return FinalResult;
 }
 
 FPubnubChatOperationResult UPubnubChat::ForwardMessage(UPubnubChatMessage* Message, UPubnubChatChannel* Channel)
@@ -2099,4 +1953,112 @@ void UPubnubChat::RunSaveTimestampInterval()
 	});
 
 	TimerManager.SetTimer(LastSavedActivityIntervalTimerHandle, TimerDelegate, IntervalSeconds, true);
+}
+
+
+FPubnubChatOperationResult UPubnubChat::EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod)
+{
+	FPubnubChatOperationResult FinalResult;
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Payload);
+
+	//Add event type to the payload
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	UPubnubJsonUtilities::StringToJsonObject(Payload, JsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("type"), UPubnubChatInternalConverters::ChatEventTypeToString(EventType));
+
+	//If event method is default, get dedicated method for this event type
+	if(EventMethod == EPubnubChatEventMethod::PCEM_Default)
+	{
+		EventMethod = UPubnubChatInternalUtilities::GetDefaultChatEventMethodForEventType(EventType);
+	}
+
+	//Use Publish or Signal for sending event depending on specified method
+	if(EventMethod == EPubnubChatEventMethod::PCEM_Publish)
+	{
+		FPubnubPublishMessageResult PublishResult =  PubnubClient->PublishMessage(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject));
+		FinalResult.AddStep("PublishMessage", PublishResult.Result);
+	}
+	else
+	{
+		FPubnubSignalResult SignalResult =  PubnubClient->Signal(ChannelID, UPubnubJsonUtilities::JsonObjectToString(JsonObject));
+		FinalResult.AddStep("Signal", SignalResult.Result);
+	}
+
+	return FinalResult;
+}
+
+FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative)
+{
+	FPubnubChatListenForEventsResult FinalResult;
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+
+
+	UPubnubChannelEntity* ChannelEntity = PubnubClient->CreateChannelEntity(ChannelID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, ChannelEntity, TEXT("Can't ListenForEvents, Failed to create ChannelEntity"));
+
+	UPubnubSubscription* Subscription = ChannelEntity->CreateSubscription();
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, Subscription, TEXT("Can't ListenForEvents, Failed to create Subscription"));
+
+	ListenForEventsSubscriptions.Add(Subscription);
+	
+	TWeakObjectPtr<UPubnubChat> ThisWeak = MakeWeakObjectPtr(this);
+	
+	//Create listener for events
+	auto EventLambda = [ThisWeak, EventType, EventCallbackNative](const FPubnubMessageData& MessageData)
+	{
+		if(!ThisWeak.IsValid())
+		{return;}
+		
+		//Just skip if this is not an event
+		if (!UPubnubChatInternalUtilities::IsThisEventMessage(MessageData.Message))
+		{return;}
+
+		FPubnubChatEvent Event = UPubnubChatInternalUtilities::GetEventFromPubnubMessageData(MessageData);
+		
+		//Execute callback only if received event matches the type that we are listening for
+		if(Event.Type == EventType)
+		{
+			EventCallbackNative.ExecuteIfBound(Event);
+		}
+	};
+
+	//Events can be received as messages and signals, so we need to bind to both of them
+	Subscription->OnPubnubMessageNative.AddLambda(EventLambda);
+	Subscription->OnPubnubSignalNative.AddLambda(EventLambda);
+
+	//Subscribe with this channel Subscription
+	FPubnubOperationResult SubscribeResult = Subscription->Subscribe();
+	FinalResult.Result.AddStep("Subscribe", SubscribeResult);
+
+	//Create CallbackStop with function to unsubscribe (stop listening for events)
+	UPubnubChatCallbackStop* CallbackStop = NewObject<UPubnubChatCallbackStop>(this);
+	auto DisconnectLambda = [ThisWeak, Subscription]()->FPubnubChatOperationResult
+	{
+		if(!ThisWeak.IsValid())
+		{return FPubnubChatOperationResult::CreateError("Chat is already destroyed");}
+		
+		UPubnubChat* ThisChat = ThisWeak.Get();
+
+		if(!ThisChat->IsInitialized)
+		{return FPubnubChatOperationResult::CreateError("Chat is already deinitialized");}
+
+		if(!Subscription)
+		{return FPubnubChatOperationResult::CreateError("This subscription is already destroyed");}
+
+		ThisChat->ListenForEventsSubscriptions.Remove(Subscription);
+		Subscription->OnPubnubMessageNative.Clear();
+		Subscription->OnPubnubSignalNative.Clear();
+
+		FPubnubChatOperationResult FinalResult;
+		FPubnubOperationResult UnsubscribeResult = Subscription->Unsubscribe();
+		FinalResult.AddStep("Unsubscribe", UnsubscribeResult);
+		return FinalResult;
+	};
+	CallbackStop->InitCallbackStop(DisconnectLambda);
+	
+	FinalResult.CallbackStop = CallbackStop;
+	return FinalResult;
 }

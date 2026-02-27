@@ -590,31 +590,6 @@ void ASample_Chat::OnSetRestrictionsResponse(const FPubnubChatOperationResult& R
 	// Restrictions updated
 }
 
-// snippet.emit_chat_event
-
-// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
-void ASample_Chat::EmitChatEventSample()
-{
-	// snippet.hide
-	UPubnubChat* Chat = nullptr;
-	// snippet.show
-
-	// Assumes Chat is a valid and initialized instance of UPubnubChat
-
-	// Emit a moderation/chat event to a channel (e.g. typing indicator, report, or custom event)
-	FOnPubnubChatOperationResponseNative Callback;
-	// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
-	Callback.BindUObject(this, &ASample_Chat::OnEmitChatEventResponse);
-	Chat->EmitChatEventAsync(EPubnubChatEventType::PCET_Typing, TEXT("Lobby_001"), TEXT("{}"), Callback);
-}
-
-// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
-void ASample_Chat::OnEmitChatEventResponse(const FPubnubChatOperationResult& Result)
-{
-	if (Result.Error) { return; }
-	// Event emitted
-}
-
 // snippet.get_events_history
 
 // ACTION REQUIRED: Replace ASample_Chat with name of your Actor class

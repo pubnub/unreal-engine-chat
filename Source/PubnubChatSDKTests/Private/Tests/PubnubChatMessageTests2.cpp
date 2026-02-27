@@ -296,7 +296,7 @@ bool FPubnubChatMessageReportFullParametersTest::RunTest(const FString& Paramete
 // ============================================================================
 
 /**
- * Tests Report by verifying that a report event is received via ListenForEvents.
+ * Tests Report by verifying that a report event is received via channel message report stream.
  * Verifies that the event is emitted to the correct moderation channel and contains correct payload data.
  */
 IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageReportEventReceivedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Message.Report.4Advanced.EventReceived", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
@@ -343,9 +343,6 @@ bool FPubnubChatMessageReportEventReceivedTest::RunTest(const FString& Parameter
 		return false;
 	}
 	
-	// Get moderation channel for listening to events
-	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-	
 	// Shared state for message reception
 	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
@@ -371,21 +368,17 @@ bool FPubnubChatMessageReportEventReceivedTest::RunTest(const FString& Parameter
 	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatReportEvent> ReceivedEvent = MakeShared<FPubnubChatReportEvent>();
 	
-	// Listen for report events on the moderation channel
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationChannelID](const FPubnubChatEvent& Event)
+	// Stream report events on the channel
+	CreateResult.Channel->OnMessageReportedNative.AddLambda([this, bEventReceived, ReceivedEvent](const FPubnubChatReportEvent& Event)
 	{
 		*bEventReceived = true;
 		*ReceivedEvent = Event;
-		TestEqual("Received event type should be Report", Event.Type, EPubnubChatEventType::PCET_Report);
-		TestEqual("Received event ChannelID should match moderation channel", Event.ChannelID, ModerationChannelID);
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamMessageReports();
+	TestFalse("StreamMessageReports should succeed", StreamResult.Error);
 	
 	// Wait a bit for subscription to be ready, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -418,7 +411,7 @@ bool FPubnubChatMessageReportEventReceivedTest::RunTest(const FString& Parameter
 	}, MAX_WAIT_TIME));
 	
 	// Verify event was received and has correct payload
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedEvent, TestChannelID, TestMessageText, TestReason, MessageTimetoken, MessageUserID, ModerationChannelID]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedEvent, TestChannelID, TestMessageText, TestReason, MessageTimetoken, MessageUserID]()
 	{
 		if(!*bEventReceived)
 		{
@@ -426,86 +419,26 @@ bool FPubnubChatMessageReportEventReceivedTest::RunTest(const FString& Parameter
 		}
 		else
 		{
-			TestEqual("Received event type should be Report", ReceivedEvent->Type, EPubnubChatEventType::PCET_Report);
-			TestEqual("Received event ChannelID should match moderation channel", ReceivedEvent->ChannelID, ModerationChannelID);
-			
-			// Parse payload to verify it contains correct data
-			TSharedPtr<FJsonObject> PayloadObject = MakeShareable(new FJsonObject);
-			UPubnubJsonUtilities::StringToJsonObject(ReceivedEvent->Payload, PayloadObject);
-			
-			// Verify text field
-			FString TextInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("text"), TextInPayload))
+			TestEqual("Report text should match message text", ReceivedEvent->Text, TestMessageText);
+			TestEqual("Report reason should match", ReceivedEvent->Reason, TestReason);
+			TestEqual("Report channelId should match test channel", ReceivedEvent->ReportedMessageChannelID, TestChannelID);
+			if(!MessageTimetoken->IsEmpty())
 			{
-				TestEqual("Payload text should match message text", TextInPayload, TestMessageText);
+				TestEqual("Report timetoken should match message timetoken", ReceivedEvent->MessageTimetoken, *MessageTimetoken);
 			}
-			else
+			if(!MessageUserID->IsEmpty())
 			{
-				AddError("Payload should contain text field");
-			}
-			
-			// Verify reason field
-			FString ReasonInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("reason"), ReasonInPayload))
-			{
-				TestEqual("Payload reason should match", ReasonInPayload, TestReason);
-			}
-			else
-			{
-				AddError("Payload should contain reason field");
-			}
-			
-			// Verify timetoken field
-			FString TimetokenInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("timetoken"), TimetokenInPayload))
-			{
-				if(!MessageTimetoken->IsEmpty())
-				{
-					TestEqual("Payload timetoken should match message timetoken", TimetokenInPayload, *MessageTimetoken);
-				}
-			}
-			else
-			{
-				AddError("Payload should contain timetoken field");
-			}
-			
-			// Verify channelId field
-			FString ChannelIdInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("channelId"), ChannelIdInPayload))
-			{
-				TestEqual("Payload channelId should match test channel", ChannelIdInPayload, TestChannelID);
-			}
-			else
-			{
-				AddError("Payload should contain channelId field");
-			}
-			
-			// Verify userId field
-			FString UserIdInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("userId"), UserIdInPayload))
-			{
-				if(!MessageUserID->IsEmpty())
-				{
-					TestEqual("Payload userId should match message user ID", UserIdInPayload, *MessageUserID);
-				}
-			}
-			else
-			{
-				AddError("Payload should contain userId field");
+				TestEqual("Report userId should match message user ID", ReceivedEvent->ReportedUserID, *MessageUserID);
 			}
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, disconnect and delete channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, CreateResult, Chat, TestChannelID]()
+	// Cleanup: Stop streaming, disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
-		if(ListenResult.CallbackStop)
-		{
-			ListenResult.CallbackStop->Stop();
-		}
-		
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->StopStreamingMessageReports();
 			CreateResult.Channel->Disconnect();
 		}
 		if(Chat)
@@ -565,9 +498,6 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	// Get moderation channel for listening to events
-	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-	
 	// Shared state for message reception
 	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
@@ -588,18 +518,17 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatReportEvent> ReceivedEvent = MakeShared<FPubnubChatReportEvent>();
 	
-	// Listen for report events on the moderation channel
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationChannelID](const FPubnubChatEvent& Event)
+	// Stream report events on the channel
+	CreateResult.Channel->OnMessageReportedNative.AddLambda([this, bEventReceived, ReceivedEvent](const FPubnubChatReportEvent& Event)
 	{
 		*bEventReceived = true;
 		*ReceivedEvent = Event;
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamMessageReports();
+	TestFalse("StreamMessageReports should succeed", StreamResult.Error);
 	
 	// Wait a bit for subscription to be ready, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessageText]()
@@ -631,7 +560,7 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 		return *bEventReceived;
 	}, MAX_WAIT_TIME));
 	
-	// Verify event payload contains empty reason
+	// Verify report event contains empty reason
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedEvent]()
 	{
 		if(!*bEventReceived)
@@ -640,33 +569,16 @@ bool FPubnubChatMessageReportEmptyReasonTest::RunTest(const FString& Parameters)
 		}
 		else
 		{
-			// Parse payload to verify reason is empty
-			TSharedPtr<FJsonObject> PayloadObject = MakeShareable(new FJsonObject);
-			UPubnubJsonUtilities::StringToJsonObject(ReceivedEvent->Payload, PayloadObject);
-			
-			FString ReasonInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("reason"), ReasonInPayload))
-			{
-				TestTrue("Payload reason should be empty when not provided", ReasonInPayload.IsEmpty());
-			}
-			else
-			{
-				// Reason field might not exist if empty, which is also acceptable
-				TestTrue("Payload reason field should be empty or missing", true);
-			}
+			TestTrue("Report reason should be empty when not provided", ReceivedEvent->Reason.IsEmpty());
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, disconnect and delete channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, CreateResult, Chat, TestChannelID]()
+	// Cleanup: Stop streaming, disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
-		if(ListenResult.CallbackStop)
-		{
-			ListenResult.CallbackStop->Stop();
-		}
-		
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->StopStreamingMessageReports();
 			CreateResult.Channel->Disconnect();
 		}
 		if(Chat)
@@ -728,9 +640,6 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 		return false;
 	}
 	
-	// Get moderation channel for listening to events
-	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-	
 	// Shared state for message reception
 	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
 	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
@@ -751,18 +660,17 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatReportEvent> ReceivedEvent = MakeShared<FPubnubChatReportEvent>();
 	
-	// Listen for report events on the moderation channel
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, ModerationChannelID](const FPubnubChatEvent& Event)
+	// Stream report events on the channel
+	CreateResult.Channel->OnMessageReportedNative.AddLambda([this, bEventReceived, ReceivedEvent](const FPubnubChatReportEvent& Event)
 	{
 		*bEventReceived = true;
 		*ReceivedEvent = Event;
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(ModerationChannelID, EPubnubChatEventType::PCET_Report, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamMessageReports();
+	TestFalse("StreamMessageReports should succeed", StreamResult.Error);
 	
 	// Wait a bit for subscription to be ready, then send message
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, OriginalText]()
@@ -818,7 +726,7 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 		return *bEventReceived;
 	}, MAX_WAIT_TIME));
 	
-	// Verify event payload contains edited text (not original text)
+	// Verify report event contains edited text (not original text)
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedEvent, EditedText]()
 	{
 		if(!*bEventReceived)
@@ -827,32 +735,16 @@ bool FPubnubChatMessageReportEditedMessageTest::RunTest(const FString& Parameter
 		}
 		else
 		{
-			// Parse payload to verify it contains edited text
-			TSharedPtr<FJsonObject> PayloadObject = MakeShareable(new FJsonObject);
-			UPubnubJsonUtilities::StringToJsonObject(ReceivedEvent->Payload, PayloadObject);
-			
-			FString TextInPayload;
-			if(PayloadObject->TryGetStringField(TEXT("text"), TextInPayload))
-			{
-				TestEqual("Payload text should match edited text (not original)", TextInPayload, EditedText);
-			}
-			else
-			{
-				AddError("Payload should contain text field");
-			}
+			TestEqual("Report text should match edited text (not original)", ReceivedEvent->Text, EditedText);
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, disconnect and delete channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, CreateResult, Chat, TestChannelID]()
+	// Cleanup: Stop streaming, disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
-		if(ListenResult.CallbackStop)
-		{
-			ListenResult.CallbackStop->Stop();
-		}
-		
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->StopStreamingMessageReports();
 			CreateResult.Channel->Disconnect();
 		}
 		if(Chat)

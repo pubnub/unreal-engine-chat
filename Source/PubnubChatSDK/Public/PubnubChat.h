@@ -812,45 +812,7 @@ public:
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */
 	void SetRestrictionsAsync(FPubnubChatRestriction Restriction, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
-
-	/**
-	 * Emits a chat event to a channel using publish or signal.
-	 * Blocking: performs network requests on the calling thread.
-	 * The function injects the event type into the JSON payload.
-	 *
-	 * @param EventType Chat event type to emit.
-	 * @param ChannelID Unique identifier of the channel to publish the event to.
-	 * @param Payload JSON string payload for the event (event type is injected automatically).
-	 * @param EventMethod Publish or Signal. Use Default to pick the recommended method per event type.
-	 * @return Operation result.
-	 */
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
-	FPubnubChatOperationResult EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
-
-	/**
-	 * Emits a chat event asynchronously to a channel using publish or signal.
-	 * The function injects the event type into the JSON payload.
-	 *
-	 * @param EventType Chat event type to emit.
-	 * @param ChannelID Unique identifier of the channel to publish the event to.
-	 * @param Payload JSON string payload for the event (event type is injected automatically).
-	 * @param OnOperationResponse Callback executed when the operation completes.
-	 * @param EventMethod Publish or Signal. Use Default to pick the recommended method per event type.
-	 */
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation", meta = (AutoCreateRefTerm = "OnOperationResponse"))
-	void EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponse OnOperationResponse, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
-	/**
-	 * Emits a chat event asynchronously to a channel using publish or signal.
-	 * The function injects the event type into the JSON payload.
-	 *
-	 * @param EventType Chat event type to emit.
-	 * @param ChannelID Unique identifier of the channel to publish the event to.
-	 * @param Payload JSON string payload for the event (event type is injected automatically).
-	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
-	 * @param EventMethod Publish or Signal. Use Default to pick the recommended method per event type.
-	 */
-	void EmitChatEventAsync(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
-
+	
 	/**
 	 * Fetches chat events history for a channel within a timetoken range.
 	 * Blocking: performs network requests on the calling thread.
@@ -889,28 +851,6 @@ public:
 	 */
 	void GetEventsHistoryAsync(const FString ChannelID, const FString StartTimetoken, const FString EndTimetoken, FOnPubnubChatEventsResponseNative OnEventsResponseNative, int Count = 100);
 	
-	/**
-	 * Starts listening for a specific chat event type on a channel.
-	 * Local: sets up client-side listeners and returns a callback stop handle.
-	 *
-	 * @param ChannelID Unique identifier of the channel to listen on.
-	 * @param EventType Chat event type to listen for.
-	 * @param EventCallback Callback executed when a matching event is received.
-	 * @return Operation result and a callback stop handle to unsubscribe.
-	 */
-	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Moderation")
-	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceived EventCallback);
-	/**
-	 * Starts listening for a specific chat event type on a channel.
-	 * Local: sets up client-side listeners and returns a callback stop handle.
-	 *
-	 * @param ChannelID Unique identifier of the channel to listen on.
-	 * @param EventType Chat event type to listen for.
-	 * @param EventCallbackNative Native callback executed when a matching event is received (accepts lambdas).
-	 * @return Operation result and a callback stop handle to unsubscribe.
-	 */
-	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative);
-
 	
 	/* MESSAGES */
 	
@@ -1247,6 +1187,11 @@ private:
 	UPubnubChatThreadMessage* CreateThreadMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData, const FString ParentChannelID);
 	UPubnubChatThreadMessage* CreateThreadMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData, const FString ParentChannelID);
 	UPubnubChatThreadMessage* CreateThreadMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData, const FString ParentChannelID);
+	
+	/* EVENTS */
+	
+	FPubnubChatOperationResult EmitChatEvent(EPubnubChatEventType EventType, const FString ChannelID, const FString Payload, EPubnubChatEventMethod EventMethod = EPubnubChatEventMethod::PCEM_Default);
+	FPubnubChatListenForEventsResult ListenForEvents(const FString ChannelID, EPubnubChatEventType EventType, FOnPubnubChatEventReceivedNative EventCallbackNative);
 
 };
 

@@ -1672,15 +1672,28 @@ bool FPubnubChatUserStreamMentionsIgnoresOtherEventsTest::RunTest(const FString&
 
 	TestFalse("StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
 
-	FPubnubChatOperationResult EmitOtherEventResult = SenderChat->EmitChatEvent(EPubnubChatEventType::PCET_Report, MentionedUserID, TEXT("{\"text\":\"r\",\"reason\":\"x\",\"channelId\":\"c\",\"userId\":\"u\",\"timetoken\":\"1\"}"));
-	TestFalse("EmitChatEvent report should succeed", EmitOtherEventResult.Error);
+	FPubnubChatChannelResult CreateChannelResult = SenderChat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+
+	if(CreateChannelResult.Channel)
+	{
+		FPubnubChatUserResult MentionedUserResult = SenderChat->GetUser(MentionedUserID);
+		TestFalse("Get mentioned user should succeed", MentionedUserResult.Result.Error);
+		TestNotNull("Mentioned user object should be valid", MentionedUserResult.User);
+		if(MentionedUserResult.User)
+		{
+			FPubnubChatInviteResult InviteResult = CreateChannelResult.Channel->Invite(MentionedUserResult.User);
+			TestFalse("Invite should succeed", InviteResult.Result.Error);
+		}
+	}
 
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, MentionCount]()
 	{
 		TestEqual("Mention callback count should remain 0 for non-mention events", *MentionCount, 0);
 	}, 1.0f));
 
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, SenderUserID, MentionedUserID]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, TestChannelID, SenderUserID, MentionedUserID]()
 	{
 		if(*MentionedChat)
 		{
@@ -1690,6 +1703,7 @@ bool FPubnubChatUserStreamMentionsIgnoresOtherEventsTest::RunTest(const FString&
 		}
 		if(SenderChat)
 		{
+			SenderChat->DeleteChannel(TestChannelID);
 			SenderChat->DeleteUser(MentionedUserID);
 			SenderChat->DeleteUser(SenderUserID);
 		}

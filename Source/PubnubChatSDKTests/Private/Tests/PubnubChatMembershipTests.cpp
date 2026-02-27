@@ -853,17 +853,15 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
 	
-	// Listen for Receipt events
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived](const FPubnubChatEvent& Event)
+	// Stream read receipts on the channel
+	CreateResult.Channel->OnReadReceiptReceivedNative.AddLambda([this, bEventReceived](const FPubnubChatReadReceipt&)
 	{
 		*bEventReceived = true;
 		AddError("Receipt event should NOT be received for public channels");
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(TestChannelID, EPubnubChatEventType::PCET_Receipt, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamReadReceipts();
+	TestFalse("StreamReadReceipts should succeed", StreamResult.Error);
 	
 	// Wait a bit for subscription to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, JoinResult]()
@@ -871,17 +869,6 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 		const FString TestTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
 		FPubnubChatOperationResult SetResult = JoinResult.Membership->SetLastReadMessageTimetoken(TestTimetoken);
 		TestFalse("SetLastReadMessageTimetoken should succeed", SetResult.Error);
-		
-		// Verify no EmitChatEvent step for public channels
-		bool bFoundEmitChatEvent = false;
-		for(const FPubnubChatOperationStepResult& Step : SetResult.StepResults)
-		{
-			if(Step.StepName == TEXT("EmitChatEvent"))
-			{
-				bFoundEmitChatEvent = true;
-			}
-		}
-		TestFalse("Should NOT have EmitChatEvent step for public channels", bFoundEmitChatEvent);
 	}, 0.5f));
 	
 	// Wait a bit to ensure event would have been received if it was sent
@@ -902,15 +889,12 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenPublicChannelNoEventTest::R
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, leave and delete channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, CreateResult, Chat, TestChannelID]()
+	// Cleanup: Stop streaming, leave and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
-		if(ListenResult.CallbackStop)
-		{
-			ListenResult.CallbackStop->Stop();
-		}
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->StopStreamingReadReceipts();
 			CreateResult.Channel->Leave();
 		}
 		if(Chat)
@@ -992,24 +976,19 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 	
 	// Shared state for event reception
 	TSharedPtr<bool> bEventReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatEvent> ReceivedEvent = MakeShared<FPubnubChatEvent>();
+	TSharedPtr<FPubnubChatReadReceipt> ReceivedReadReceipt = MakeShared<FPubnubChatReadReceipt>();
 	const FString TestTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
 	
-	// Listen for Receipt events
-	FOnPubnubChatEventReceivedNative EventCallback;
-	EventCallback.BindLambda([this, bEventReceived, ReceivedEvent, TestChannelID, TestTimetoken](const FPubnubChatEvent& Event)
+	// Stream read receipts on the channel
+	CreateResult.Channel->OnReadReceiptReceivedNative.AddLambda([this, bEventReceived, ReceivedReadReceipt, TestTimetoken](const FPubnubChatReadReceipt& ReadReceipt)
 	{
 		*bEventReceived = true;
-		*ReceivedEvent = Event;
-		TestEqual("Received event type should be Receipt", Event.Type, EPubnubChatEventType::PCET_Receipt);
-		TestEqual("Received event ChannelID should match", Event.ChannelID, TestChannelID);
-		TestFalse("Received event Payload should not be empty", Event.Payload.IsEmpty());
-		TestTrue("Received event Payload should contain timetoken", Event.Payload.Contains(TestTimetoken));
+		*ReceivedReadReceipt = ReadReceipt;
+		TestTrue("Received read receipt should contain timetoken", ReadReceipt.LastReadTimetoken.Contains(TestTimetoken));
 	});
 	
-	FPubnubChatListenForEventsResult ListenResult = Chat->ListenForEvents(TestChannelID, EPubnubChatEventType::PCET_Receipt, EventCallback);
-	TestFalse("ListenForEvents should succeed", ListenResult.Result.Error);
-	TestNotNull("CallbackStop should be created", ListenResult.CallbackStop);
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamReadReceipts();
+	TestFalse("StreamReadReceipts should succeed", StreamResult.Error);
 	
 	// Wait a bit for subscription to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestTimetoken]()
@@ -1025,7 +1004,7 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 	}, MAX_WAIT_TIME));
 	
 	// Verify event was received
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedEvent, TestTimetoken]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceived, ReceivedReadReceipt, TestTimetoken]()
 	{
 		if(!*bEventReceived)
 		{
@@ -1033,17 +1012,16 @@ bool FPubnubChatMembershipSetLastReadMessageTimetokenNonPublicChannelEventTest::
 		}
 		else
 		{
-			TestEqual("Received event type should be Receipt", ReceivedEvent->Type, EPubnubChatEventType::PCET_Receipt);
-			TestTrue("Received event Payload should contain timetoken", ReceivedEvent->Payload.Contains(TestTimetoken));
+			TestTrue("Received read receipt should contain timetoken", ReceivedReadReceipt->LastReadTimetoken.Contains(TestTimetoken));
 		}
 	}, 0.1f));
 	
-	// Cleanup: Stop listening, delete users and channel
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ListenResult, Chat, TestChannelID, InitUserID, SecondUserID]()
+	// Cleanup: Stop streaming, delete users and channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID, InitUserID, SecondUserID]()
 	{
-		if(ListenResult.CallbackStop)
+		if(CreateResult.Channel)
 		{
-			ListenResult.CallbackStop->Stop();
+			CreateResult.Channel->StopStreamingReadReceipts();
 		}
 		if(Chat)
 		{

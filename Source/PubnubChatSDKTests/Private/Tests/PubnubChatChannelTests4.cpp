@@ -191,7 +191,7 @@ bool FPubnubChatChannelStartTypingHappyPathTest::RunTest(const FString& Paramete
 	FPubnubChatOperationResult StartTypingResult = CreateResult.Channel->StartTyping();
 	TestFalse("StartTyping should succeed", StartTypingResult.Error);
 	
-	// Verify step results contain PublishMessage or Signal step (EmitChatEvent uses one of these)
+	// Verify step results contain PublishMessage or Signal step
 	bool bFoundPublishOrSignal = false;
 	for(const FPubnubChatOperationStepResult& Step : StartTypingResult.StepResults)
 	{
@@ -605,7 +605,7 @@ bool FPubnubChatChannelStopTypingHappyPathTest::RunTest(const FString& Parameter
 		FPubnubChatOperationResult StopTypingResult = CreateResult.Channel->StopTyping();
 		TestFalse("StopTyping should succeed", StopTypingResult.Error);
 		
-		// Verify step results contain PublishMessage or Signal step (EmitChatEvent uses one of these)
+		// Verify step results contain PublishMessage or Signal step
 		bool bFoundPublishOrSignal = false;
 		for(const FPubnubChatOperationStepResult& Step : StopTypingResult.StepResults)
 		{
@@ -1045,10 +1045,13 @@ bool FPubnubChatChannelStreamTypingHappyPathTest::RunTest(const FString& Paramet
 		
 		if(OtherInitResult.Chat)
 		{
-			// Emit typing event from other user's Chat instance
-			FString TypingEventPayload = UPubnubChatInternalUtilities::GetTypingEventPayload(true);
-			FPubnubChatOperationResult EmitResult = OtherInitResult.Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TypingEventPayload);
-			TestFalse("EmitChatEvent should succeed", EmitResult.Error);
+			FPubnubChatChannelResult OtherChannelResult = OtherInitResult.Chat->GetChannel(TestChannelID);
+			TestFalse("Other user GetChannel should succeed", OtherChannelResult.Result.Error);
+			if(OtherChannelResult.Channel)
+			{
+				FPubnubChatOperationResult StartTypingResult = OtherChannelResult.Channel->StartTyping();
+				TestFalse("StartTyping should succeed", StartTypingResult.Error);
+			}
 			
 			// Cleanup other user's Chat
 			CleanUpCurrentChatUser(OtherInitResult.Chat);
@@ -1191,10 +1194,13 @@ bool FPubnubChatChannelStreamTypingMultipleUsersTest::RunTest(const FString& Par
 	
 	if(InitResult1.Chat)
 	{
-		// Emit typing event from first user's Chat instance
-		FString TypingEventPayload1 = UPubnubChatInternalUtilities::GetTypingEventPayload(true);
-		FPubnubChatOperationResult EmitResult1 = InitResult1.Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TypingEventPayload1);
-		TestFalse("EmitChatEvent1 should succeed", EmitResult1.Error);
+		FPubnubChatChannelResult OtherChannelResult1 = InitResult1.Chat->GetChannel(TestChannelID);
+		TestFalse("Other user1 GetChannel should succeed", OtherChannelResult1.Result.Error);
+		if(OtherChannelResult1.Channel)
+		{
+			FPubnubChatOperationResult StartTypingResult1 = OtherChannelResult1.Channel->StartTyping();
+			TestFalse("StartTyping1 should succeed", StartTypingResult1.Error);
+		}
 		
 		// Cleanup first other user's Chat
 		CleanUpCurrentChatUser(InitResult1.Chat);
@@ -1207,9 +1213,13 @@ bool FPubnubChatChannelStreamTypingMultipleUsersTest::RunTest(const FString& Par
 	
 	if(InitResult2.Chat)
 	{
-		FString TypingEventPayload2 = UPubnubChatInternalUtilities::GetTypingEventPayload(true);
-		FPubnubChatOperationResult EmitResult2 = InitResult2.Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TypingEventPayload2);
-		TestFalse("EmitChatEvent2 should succeed", EmitResult2.Error);
+		FPubnubChatChannelResult OtherChannelResult2 = InitResult2.Chat->GetChannel(TestChannelID);
+		TestFalse("Other user2 GetChannel should succeed", OtherChannelResult2.Result.Error);
+		if(OtherChannelResult2.Channel)
+		{
+			FPubnubChatOperationResult StartTypingResult2 = OtherChannelResult2.Channel->StartTyping();
+			TestFalse("StartTyping2 should succeed", StartTypingResult2.Error);
+		}
 		
 		// Cleanup second other user's Chat
 		CleanUpCurrentChatUser(InitResult2.Chat);
@@ -1360,10 +1370,13 @@ bool FPubnubChatChannelStreamTypingTimerExpirationTest::RunTest(const FString& P
 	
 	if(OtherInitResult.Chat)
 	{
-		// Emit typing event from other user's Chat instance
-		FString TypingEventPayload = UPubnubChatInternalUtilities::GetTypingEventPayload(true);
-		FPubnubChatOperationResult EmitResult = OtherInitResult.Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, TypingEventPayload);
-		TestFalse("EmitChatEvent should succeed", EmitResult.Error);
+		FPubnubChatChannelResult OtherChannelResult = OtherInitResult.Chat->GetChannel(TestChannelID);
+		TestFalse("Other user GetChannel should succeed", OtherChannelResult.Result.Error);
+		if(OtherChannelResult.Channel)
+		{
+			FPubnubChatOperationResult StartTypingResult = OtherChannelResult.Channel->StartTyping();
+			TestFalse("StartTyping should succeed", StartTypingResult.Error);
+		}
 		
 		// Cleanup other user's Chat
 		CleanUpCurrentChatUser(OtherInitResult.Chat);
@@ -1525,14 +1538,16 @@ bool FPubnubChatChannelStreamTypingStopTypingEventTest::RunTest(const FString& P
 	
 	if(OtherInitResult.Chat)
 	{
-		// Emit start typing event from other user's Chat instance
-		FString StartTypingPayload = UPubnubChatInternalUtilities::GetTypingEventPayload(true);
-		FPubnubChatOperationResult EmitStartResult = OtherInitResult.Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, StartTypingPayload);
-		TestFalse("EmitChatEvent (start) should succeed", EmitStartResult.Error);
-		
-		FString StopTypingPayload = UPubnubChatInternalUtilities::GetTypingEventPayload(false);
-		FPubnubChatOperationResult EmitStopResult = OtherInitResult.Chat->EmitChatEvent(EPubnubChatEventType::PCET_Typing, TestChannelID, StopTypingPayload);
-		TestFalse("EmitChatEvent (stop) should succeed", EmitStopResult.Error);
+		FPubnubChatChannelResult OtherChannelResult = OtherInitResult.Chat->GetChannel(TestChannelID);
+		TestFalse("Other user GetChannel should succeed", OtherChannelResult.Result.Error);
+		if(OtherChannelResult.Channel)
+		{
+			FPubnubChatOperationResult StartTypingResult = OtherChannelResult.Channel->StartTyping();
+			TestFalse("StartTyping should succeed", StartTypingResult.Error);
+			
+			FPubnubChatOperationResult StopTypingResult = OtherChannelResult.Channel->StopTyping();
+			TestFalse("StopTyping should succeed", StopTypingResult.Error);
+		}
 		
 		// Cleanup other user's Chat
 		CleanUpCurrentChatUser(OtherInitResult.Chat);
@@ -2090,8 +2105,7 @@ bool FPubnubChatChannelStreamMessageReportsHappyPathTest::RunTest(const FString&
 		TestTrue("Report event should have been received", *bReportReceived);
 		
 		// Verify event data
-		FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-		TestEqual("Report event ChannelID should match moderation channel", ReceivedReportEvent->ReportedMessageChannelID, ModerationChannelID);
+		TestEqual("Report event ChannelID should match source channel", ReceivedReportEvent->ReportedMessageChannelID, TestChannelID);
 		TestEqual("Payload channelId should match", ReceivedReportEvent->ReportedMessageChannelID, TestChannelID);
 		
 	}, 0.1f));
@@ -2240,12 +2254,10 @@ bool FPubnubChatChannelStreamMessageReportsMultipleReportsTest::RunTest(const FS
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReceivedReportEvents, TestChannelID]()
 	{
 		TestTrue("Should have received at least two report events", ReceivedReportEvents->Num() >= 2);
-		
-		FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-		
+				
 		for(const FPubnubChatReportEvent& Event : *ReceivedReportEvents)
 		{
-			TestEqual("Report event ChannelID should match moderation channel", Event.ReportedMessageChannelID, ModerationChannelID);
+			TestEqual("Report event ChannelID should match source channel", Event.ReportedMessageChannelID, TestChannelID);
 		}
 	}, 0.1f));
 	

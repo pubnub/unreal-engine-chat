@@ -171,14 +171,7 @@ public:
 
 	UFUNCTION()
 	void OnSetRestrictionsResponse(const FPubnubChatOperationResult& Result);
-
-	// snippet.emit_chat_event
-	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Moderation")
-	void EmitChatEventSample();
-
-	UFUNCTION()
-	void OnEmitChatEventResponse(const FPubnubChatOperationResult& Result);
-
+	
 	// snippet.get_events_history
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Moderation")
 	void GetEventsHistorySample();
