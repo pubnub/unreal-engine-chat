@@ -23,6 +23,7 @@
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "Private/FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
+#include "Misc/Guid.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;
@@ -79,8 +80,9 @@ bool FPubnubChatMarkAllMessagesAsReadHappyPathTest::RunTest(const FString& Param
 
 	const FString TestPublishKey = GetTestPublishKey();
 	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + "test_mark_all_read_happy_init";
-	const FString TestChannelID = SDK_PREFIX + "test_mark_all_read_happy";
+	const FString UniqueSuffix = TEXT("_") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	const FString InitUserID = SDK_PREFIX + "test_mark_all_read_happy_init" + UniqueSuffix;
+	const FString TestChannelID = SDK_PREFIX + "test_mark_all_read_happy" + UniqueSuffix;
 	
 	FPubnubChatConfig ChatConfig;
 	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);

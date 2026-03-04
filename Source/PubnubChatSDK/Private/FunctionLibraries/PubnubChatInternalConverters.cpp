@@ -8,15 +8,15 @@ EPubnubChatConnectionStatus UPubnubChatInternalConverters::SubscriptionStatusToC
 	switch(SubscriptionStatus)
 	{
 	case EPubnubSubscriptionStatus::PSS_Connected:
-		return EPubnubChatConnectionStatus::PCCS_CONNECTION_ONLINE;
+		return EPubnubChatConnectionStatus::PCCS_ConnectionOnline;
 	case EPubnubSubscriptionStatus::PSS_Disconnected:
-		return EPubnubChatConnectionStatus::PCCS_CONNECTION_OFFLINE;
+		return EPubnubChatConnectionStatus::PCCS_ConnectionOffline;
 	case EPubnubSubscriptionStatus::PSS_ConnectionError:
-		return EPubnubChatConnectionStatus::PCCS_CONNECTION_ERROR;
+		return EPubnubChatConnectionStatus::PCCS_ConnectionError;
 	case EPubnubSubscriptionStatus::PSS_DisconnectedUnexpectedly:
-		return EPubnubChatConnectionStatus::PCCS_CONNECTION_ERROR;
+		return EPubnubChatConnectionStatus::PCCS_ConnectionError;
 	default:
-		return EPubnubChatConnectionStatus::PCCS_CONNECTION_ERROR;
+		return EPubnubChatConnectionStatus::PCCS_ConnectionError;
 	} 
 }
 

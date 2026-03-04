@@ -2768,6 +2768,7 @@ bool FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest::RunTest(const
 	const FString TestPublishKey = GetTestPublishKey();
 	const FString TestSubscribeKey = GetTestSubscribeKey();
 	const FString InitUserID = SDK_PREFIX + "test_disconnect_event_init";
+	const FString OtherUserID = SDK_PREFIX + "test_disconnect_event_other";
 	const FString TestChannelID = SDK_PREFIX + "test_disconnect_event";
 	
 	FPubnubChatConfig ChatConfig;
@@ -2784,8 +2785,18 @@ bool FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest::RunTest(const
 		return false;
 	}
 
-	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
-	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(OtherUserID);
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatCreateDirectConversationResult CreateChannelResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	TestFalse("CreateDirectConversation should succeed", CreateChannelResult.Result.Error);
 	TestNotNull("Channel should be created", CreateChannelResult.Channel);
 	if(!CreateChannelResult.Channel)
 	{
@@ -2860,13 +2871,22 @@ bool FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest::RunTest(const
 	}, 0.1f));
 	
 	// Cleanup: Stop streaming
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, OtherUserID]()
 	{
 		if(CreateChannelResult.Channel)
 		{
 			CreateChannelResult.Channel->StopStreamingTyping();
 		}
+		if(CreateChannelResult.HostMembership)
+		{
+			CreateChannelResult.HostMembership->Delete();
+		}
+		if(CreateChannelResult.InviteeMembership)
+		{
+			CreateChannelResult.InviteeMembership->Delete();
+		}
 		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(OtherUserID);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 	}, 0.1f));

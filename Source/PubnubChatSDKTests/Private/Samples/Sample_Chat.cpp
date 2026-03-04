@@ -862,7 +862,7 @@ void ASample_Chat::ConnectionStatusChangedSample()
 void ASample_Chat::OnConnectionStatusChanged(EPubnubChatConnectionStatus Status, const FPubnubChatConnectionStatusData& StatusData)
 {
 	//React to connection statuses, for example check for errors
-	if (Status == EPubnubChatConnectionStatus::PCCS_CONNECTION_ERROR)
+	if (Status == EPubnubChatConnectionStatus::PCCS_ConnectionError)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Connection Error. Reason: %s"), *StatusData.Reason);
 	}
@@ -885,7 +885,7 @@ void ASample_Chat::ConnectionStatusChangedReconnectSample()
 		{ return; }
 		
 		// Try to reconnect subscriptions when there is a connection error
-		if (Status == EPubnubChatConnectionStatus::PCCS_CONNECTION_ERROR)
+		if (Status == EPubnubChatConnectionStatus::PCCS_ConnectionError)
 		{
 			Chat->ReconnectSubscriptions();
 		}

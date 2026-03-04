@@ -10,9 +10,9 @@
 UENUM(BlueprintType)
 enum class EPubnubChatConnectionStatus : uint8
 {
-	PCCS_CONNECTION_ONLINE		UMETA(DisplayName="ConnectionOnline"),
-	PCCS_CONNECTION_OFFLINE		UMETA(DisplayName="ConnectionOffline"),
-	PCCS_CONNECTION_ERROR		UMETA(DisplayName="ConnectionError")
+	PCCS_ConnectionOnline		UMETA(DisplayName="ConnectionOnline"),
+	PCCS_ConnectionOffline		UMETA(DisplayName="ConnectionOffline"),
+	PCCS_ConnectionError		UMETA(DisplayName="ConnectionError")
 };
 
 UENUM(BlueprintType)

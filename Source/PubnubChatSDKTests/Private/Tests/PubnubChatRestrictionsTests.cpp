@@ -585,8 +585,7 @@ bool FPubnubChatSetRestrictionsEventEmissionTest::RunTest(const FString& Paramet
 		}
 		else
 		{
-			FString ExpectedModerationChannel = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-			TestEqual("Restriction channelId should match moderation channel", ReceivedRestriction->ChannelID, ExpectedModerationChannel);
+			TestEqual("Restriction channelId should match target channel", ReceivedRestriction->ChannelID, TestChannelID);
 			TestTrue("Restriction should be banned", ReceivedRestriction->Ban);
 			TestEqual("Restriction reason should match", ReceivedRestriction->Reason, TestReason);
 		}
@@ -1310,7 +1309,7 @@ bool FPubnubChatChannelGetUsersRestrictionsFullParametersTest::RunTest(const FSt
 		}
 		Chat->DeleteChannel(TestChannelID);
 		Chat->DeleteUser(TargetUserID1);
-		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 	}
 
 	CleanUpCurrentChatUser(Chat);
