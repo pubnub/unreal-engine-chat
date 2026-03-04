@@ -381,10 +381,9 @@ FPubnubChatOperationResult UPubnubChatMessage::ToggleReaction(const FString Reac
 	FPubnubChatOperationResult FinalResult;
 	FPubnubChatMessageData CurrentMessageData = GetMessageData();
 	
-	FPubnubChatGetReactionsResult GetReactionsResult = GetReactions();
-	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, GetReactionsResult.Result);
-	
-	FPubnubChatMessageAction ReactionToToggle = UPubnubChatInternalUtilities::GetMessageReactionForUserID(GetReactionsResult.Reactions, Reaction, Chat->CurrentUserID);
+	//Find if there is a MessageAction with provided Reaction for CurrentUserID
+	TArray<FPubnubChatMessageAction> FilteredMessageActions = UPubnubChatInternalUtilities::FilterMessageActionsOfType(CurrentMessageData.MessageActions, EPubnubChatMessageActionType::PCMAT_Reaction);
+	FPubnubChatMessageAction ReactionToToggle = UPubnubChatInternalUtilities::GetMessageReactionForUserID(FilteredMessageActions, Reaction, Chat->CurrentUserID);
 	
 	//If there is already such reaction from CurrentUser, we remove it
 	if (!ReactionToToggle.Timetoken.IsEmpty())
@@ -445,7 +444,7 @@ FPubnubChatGetReactionsResult UPubnubChatMessage::GetReactions() const
 	FPubnubChatMessageData CurrentMessageData = GetMessageData();
 	
 	//Filter message actions of type Reaction
-	FinalResult.Reactions = UPubnubChatInternalUtilities::FilterMessageActionsOfType(CurrentMessageData.MessageActions, EPubnubChatMessageActionType::PCMAT_Reaction);
+	FinalResult.Reactions = UPubnubChatInternalUtilities::GetMessageReactionsFromMessageActions(Chat->CurrentUserID, CurrentMessageData.MessageActions);
 	
 	return FinalResult;
 }
@@ -459,8 +458,8 @@ FPubnubChatHasReactionResult UPubnubChatMessage::HasUserReaction(const FString R
 	FPubnubChatGetReactionsResult GetReactionsResult = GetReactions();
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetReactionsResult.Result);
 	
-	FPubnubChatMessageAction MessageReaction = UPubnubChatInternalUtilities::GetMessageReactionForUserID(GetReactionsResult.Reactions, Reaction, Chat->CurrentUserID);
-	FinalResult.HasReaction = !MessageReaction.Timetoken.IsEmpty();
+	FPubnubChatMessageReaction MessageReaction = UPubnubChatInternalUtilities::GetReactionFromArrayByValue(Reaction, GetReactionsResult.Reactions);
+	FinalResult.HasReaction = MessageReaction.IsMine;
 	return FinalResult;
 }
 

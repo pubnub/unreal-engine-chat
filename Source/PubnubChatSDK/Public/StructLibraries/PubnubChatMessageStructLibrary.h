@@ -32,6 +32,24 @@ struct FPubnubChatMessageAction
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatMessageReaction
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Value = "";
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool IsMine = false;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FString> UserIDs;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Count = 0;
+};
+
+USTRUCT(BlueprintType)
 struct FPubnubChatMessageData
 {
 	GENERATED_BODY()
@@ -79,7 +97,7 @@ struct FPubnubChatGetReactionsResult
 	FPubnubChatOperationResult Result;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	TArray<FPubnubChatMessageAction> Reactions;
+	TArray<FPubnubChatMessageReaction> Reactions;
 };
 
 USTRUCT(BlueprintType)

@@ -92,7 +92,8 @@ public:
 	static FPubnubChatMessageAction GetMessageReactionForUserID(const TArray<FPubnubChatMessageAction>& MessageReactions, const FString& Reaction, const FString& UserID);
 	static bool RemoveReactionFromReactionsArray(TArray<FPubnubChatMessageAction>& MessageReactions, const FPubnubChatMessageAction& Reaction);
 	static bool IsChatMessageActionEqualPubnubAction(const FPubnubChatMessageAction& ChatAction, const FPubnubMessageActionData& PubnubAction);
-	
+	static TArray<FPubnubChatMessageReaction> GetMessageReactionsFromMessageActions(const FString& CurrentUserID, const TArray<FPubnubChatMessageAction>& MessageActions);
+	static FPubnubChatMessageReaction GetReactionFromArrayByValue(const FString& Value, const TArray<FPubnubChatMessageReaction>& Reactions);
 	
 	/* STREAM UPDATES */
 	

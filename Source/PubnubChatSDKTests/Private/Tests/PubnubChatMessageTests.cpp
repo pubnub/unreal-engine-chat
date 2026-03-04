@@ -4183,12 +4183,14 @@ bool FPubnubChatMessageToggleReactionHappyPathTest::RunTest(const FString& Param
 		TestTrue("GetReactions should return at least one reaction", GetReactionsResult.Reactions.Num() >= 1);
 		
 		bool bFoundReaction = false;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
-			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			if(Reaction.Value == TestReaction)
 			{
 				bFoundReaction = true;
-				TestFalse("Reaction timetoken should not be empty", Reaction.Timetoken.IsEmpty());
+				TestTrue("Reaction should contain at least one user", Reaction.UserIDs.Num() >= 1);
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
+				TestTrue("Reaction should be mine for current user", Reaction.IsMine);
 				break;
 			}
 		}
@@ -4401,11 +4403,13 @@ bool FPubnubChatMessageToggleReactionMultipleReactionsTest::RunTest(const FStrin
 		TestTrue("GetReactions should return at least 3 reactions", GetReactionsResult.Reactions.Num() >= 3);
 		
 		int FoundReactions = 0;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
 			if(Reaction.Value == Reaction1 || Reaction.Value == Reaction2 || Reaction.Value == Reaction3)
 			{
 				FoundReactions++;
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
+				TestTrue("Reaction should belong to current user", Reaction.IsMine);
 			}
 		}
 		TestEqual("Should find all 3 reactions", FoundReactions, 3);
@@ -4444,11 +4448,12 @@ bool FPubnubChatMessageToggleReactionMultipleReactionsTest::RunTest(const FStrin
 		// Verify GetReactions returns only 2 reactions
 		FPubnubChatGetReactionsResult GetReactionsResult = (*ReceivedMessage)->GetReactions();
 		int FoundReactions = 0;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
 			if(Reaction.Value == Reaction1 || Reaction.Value == Reaction3)
 			{
 				FoundReactions++;
+				TestTrue("Remaining reactions should belong to current user", Reaction.IsMine);
 			}
 			if(Reaction.Value == Reaction2)
 			{
@@ -4679,23 +4684,24 @@ bool FPubnubChatMessageToggleReactionMultipleUsersTest::RunTest(const FString& P
 		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
 		TestTrue("First user should have reaction", HasReactionResult.HasReaction);
 		
-		// GetReactions should return reactions from both users
+		// GetReactions should return a single aggregated reaction with both users
 		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
 		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
-		TestTrue("GetReactions should return at least 2 reactions", GetReactionsResult.Reactions.Num() >= 2);
+		TestTrue("GetReactions should return at least 1 reaction", GetReactionsResult.Reactions.Num() >= 1);
 		
-		// Count reactions with the same value but different users
-		int ReactionCount = 0;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		// Validate aggregated reaction for TestReaction
+		bool bFoundReaction = false;
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
-			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			if(Reaction.Value == TestReaction)
 			{
-				ReactionCount++;
-				TestFalse("Reaction should have non-empty UserID", Reaction.UserID.IsEmpty());
-				TestFalse("Reaction should have non-empty Timetoken", Reaction.Timetoken.IsEmpty());
+				bFoundReaction = true;
+				TestTrue("Aggregated reaction should contain at least 2 users", Reaction.UserIDs.Num() >= 2);
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
+				TestTrue("First user should have IsMine=true", Reaction.IsMine);
 			}
 		}
-		TestTrue("Should find reactions from multiple users", ReactionCount >= 2);
+		TestTrue("Should find aggregated reaction entry", bFoundReaction);
 	}, 0.5f));
 	
 	// First user removes their reaction
@@ -4741,11 +4747,14 @@ bool FPubnubChatMessageToggleReactionMultipleUsersTest::RunTest(const FString& P
 		
 		// Verify at least one reaction with the same value exists (from second user)
 		bool bFoundOtherUserReaction = false;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
-			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			if(Reaction.Value == TestReaction)
 			{
 				bFoundOtherUserReaction = true;
+				TestFalse("Remaining reaction should not be mine for first user", Reaction.IsMine);
+				TestTrue("Remaining reaction should have at least one user", Reaction.UserIDs.Num() >= 1);
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
 				break;
 			}
 		}
@@ -4942,14 +4951,14 @@ bool FPubnubChatMessageGetReactionsHappyPathTest::RunTest(const FString& Paramet
 		
 		// Verify reaction details
 		bool bFoundReaction = false;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
 			if(Reaction.Value == TestReaction)
 			{
 				bFoundReaction = true;
-				TestEqual("Reaction type should be PCMAT_Reaction", Reaction.Type, EPubnubChatMessageActionType::PCMAT_Reaction);
-				TestFalse("Reaction timetoken should not be empty", Reaction.Timetoken.IsEmpty());
-				TestFalse("Reaction UserID should not be empty", Reaction.UserID.IsEmpty());
+				TestTrue("Reaction should be mine", Reaction.IsMine);
+				TestTrue("Reaction should contain at least one user", Reaction.UserIDs.Num() >= 1);
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
 				break;
 			}
 		}
@@ -5210,23 +5219,21 @@ bool FPubnubChatMessageGetReactionsMultipleUsersTest::RunTest(const FString& Par
 		
 		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
 		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
-		TestTrue("GetReactions should return at least 3 reactions", GetReactionsResult.Reactions.Num() >= 3);
+		TestTrue("GetReactions should return at least 1 reaction", GetReactionsResult.Reactions.Num() >= 1);
 		
-		// Count reactions with the same value
-		int ReactionCount = 0;
-		TArray<FString> UserIDs;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		// Validate aggregated reaction for TestReaction
+		bool bFoundReaction = false;
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
-			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			if(Reaction.Value == TestReaction)
 			{
-				ReactionCount++;
-				TestFalse("Reaction should have non-empty UserID", Reaction.UserID.IsEmpty());
-				TestFalse("Reaction should have non-empty Timetoken", Reaction.Timetoken.IsEmpty());
-				UserIDs.AddUnique(Reaction.UserID);
+				bFoundReaction = true;
+				TestTrue("Aggregated reaction should contain at least 3 users", Reaction.UserIDs.Num() >= 3);
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
+				TestTrue("Current user should have IsMine=true", Reaction.IsMine);
 			}
 		}
-		TestTrue("Should find reactions from multiple users", ReactionCount >= 3);
-		TestTrue("Should have reactions from at least 3 different users", UserIDs.Num() >= 3);
+		TestTrue("Should find aggregated reaction entry", bFoundReaction);
 	}, 0.5f));
 	
 	// Cleanup: Disconnect and delete channel
@@ -5791,10 +5798,10 @@ bool FPubnubChatMessageHasUserReactionMultipleUsersTest::RunTest(const FString& 
 		TestFalse("HasUserReaction check should succeed", HasReactionResult.Result.Error);
 		TestTrue("First user should still have reaction", HasReactionResult.HasReaction);
 		
-		// GetReactions should show reactions from both users
+		// GetReactions should show one aggregated reaction from both users
 		FPubnubChatGetReactionsResult GetReactionsResult = GetMessageResult.Message->GetReactions();
 		TestFalse("GetReactions should succeed", GetReactionsResult.Result.Error);
-		TestTrue("GetReactions should return at least 2 reactions", GetReactionsResult.Reactions.Num() >= 2);
+		TestTrue("GetReactions should return at least 1 reaction", GetReactionsResult.Reactions.Num() >= 1);
 	}, 0.5f));
 	
 	// First user removes their reaction
@@ -5840,11 +5847,14 @@ bool FPubnubChatMessageHasUserReactionMultipleUsersTest::RunTest(const FString& 
 		
 		// Verify at least one reaction with the same value exists (from second user)
 		bool bFoundOtherUserReaction = false;
-		for(const FPubnubChatMessageAction& Reaction : GetReactionsResult.Reactions)
+		for(const FPubnubChatMessageReaction& Reaction : GetReactionsResult.Reactions)
 		{
-			if(Reaction.Value == TestReaction && Reaction.Type == EPubnubChatMessageActionType::PCMAT_Reaction)
+			if(Reaction.Value == TestReaction)
 			{
 				bFoundOtherUserReaction = true;
+				TestFalse("Remaining reaction should not be mine for first user", Reaction.IsMine);
+				TestTrue("Remaining reaction should have at least one user", Reaction.UserIDs.Num() >= 1);
+				TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
 				break;
 			}
 		}
@@ -6338,6 +6348,134 @@ bool FPubnubChatMessageRemoveThreadHappyPathTest::RunTest(const FString& Paramet
 		CleanUp();
 	}, 0.1f));
 	
+	return true;
+}
+
+// ============================================================================
+// INTERNAL UTILITIES UNIT TESTS - REACTION AGGREGATION
+// ============================================================================
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageReactionsFilterNonReactionActionsTest, "PubnubChat.Unit.Message.GetReactions.FilterNonReactionActions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageReactionsFilterNonReactionActionsTest::RunTest(const FString& Parameters)
+{
+	const FString CurrentUserID = TEXT("user_current");
+	const FString OtherUserID = TEXT("user_other");
+
+	TArray<FPubnubChatMessageAction> MessageActions;
+
+	// Valid reaction action for current user
+	FPubnubChatMessageAction CurrentUserReaction;
+	CurrentUserReaction.Type = EPubnubChatMessageActionType::PCMAT_Reaction;
+	CurrentUserReaction.Value = TEXT("thumbs_up");
+	CurrentUserReaction.UserID = CurrentUserID;
+	CurrentUserReaction.Timetoken = TEXT("1001");
+	MessageActions.Add(CurrentUserReaction);
+
+	// Valid reaction action for another user
+	FPubnubChatMessageAction OtherUserReaction;
+	OtherUserReaction.Type = EPubnubChatMessageActionType::PCMAT_Reaction;
+	OtherUserReaction.Value = TEXT("laugh");
+	OtherUserReaction.UserID = OtherUserID;
+	OtherUserReaction.Timetoken = TEXT("1002");
+	MessageActions.Add(OtherUserReaction);
+
+	// Non-reaction actions that should be ignored by aggregation
+	FPubnubChatMessageAction EditedAction;
+	EditedAction.Type = EPubnubChatMessageActionType::PCMAT_Edited;
+	EditedAction.Value = TEXT("thumbs_up"); // same value as reaction on purpose
+	EditedAction.UserID = OtherUserID;
+	EditedAction.Timetoken = TEXT("1003");
+	MessageActions.Add(EditedAction);
+
+	FPubnubChatMessageAction DeletedAction;
+	DeletedAction.Type = EPubnubChatMessageActionType::PCMAT_Deleted;
+	DeletedAction.Value = TEXT("laugh"); // same value as reaction on purpose
+	DeletedAction.UserID = OtherUserID;
+	DeletedAction.Timetoken = TEXT("1004");
+	MessageActions.Add(DeletedAction);
+
+	FPubnubChatMessageAction ThreadRootAction;
+	ThreadRootAction.Type = EPubnubChatMessageActionType::PCMAT_ThreadRootId;
+	ThreadRootAction.Value = TEXT("root_id");
+	ThreadRootAction.UserID = OtherUserID;
+	ThreadRootAction.Timetoken = TEXT("1005");
+	MessageActions.Add(ThreadRootAction);
+
+	const TArray<FPubnubChatMessageReaction> Reactions = UPubnubChatInternalUtilities::GetMessageReactionsFromMessageActions(CurrentUserID, MessageActions);
+
+	TestEqual("Only reaction actions should be aggregated", Reactions.Num(), 2);
+
+	const FPubnubChatMessageReaction ThumbsUpReaction = UPubnubChatInternalUtilities::GetReactionFromArrayByValue(TEXT("thumbs_up"), Reactions);
+	TestEqual("thumbs_up reaction should exist", ThumbsUpReaction.Value, FString(TEXT("thumbs_up")));
+	TestTrue("thumbs_up should be mine", ThumbsUpReaction.IsMine);
+	TestEqual("thumbs_up count should match user IDs", ThumbsUpReaction.Count, ThumbsUpReaction.UserIDs.Num());
+	TestEqual("thumbs_up should have exactly one user", ThumbsUpReaction.Count, 1);
+	TestTrue("thumbs_up should contain current user", ThumbsUpReaction.UserIDs.Contains(CurrentUserID));
+
+	const FPubnubChatMessageReaction LaughReaction = UPubnubChatInternalUtilities::GetReactionFromArrayByValue(TEXT("laugh"), Reactions);
+	TestEqual("laugh reaction should exist", LaughReaction.Value, FString(TEXT("laugh")));
+	TestFalse("laugh should not be mine", LaughReaction.IsMine);
+	TestEqual("laugh count should match user IDs", LaughReaction.Count, LaughReaction.UserIDs.Num());
+	TestEqual("laugh should have exactly one user", LaughReaction.Count, 1);
+	TestTrue("laugh should contain other user", LaughReaction.UserIDs.Contains(OtherUserID));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageReactionsCurrentUserNotPresentTest, "PubnubChat.Unit.Message.GetReactions.CurrentUserNotPresent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageReactionsCurrentUserNotPresentTest::RunTest(const FString& Parameters)
+{
+	const FString CurrentUserID = TEXT("user_current");
+	const FString UserA = TEXT("user_a");
+	const FString UserB = TEXT("user_b");
+
+	TArray<FPubnubChatMessageAction> MessageActions;
+
+	// Two different users react with the same value
+	FPubnubChatMessageAction ReactionA;
+	ReactionA.Type = EPubnubChatMessageActionType::PCMAT_Reaction;
+	ReactionA.Value = TEXT("fire");
+	ReactionA.UserID = UserA;
+	ReactionA.Timetoken = TEXT("2001");
+	MessageActions.Add(ReactionA);
+
+	FPubnubChatMessageAction ReactionB;
+	ReactionB.Type = EPubnubChatMessageActionType::PCMAT_Reaction;
+	ReactionB.Value = TEXT("fire");
+	ReactionB.UserID = UserB;
+	ReactionB.Timetoken = TEXT("2002");
+	MessageActions.Add(ReactionB);
+
+	// Additional different reaction by another user
+	FPubnubChatMessageAction HeartReaction;
+	HeartReaction.Type = EPubnubChatMessageActionType::PCMAT_Reaction;
+	HeartReaction.Value = TEXT("heart");
+	HeartReaction.UserID = UserB;
+	HeartReaction.Timetoken = TEXT("2003");
+	MessageActions.Add(HeartReaction);
+
+	const TArray<FPubnubChatMessageReaction> Reactions = UPubnubChatInternalUtilities::GetMessageReactionsFromMessageActions(CurrentUserID, MessageActions);
+
+	TestEqual("Should return two aggregated reactions", Reactions.Num(), 2);
+
+	const FPubnubChatMessageReaction FireReaction = UPubnubChatInternalUtilities::GetReactionFromArrayByValue(TEXT("fire"), Reactions);
+	TestEqual("fire reaction should exist", FireReaction.Value, FString(TEXT("fire")));
+	TestFalse("fire should not be mine when current user is absent", FireReaction.IsMine);
+	TestEqual("fire count should match user IDs", FireReaction.Count, FireReaction.UserIDs.Num());
+	TestEqual("fire should aggregate both users", FireReaction.Count, 2);
+	TestTrue("fire should contain user A", FireReaction.UserIDs.Contains(UserA));
+	TestTrue("fire should contain user B", FireReaction.UserIDs.Contains(UserB));
+	TestFalse("fire should not contain current user", FireReaction.UserIDs.Contains(CurrentUserID));
+
+	const FPubnubChatMessageReaction HeartReactionResult = UPubnubChatInternalUtilities::GetReactionFromArrayByValue(TEXT("heart"), Reactions);
+	TestEqual("heart reaction should exist", HeartReactionResult.Value, FString(TEXT("heart")));
+	TestFalse("heart should not be mine when current user is absent", HeartReactionResult.IsMine);
+	TestEqual("heart count should match user IDs", HeartReactionResult.Count, HeartReactionResult.UserIDs.Num());
+	TestEqual("heart should have one user", HeartReactionResult.Count, 1);
+	TestTrue("heart should contain user B", HeartReactionResult.UserIDs.Contains(UserB));
+
 	return true;
 }
 

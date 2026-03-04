@@ -1285,11 +1285,14 @@ bool FPubnubChatMessageStreamUpdatesMultipleUpdatesTest::RunTest(const FString& 
 			FPubnubChatGetReactionsResult ReactionsResult = (*ReceivedMessage)->GetReactions();
 			TestFalse("GetReactions should succeed", ReactionsResult.Result.Error);
 			bool bHasReaction = false;
-			for(const FPubnubChatMessageAction& Action : ReactionsResult.Reactions)
+			for(const FPubnubChatMessageReaction& Reaction : ReactionsResult.Reactions)
 			{
-				if(Action.Value == ReactionEmoji)
+				if(Reaction.Value == ReactionEmoji)
 				{
 					bHasReaction = true;
+					TestTrue("Reaction should be mine", Reaction.IsMine);
+					TestTrue("Reaction should contain at least one user", Reaction.UserIDs.Num() >= 1);
+					TestEqual("Reaction count should match user IDs count", Reaction.Count, Reaction.UserIDs.Num());
 					break;
 				}
 			}

@@ -588,6 +588,54 @@ bool UPubnubChatInternalUtilities::IsChatMessageActionEqualPubnubAction(const FP
 	return false;
 }
 
+TArray<FPubnubChatMessageReaction> UPubnubChatInternalUtilities::GetMessageReactionsFromMessageActions(const FString& CurrentUserID, const TArray<FPubnubChatMessageAction>& MessageActions)
+{
+	TArray<FPubnubChatMessageReaction> FinalReactions;
+	
+	TMap<FString, int32> ReactionValueToIndex;
+	for (const FPubnubChatMessageAction& MessageAction : MessageActions)
+	{
+		if (MessageAction.Type != EPubnubChatMessageActionType::PCMAT_Reaction)
+		{
+			continue;
+		}
+
+		int32* ExistingIndex = ReactionValueToIndex.Find(MessageAction.Value);
+		if (!ExistingIndex)
+		{
+			FPubnubChatMessageReaction NewReaction;
+			NewReaction.Value = MessageAction.Value;
+			NewReaction.UserIDs.Add(MessageAction.UserID);
+			NewReaction.IsMine = (MessageAction.UserID == CurrentUserID);
+			NewReaction.Count = NewReaction.UserIDs.Num();
+
+			const int32 NewIndex = FinalReactions.Add(NewReaction);
+			ReactionValueToIndex.Add(MessageAction.Value, NewIndex);
+			continue;
+		}
+
+		FPubnubChatMessageReaction& ExistingReaction = FinalReactions[*ExistingIndex];
+		ExistingReaction.UserIDs.AddUnique(MessageAction.UserID);
+		if (!ExistingReaction.IsMine && MessageAction.UserID == CurrentUserID)
+		{
+			ExistingReaction.IsMine = true;
+		}
+		ExistingReaction.Count = ExistingReaction.UserIDs.Num();
+	}
+
+	return FinalReactions;
+}
+
+FPubnubChatMessageReaction UPubnubChatInternalUtilities::GetReactionFromArrayByValue(const FString& Value, const TArray<FPubnubChatMessageReaction>& Reactions)
+{
+	for (const FPubnubChatMessageReaction& Reaction : Reactions)
+		if (Reaction.Value == Value)
+		{
+			return Reaction;
+		}
+	return FPubnubChatMessageReaction();
+}
+
 bool UPubnubChatInternalUtilities::IsPubnubMessageChannelUpdate(const FString& MessageContent)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);

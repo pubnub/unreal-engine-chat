@@ -188,7 +188,7 @@ void ASample_ChatMessage::GetReactionsSample()
 
 	FPubnubChatGetReactionsResult Result = Message->GetReactions();
 	if (Result.Result.Error) { return; }
-	TArray<FPubnubChatMessageAction> Reactions = Result.Reactions;
+	TArray<FPubnubChatMessageReaction> Reactions = Result.Reactions;
 }
 
 // snippet.has_user_reaction
