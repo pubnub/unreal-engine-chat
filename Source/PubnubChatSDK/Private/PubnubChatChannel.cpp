@@ -817,6 +817,91 @@ void UPubnubChatChannel::GetMembersAsync(FOnPubnubChatMembershipsResponseNative 
 	});
 }
 
+FPubnubChatMembershipResult UPubnubChatChannel::GetMember(const FString UserID)
+{
+	FPubnubChatMembershipResult FinalResult;
+	FinalResult.Membership = nullptr;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, UserID);
+
+	FPubnubChatMembershipsResult GetMembersResult = GetMembers(1, UPubnubChatInternalUtilities::GetFilterForUserID(UserID));
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembersResult.Result);
+
+	if (!GetMembersResult.Memberships.IsEmpty())
+	{
+		FinalResult.Membership = GetMembersResult.Memberships[0];
+	}
+
+	return FinalResult;
+}
+
+void UPubnubChatChannel::GetMemberAsync(const FString UserID, FOnPubnubChatMembershipResponse OnMembershipResponse)
+{
+	FOnPubnubChatMembershipResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnMembershipResponse](const FPubnubChatMembershipResult& MembershipResult)
+	{
+		OnMembershipResponse.ExecuteIfBound(MembershipResult);
+	});
+
+	GetMemberAsync(UserID, NativeCallback);
+}
+
+void UPubnubChatChannel::GetMemberAsync(const FString UserID, FOnPubnubChatMembershipResponseNative OnMembershipResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnMembershipResponseNative, FPubnubChatMembershipResult());
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, UserID, OnMembershipResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatMembershipResult MembershipResult = WeakThis.Get()->GetMember(UserID);
+		UPubnubUtilities::CallPubnubDelegate(OnMembershipResponseNative, MembershipResult);
+	});
+}
+
+FPubnubChatHasMemberResult UPubnubChatChannel::HasMember(const FString UserID)
+{
+	FPubnubChatHasMemberResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	FPubnubChatMembershipResult GetMemberResult = GetMember(UserID);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMemberResult.Result);
+
+	FinalResult.HasMember = IsValid(GetMemberResult.Membership);
+	return FinalResult;
+}
+
+void UPubnubChatChannel::HasMemberAsync(const FString UserID, FOnPubnubChatHasMemberResponse OnHasMemberResponse)
+{
+	FOnPubnubChatHasMemberResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnHasMemberResponse](const FPubnubChatHasMemberResult& HasMemberResult)
+	{
+		OnHasMemberResponse.ExecuteIfBound(HasMemberResult);
+	});
+
+	HasMemberAsync(UserID, NativeCallback);
+}
+
+void UPubnubChatChannel::HasMemberAsync(const FString UserID, FOnPubnubChatHasMemberResponseNative OnHasMemberResponseNative)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnHasMemberResponseNative, FPubnubChatHasMemberResult());
+	
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, UserID, OnHasMemberResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+		
+		FPubnubChatHasMemberResult HasMemberResult = WeakThis.Get()->HasMember(UserID);
+		UPubnubUtilities::CallPubnubDelegate(OnHasMemberResponseNative, HasMemberResult);
+	});
+}
+
+
 FPubnubChatMembershipsResult UPubnubChatChannel::GetInvitees(const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
 {
 	FPubnubChatMembershipsResult FinalResult;

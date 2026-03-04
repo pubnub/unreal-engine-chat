@@ -5,6 +5,7 @@
 #include "PubnubChatChannel.h"
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
+#include "PubnubChatMembership.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "Private/PubnubChatConst.h"
@@ -3281,6 +3282,500 @@ bool FPubnubChatUserStopStreamingRestrictionsPreventsEventsTest::RunTest(const F
 		CleanUp();
 	}, 0.2f));
 
+	return true;
+}
+
+// ============================================================================
+// GETMEMBERSHIP TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetMembershipNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetMembership.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetMembershipNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_membership_not_init";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+
+	if(Chat)
+	{
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		FPubnubChatMembershipResult GetMembershipResult = UninitializedUser->GetMembership(TEXT("channel"));
+		TestTrue("GetMembership should fail on uninitialized user", GetMembershipResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", GetMembershipResult.Result.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetMembershipEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetMembership.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetMembershipEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_membership_empty_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatMembershipResult GetMembershipResult = Chat->GetCurrentUser()->GetMembership(TEXT(""));
+	TestTrue("GetMembership should fail for empty ChannelID", GetMembershipResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", GetMembershipResult.Result.ErrorMessage.IsEmpty());
+
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetMembershipHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetMembership.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetMembershipHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_membership_happy";
+	const FString TestChannelID = SDK_PREFIX + "test_get_membership_happy_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	FPubnubChatJoinResult JoinResult;
+	if(CreateResult.Channel)
+	{
+		JoinResult = CreateResult.Channel->Join();
+		TestFalse("Join should succeed", JoinResult.Result.Error);
+	}
+
+	FPubnubChatMembershipResult GetMembershipResult = Chat->GetCurrentUser()->GetMembership(TestChannelID);
+	TestFalse("GetMembership should succeed", GetMembershipResult.Result.Error);
+	TestNotNull("Membership should be returned", GetMembershipResult.Membership);
+
+	if(GetMembershipResult.Membership)
+	{
+		TestEqual("Membership UserID should match", GetMembershipResult.Membership->GetUserID(), InitUserID);
+		TestEqual("Membership ChannelID should match", GetMembershipResult.Membership->GetChannelID(), TestChannelID);
+	}
+
+	if(JoinResult.Membership)
+	{
+		JoinResult.Membership->Delete();
+	}
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetMembershipNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetMembership.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetMembershipNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_membership_no_optional";
+	const FString TestChannelID = SDK_PREFIX + "test_get_membership_no_optional_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	FPubnubChatJoinResult JoinResult;
+	if(CreateResult.Channel)
+	{
+		JoinResult = CreateResult.Channel->Join();
+		TestFalse("Join should succeed", JoinResult.Result.Error);
+	}
+
+	FPubnubChatMembershipResult GetMembershipResult = Chat->GetCurrentUser()->GetMembership(TestChannelID);
+	TestFalse("GetMembership should succeed with required parameters only", GetMembershipResult.Result.Error);
+	TestNotNull("Membership should be returned", GetMembershipResult.Membership);
+
+	if(JoinResult.Membership)
+	{
+		JoinResult.Membership->Delete();
+	}
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Verifies GetMembership returns membership data populated by Join (status/type/custom).
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserGetMembershipReturnsMembershipDataTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.GetMembership.4Advanced.ReturnsMembershipData", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserGetMembershipReturnsMembershipDataTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_membership_data";
+	const FString TestChannelID = SDK_PREFIX + "test_get_membership_data_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	FPubnubChatMembershipData JoinMembershipData;
+	JoinMembershipData.Status = TEXT("active");
+	JoinMembershipData.Type = TEXT("member");
+	JoinMembershipData.Custom = TEXT("{\"role\":\"owner\"}");
+
+	FPubnubChatJoinResult JoinResult;
+	if(CreateResult.Channel)
+	{
+		JoinResult = CreateResult.Channel->Join(JoinMembershipData);
+		TestFalse("Join should succeed", JoinResult.Result.Error);
+	}
+
+	FPubnubChatMembershipResult GetMembershipResult = Chat->GetCurrentUser()->GetMembership(TestChannelID);
+	TestFalse("GetMembership should succeed", GetMembershipResult.Result.Error);
+	TestNotNull("Membership should be returned", GetMembershipResult.Membership);
+
+	if(GetMembershipResult.Membership)
+	{
+		FPubnubChatMembershipData MembershipData = GetMembershipResult.Membership->GetMembershipData();
+		TestEqual("Membership Status should match", MembershipData.Status, JoinMembershipData.Status);
+		TestEqual("Membership Type should match", MembershipData.Type, JoinMembershipData.Type);
+		TestTrue("Membership Custom should contain role owner", MembershipData.Custom.Contains(TEXT("\"role\":\"owner\"")));
+	}
+
+	if(JoinResult.Membership)
+	{
+		JoinResult.Membership->Delete();
+	}
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ISMEMBERON TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsMemberOnNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsMemberOn.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsMemberOnNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_member_on_not_init";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+
+	if(Chat)
+	{
+		UPubnubChatUser* UninitializedUser = NewObject<UPubnubChatUser>(Chat);
+		FPubnubChatIsMemberOnResult IsMemberOnResult = UninitializedUser->IsMemberOn(TEXT("channel"));
+		TestTrue("IsMemberOn should fail on uninitialized user", IsMemberOnResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", IsMemberOnResult.Result.ErrorMessage.IsEmpty());
+
+		Chat->DeleteUser(InitUserID);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsMemberOnEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsMemberOn.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsMemberOnEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_member_on_empty_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatIsMemberOnResult IsMemberOnResult = Chat->GetCurrentUser()->IsMemberOn(TEXT(""));
+	TestTrue("IsMemberOn should fail for empty ChannelID", IsMemberOnResult.Result.Error);
+	TestFalse("ErrorMessage should not be empty", IsMemberOnResult.Result.ErrorMessage.IsEmpty());
+
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsMemberOnHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsMemberOn.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsMemberOnHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_member_on_happy";
+	const FString TestChannelID = SDK_PREFIX + "test_is_member_on_happy_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	FPubnubChatJoinResult JoinResult;
+	if(CreateResult.Channel)
+	{
+		JoinResult = CreateResult.Channel->Join();
+		TestFalse("Join should succeed", JoinResult.Result.Error);
+	}
+
+	FPubnubChatIsMemberOnResult IsMemberOnResult = Chat->GetCurrentUser()->IsMemberOn(TestChannelID);
+	TestFalse("IsMemberOn should succeed", IsMemberOnResult.Result.Error);
+	TestTrue("IsMemberOn should be true for joined channel", IsMemberOnResult.IsMemberOn);
+
+	if(JoinResult.Membership)
+	{
+		JoinResult.Membership->Delete();
+	}
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsMemberOnNoOptionalParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsMemberOn.3FullParameters.NoOptionalParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsMemberOnNoOptionalParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_member_on_no_optional";
+	const FString TestChannelID = SDK_PREFIX + "test_is_member_on_no_optional_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	FPubnubChatJoinResult JoinResult;
+	if(CreateResult.Channel)
+	{
+		JoinResult = CreateResult.Channel->Join();
+		TestFalse("Join should succeed", JoinResult.Result.Error);
+	}
+
+	FPubnubChatIsMemberOnResult IsMemberOnResult = Chat->GetCurrentUser()->IsMemberOn(TestChannelID);
+	TestFalse("IsMemberOn should succeed with required parameters only", IsMemberOnResult.Result.Error);
+	TestTrue("IsMemberOn should be true for joined channel", IsMemberOnResult.IsMemberOn);
+
+	if(JoinResult.Membership)
+	{
+		JoinResult.Membership->Delete();
+	}
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Verifies IsMemberOn returns false (without error) when channel exists but user is not a member.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatUserIsMemberOnNonMemberChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.User.IsMemberOn.4Advanced.NonMemberChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatUserIsMemberOnNonMemberChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_member_on_non_member";
+	const FString TestChannelID = SDK_PREFIX + "test_is_member_on_non_member_channel";
+
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	FPubnubChatIsMemberOnResult IsMemberOnResult = Chat->GetCurrentUser()->IsMemberOn(TestChannelID);
+	TestFalse("IsMemberOn should succeed for non-member channel query", IsMemberOnResult.Result.Error);
+	TestFalse("IsMemberOn should be false when user did not join", IsMemberOnResult.IsMemberOn);
+
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(InitUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
 	return true;
 }
 

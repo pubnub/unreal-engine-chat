@@ -379,6 +379,62 @@ void ASample_ChatChannel::OnGetMembersResponse(const FPubnubChatMembershipsResul
 	TArray<UPubnubChatMembership*> Memberships = Result.Memberships;
 }
 
+// snippet.get_member
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::GetMemberSample()
+{
+	// snippet.hide
+	UPubnubChatChannel* Channel = nullptr;
+	// snippet.show
+
+	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
+
+	// User ID to query member for
+	FString UserID = TEXT("user-abc123");
+
+	// Callback for when the operation completes (returns one membership or empty)
+	FOnPubnubChatMembershipResponseNative Callback;
+	// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+	Callback.BindUObject(this, &ASample_ChatChannel::OnGetMemberResponse);
+	Channel->GetMemberAsync(UserID, Callback);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::OnGetMemberResponse(const FPubnubChatMembershipResult& Result)
+{
+	if (Result.Result.Error) { return; }
+	UPubnubChatMembership* Membership = Result.Membership;
+}
+
+// snippet.has_member
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::HasMemberSample()
+{
+	// snippet.hide
+	UPubnubChatChannel* Channel = nullptr;
+	// snippet.show
+
+	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
+
+	// User ID to check membership for
+	FString UserID = TEXT("user-abc123");
+
+	// Callback for when the operation completes (returns true if user is a member)
+	FOnPubnubChatHasMemberResponseNative Callback;
+	// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+	Callback.BindUObject(this, &ASample_ChatChannel::OnHasMemberResponse);
+	Channel->HasMemberAsync(UserID, Callback);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::OnHasMemberResponse(const FPubnubChatHasMemberResult& Result)
+{
+	if (Result.Result.Error) { return; }
+	bool bHasMember = Result.HasMember;
+}
+
 // snippet.get_invitees
 
 // ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class

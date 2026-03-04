@@ -368,6 +368,19 @@ struct FPubnubChatIsDeletedResult
 };
 
 USTRUCT(BlueprintType)
+struct FPubnubChatMembershipResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	UPubnubChatMembership* Membership = nullptr;
+};
+
+
+USTRUCT(BlueprintType)
 struct FPubnubChatMembershipsResult
 {
 	GENERATED_BODY()
@@ -383,6 +396,30 @@ struct FPubnubChatMembershipsResult
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	int Total = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatHasMemberResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool HasMember = false;
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatIsMemberOnResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	bool IsMemberOn = false;
 };
 
 USTRUCT(BlueprintType)

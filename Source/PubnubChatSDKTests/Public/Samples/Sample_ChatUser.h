@@ -71,6 +71,20 @@ public:
 	UFUNCTION()
 	void OnGetMembershipsResponse(const FPubnubChatMembershipsResult& Result);
 
+	// snippet.get_membership
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
+	void GetMembershipSample();
+
+	UFUNCTION()
+	void OnGetMembershipResponse(const FPubnubChatMembershipResult& Result);
+
+	// snippet.is_member_on
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
+	void IsMemberOnSample();
+
+	UFUNCTION()
+	void OnIsMemberOnResponse(const FPubnubChatIsMemberOnResult& Result);
+
 	// snippet.user_set_restrictions
 	// blueprint.oner-uli
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")

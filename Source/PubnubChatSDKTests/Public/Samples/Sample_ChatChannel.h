@@ -123,6 +123,20 @@ public:
 	UFUNCTION()
 	void OnGetMembersResponse(const FPubnubChatMembershipsResult& Result);
 
+	// snippet.get_member
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
+	void GetMemberSample();
+
+	UFUNCTION()
+	void OnGetMemberResponse(const FPubnubChatMembershipResult& Result);
+
+	// snippet.has_member
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
+	void HasMemberSample();
+
+	UFUNCTION()
+	void OnHasMemberResponse(const FPubnubChatHasMemberResult& Result);
+
 	// snippet.get_invitees
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
 	void GetInviteesSample();

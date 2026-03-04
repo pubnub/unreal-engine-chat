@@ -177,6 +177,62 @@ void ASample_ChatUser::OnGetMembershipsResponse(const FPubnubChatMembershipsResu
 	TArray<UPubnubChatMembership*> Memberships = Result.Memberships;
 }
 
+// snippet.get_membership
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::GetMembershipSample()
+{
+	// snippet.hide
+	UPubnubChatUser* User = nullptr;
+	// snippet.show
+
+	// Assumes User is a valid UPubnubChatUser (e.g. from GetUser)
+
+	// Channel ID to query membership for
+	FString ChannelID = TEXT("lobby-01");
+
+	// Callback for when the operation completes (returns one membership or empty)
+	FOnPubnubChatMembershipResponseNative Callback;
+	// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+	Callback.BindUObject(this, &ASample_ChatUser::OnGetMembershipResponse);
+	User->GetMembershipAsync(ChannelID, Callback);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::OnGetMembershipResponse(const FPubnubChatMembershipResult& Result)
+{
+	if (Result.Result.Error) { return; }
+	UPubnubChatMembership* Membership = Result.Membership;
+}
+
+// snippet.is_member_on
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::IsMemberOnSample()
+{
+	// snippet.hide
+	UPubnubChatUser* User = nullptr;
+	// snippet.show
+
+	// Assumes User is a valid UPubnubChatUser (e.g. from GetUser)
+
+	// Channel ID to check membership on
+	FString ChannelID = TEXT("lobby-01");
+
+	// Callback for when the operation completes (returns true if user is a member on channel)
+	FOnPubnubChatIsMemberOnResponseNative Callback;
+	// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+	Callback.BindUObject(this, &ASample_ChatUser::OnIsMemberOnResponse);
+	User->IsMemberOnAsync(ChannelID, Callback);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::OnIsMemberOnResponse(const FPubnubChatIsMemberOnResult& Result)
+{
+	if (Result.Result.Error) { return; }
+	bool bIsMemberOn = Result.IsMemberOn;
+}
+
 // snippet.user_set_restrictions
 
 // ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class

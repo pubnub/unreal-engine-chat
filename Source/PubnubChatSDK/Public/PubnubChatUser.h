@@ -248,6 +248,58 @@ public:
 	void GetMembershipsAsync(FOnPubnubChatMembershipsResponseNative OnMembershipsResponseNative, const int Limit = 0, const FString Filter = "", FPubnubMembershipSort Sort = FPubnubMembershipSort(), FPubnubPage Page = FPubnubPage());
 
 	/**
+	 * Retrieves this user's membership on a specific channel.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param ChannelID Unique identifier of the channel to query.
+	 * @return Operation result and membership object if found; Membership is nullptr if the user is not a member of that channel.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatMembershipResult GetMembership(const FString ChannelID);
+
+	/**
+	 * Retrieves this user's membership on a specific channel asynchronously.
+	 *
+	 * @param ChannelID Unique identifier of the channel to query.
+	 * @param OnMembershipResponse Callback executed when the operation completes. Returned Membership is nullptr if the user is not a member of that channel.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void GetMembershipAsync(const FString ChannelID, FOnPubnubChatMembershipResponse OnMembershipResponse);
+	/**
+	 * Retrieves this user's membership on a specific channel asynchronously.
+	 *
+	 * @param ChannelID Unique identifier of the channel to query.
+	 * @param OnMembershipResponseNative Native callback executed when the operation completes (accepts lambdas). Returned Membership is nullptr if the user is not a member of that channel.
+	 */
+	void GetMembershipAsync(const FString ChannelID, FOnPubnubChatMembershipResponseNative OnMembershipResponseNative);
+
+	/**
+	 * Checks whether this user is a member of a specific channel.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param ChannelID Unique identifier of the channel to check.
+	 * @return Operation result and a boolean indicating whether membership exists.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	FPubnubChatIsMemberOnResult IsMemberOn(const FString ChannelID);
+
+	/**
+	 * Checks asynchronously whether this user is a member of a specific channel.
+	 *
+	 * @param ChannelID Unique identifier of the channel to check.
+	 * @param OnIsMemberOnResponse Callback executed when the operation completes.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|User")
+	void IsMemberOnAsync(const FString ChannelID, FOnPubnubChatIsMemberOnResponse OnIsMemberOnResponse);
+	/**
+	 * Checks asynchronously whether this user is a member of a specific channel.
+	 *
+	 * @param ChannelID Unique identifier of the channel to check.
+	 * @param OnIsMemberOnResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 */
+	void IsMemberOnAsync(const FString ChannelID, FOnPubnubChatIsMemberOnResponseNative OnIsMemberOnResponseNative);
+
+	/**
 	 * Sets or lifts moderation restrictions (ban, mute) for this user on the given channel.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
 	 *
