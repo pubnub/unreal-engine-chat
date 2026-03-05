@@ -1,6 +1,9 @@
 // Copyright 2025 PubNub Inc. All Rights Reserved.
 
+
 #include "PubnubChatSubsystem.h"
+#include "PubnubChatVersion.h"
+
 #include "PubnubClient.h"
 #include "PubnubChat.h"
 #include "Engine/Engine.h"
