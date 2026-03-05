@@ -31,7 +31,7 @@ class PUBNUBCHATSDK_API UPubnubChatMessageDraft : public UObject
 public:
 	
 	/**
-	 * Broadcast when the draft content changes (after InsertText, RemoveText, AddMention, RemoveMention, Update, or InsertSuggestedMention).
+	 * Broadcast when the draft content changes (after InsertText, AppendText, RemoveText, AddMention, RemoveMention, Update, or InsertSuggestedMention).
 	 * @param MessageElements Current list of message elements (text and mentions) in the draft.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Pubnub Chat|Delegates")
@@ -70,15 +70,25 @@ public:
 	
 	/**
 	 * Inserts text at the given position in the draft. Fires OnMessageDraftUpdated (and suggestion delegates); may trigger typing indicator on the channel.
-	 * Local: edits the in-memory draft only. Fails if Position is negative, beyond the end of the draft, or inside an existing mention.
+	 * Local: edits the in-memory draft only. If Position is strictly inside an existing mention (between its start and end), that mention is removed (its text is preserved) and the new text is inserted; all other mentions are preserved and their Start positions are adjusted. Inserting at the start or end of a mention does not remove it (insert before/after behaviour).
 	 *
-	 * @param Position Index at which to insert (0-based). Must be within current draft bounds and not inside a mention.
+	 * @param Position Index at which to insert (0-based). Must be within current draft bounds. Only when strictly inside a mention is the mention converted to plain text; at mention boundaries the mention is preserved.
 	 * @param Text Text to insert. Must be non-empty.
 	 * @return Operation result. Success if the text was inserted.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
 	FPubnubChatOperationResult InsertText(int Position, const FString Text);
 	
+	/**
+	 * Appends text at the end of the draft. Equivalent to InsertText(GetCurrentText().Len(), Text). Fires OnMessageDraftUpdated; may trigger typing indicator.
+	 * Local: edits the in-memory draft only. Fails if Text is empty.
+	 *
+	 * @param Text Text to append. Must be non-empty.
+	 * @return Operation result. Success if the text was appended.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
+	FPubnubChatOperationResult AppendText(const FString Text);
+
 	/**
 	 * Removes Length characters starting at Position from the draft. Fires OnMessageDraftUpdated; may trigger typing indicator on the channel.
 	 * Local: edits the in-memory draft only. Fails if Position or range is invalid, or if the range overlaps an existing mention.

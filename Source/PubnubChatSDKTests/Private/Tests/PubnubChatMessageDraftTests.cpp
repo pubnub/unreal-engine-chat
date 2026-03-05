@@ -214,7 +214,7 @@ bool FPubnubChatMessageDraftInsertTextBeforeMentionTest::RunTest(const FString& 
 	MentionTarget.Target = TEXT("user123");
 	Draft->AddMention(5, 5, MentionTarget);
 	
-	// Insert text before mention
+	// Insert text before mention (at position 5 = start of mention "World"; mention is preserved)
 	FPubnubChatOperationResult Result = Draft->InsertText(5, TEXT(" "));
 	TestFalse("InsertText should succeed", Result.Error);
 	
@@ -325,35 +325,107 @@ bool FPubnubChatMessageDraftInsertTextIntoMentionTest::RunTest(const FString& Pa
 	MentionTarget.Target = TEXT("user123");
 	Draft->AddMention(0, 5, MentionTarget);
 	
-	// Try to insert text into the middle of mention (should fail)
+	// Insert text into the middle of mention: should succeed, mention is removed and text preserved with insert
 	FPubnubChatOperationResult Result = Draft->InsertText(2, TEXT("X"));
-	TestTrue("InsertText should fail when inserting into middle of mention", Result.Error);
+	TestFalse("InsertText should succeed when inserting into middle of mention (mention is removed)", Result.Error);
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be HeXllo (mention removed, insert applied)", CurrentText, TEXT("HeXllo"));
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have one element (former mention is now plain text)", Elements.Num(), 1);
+	TestEqual("Element should be plain text", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+	TestEqual("Element text should match", Elements[0].Text, TEXT("HeXllo"));
 	
-	// Try to insert text at start of mention (should succeed - creates new text element before mention)
+	// Reset for next check: replace draft with single mention "Hello"
+	Draft->Update(TEXT("Hello"));
+	Draft->AddMention(0, 5, MentionTarget);
+	
+	// Insert text at start of mention (position 0): position is at mention start, so "before" mention – mention is preserved, new text element before it
 	Result = Draft->InsertText(0, TEXT("X"));
 	TestFalse("InsertText should succeed when inserting at start of mention", Result.Error);
-	
-	FString CurrentText = Draft->GetCurrentText();
-	TestEqual("Text should be inserted before mention", CurrentText, TEXT("XHello"));
-	
-	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
-	TestEqual("Should have two elements", Elements.Num(), 2);
-	TestTrue("Elements should be properly structured", VerifyMessageElementsStructure(Elements, CurrentText));
-	
+	CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be XHello", CurrentText, TEXT("XHello"));
+	Elements = Draft->GetMessageElements();
+	TestEqual("Should have two elements (text + mention)", Elements.Num(), 2);
 	if (Elements.Num() == 2)
 	{
-		TestEqual("First element should be text", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
-		TestEqual("First element text should match", Elements[0].Text, TEXT("X"));
+		TestEqual("First element should be plain text", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+		TestEqual("First element text", Elements[0].Text, TEXT("X"));
 		TestEqual("Second element should be mention", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
-		TestEqual("Second element text should match", Elements[1].Text, TEXT("Hello"));
+		TestEqual("Second element text", Elements[1].Text, TEXT("Hello"));
 	}
 	
-	// Try to insert text at end of mention (should fail - position 5 is inside the mention, end is exclusive)
-	// Reset: remove the "X" we added
-	Draft->RemoveText(0, 1);
-	Result = Draft->InsertText(4, TEXT("X"));
-	TestTrue("InsertText should fail when inserting at end position of mention", Result.Error);
+	// Reset: replace draft with single mention "Hello"
+	Draft->Update(TEXT("Hello"));
+	Draft->AddMention(0, 5, MentionTarget);
 	
+	// Insert text at position 4 (strictly inside mention, before last char): mention removed
+	Result = Draft->InsertText(4, TEXT("X"));
+	TestFalse("InsertText should succeed when inserting at end position of mention", Result.Error);
+	CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be HellXo", CurrentText, TEXT("HellXo"));
+	Elements = Draft->GetMessageElements();
+	TestEqual("Should have one element", Elements.Num(), 1);
+	TestEqual("Element should be plain text", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftInsertTextIntoMentionPreservesOtherMentionsTest, "PubnubChat.Unit.MessageDraft.InsertText.IntoMentionPreservesOtherMentions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftInsertTextIntoMentionPreservesOtherMentionsTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+
+	if (!Draft)
+	{
+		return false;
+	}
+
+	// Setup: "Hi" (mention) + " " (text) + "Tom" (mention) -> "Hi Tom"
+	Draft->InsertText(0, TEXT("Hi"));
+	FPubnubChatMentionTarget UserTarget;
+	UserTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserTarget.Target = TEXT("user1");
+	Draft->AddMention(0, 2, UserTarget);
+
+	Draft->InsertText(2, TEXT(" "));
+
+	Draft->InsertText(3, TEXT("Tom"));
+	FPubnubChatMentionTarget TomTarget;
+	TomTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	TomTarget.Target = TEXT("user_tom");
+	Draft->AddMention(3, 3, TomTarget);
+
+	// Insert "aa" inside the first mention at position 1 -> "H" + "aa" + "i" = "Haai", first mention removed
+	// Second mention "Tom" must be preserved and its Start adjusted: was 3, insert length 2, so new Start = 5
+	FPubnubChatOperationResult Result = Draft->InsertText(1, TEXT("aa"));
+	TestFalse("InsertText should succeed", Result.Error);
+
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be Haai Tom", CurrentText, TEXT("Haai Tom"));
+
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have three elements: plain Haai, space, mention Tom", Elements.Num(), 3);
+	if (Elements.Num() >= 3)
+	{
+		TestEqual("First element should be plain text (former mention)", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+		TestEqual("First element text", Elements[0].Text, TEXT("Haai"));
+		TestEqual("First element Start", Elements[0].Start, 0);
+
+		TestEqual("Second element should be plain text", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+		TestEqual("Second element text", Elements[1].Text, TEXT(" "));
+		TestEqual("Second element Start adjusted", Elements[1].Start, 4);
+
+		TestEqual("Third element should still be mention", Elements[2].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Third element target preserved", Elements[2].MentionTarget.Target, TEXT("user_tom"));
+		TestEqual("Third element text", Elements[2].Text, TEXT("Tom"));
+		TestEqual("Third element Start adjusted by insert length", Elements[2].Start, 5);
+	}
+
 	return true;
 }
 
@@ -380,19 +452,17 @@ bool FPubnubChatMessageDraftInsertTextBeforeMentionWithPreviousTextTest::RunTest
 	Draft->AddMention(0, 5, MentionTarget); // Mention "Hello"
 	Draft->InsertText(5, TEXT(" World")); // Text after mention
 	
-	// Now insert text at start of mention (position 0)
-	// This should add text to the previous element if it exists, or create new one
-	// In this case, there's no previous element, so it should create a new text element
+	// Insert text at start of mention (position 0). Position 0 is at the start of the mention, so this is "before" the mention: add text before it (mention preserved).
 	FPubnubChatOperationResult Result = Draft->InsertText(0, TEXT("Hi "));
 	TestFalse("InsertText should succeed when inserting at start of mention", Result.Error);
 	
 	FString CurrentText = Draft->GetCurrentText();
-	TestEqual("Text should be inserted before mention", CurrentText, TEXT("Hi Hello World"));
+	TestEqual("Text should be Hi Hello World", CurrentText, TEXT("Hi Hello World"));
 	
 	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
 	TestTrue("Elements should be properly structured", VerifyMessageElementsStructure(Elements, CurrentText));
 	
-	// Verify structure: text element, mention, text element
+	// Verify structure: text element, mention, text element (mention preserved when inserting at its start)
 	TestEqual("Should have three elements", Elements.Num(), 3);
 	if (Elements.Num() == 3)
 	{
@@ -404,6 +474,124 @@ bool FPubnubChatMessageDraftInsertTextBeforeMentionWithPreviousTextTest::RunTest
 		TestEqual("Third element text should match", Elements[2].Text, TEXT(" World"));
 	}
 	
+	return true;
+}
+
+// ============================================================================
+// APPEND TEXT TESTS
+// ============================================================================
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftAppendTextEmptyTest, "PubnubChat.Unit.MessageDraft.AppendText.Empty", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftAppendTextEmptyTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+
+	if (!Draft)
+	{
+		return false;
+	}
+
+	// Append to empty draft
+	FPubnubChatOperationResult Result = Draft->AppendText(TEXT("Hello"));
+	TestFalse("AppendText should succeed on empty draft", Result.Error);
+
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be appended", CurrentText, TEXT("Hello"));
+
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestEqual("Should have one element", Elements.Num(), 1);
+	if (Elements.Num() == 1)
+	{
+		TestEqual("Element should be plain text", Elements[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+		TestEqual("Element text", Elements[0].Text, TEXT("Hello"));
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftAppendTextWithTextTest, "PubnubChat.Unit.MessageDraft.AppendText.WithText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftAppendTextWithTextTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+
+	if (!Draft)
+	{
+		return false;
+	}
+
+	// Setup: draft with plain text
+	Draft->InsertText(0, TEXT("Hello"));
+
+	// Append text at end
+	FPubnubChatOperationResult Result = Draft->AppendText(TEXT(" World"));
+	TestFalse("AppendText should succeed", Result.Error);
+
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be Hello World", CurrentText, TEXT("Hello World"));
+
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestTrue("Elements should be properly structured", VerifyMessageElementsStructure(Elements, CurrentText));
+	TestEqual("Should have one element (appended to last text)", Elements.Num(), 1);
+	if (Elements.Num() == 1)
+	{
+		TestEqual("Element text", Elements[0].Text, TEXT("Hello World"));
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftAppendTextWithMentionAtEndTest, "PubnubChat.Unit.MessageDraft.AppendText.WithMentionAtEnd", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatMessageDraftAppendTextWithMentionAtEndTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+
+	if (!Draft)
+	{
+		return false;
+	}
+
+	// Setup: text + mention at end ("Hi " + mention "Tom")
+	Draft->InsertText(0, TEXT("Hi "));
+	Draft->InsertText(3, TEXT("Tom"));
+	FPubnubChatMentionTarget MentionTarget;
+	MentionTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	MentionTarget.Target = TEXT("user_tom");
+	Draft->AddMention(3, 3, MentionTarget);
+
+	// Append after the mention
+	FPubnubChatOperationResult Result = Draft->AppendText(TEXT("!"));
+	TestFalse("AppendText should succeed when mention is at end", Result.Error);
+
+	FString CurrentText = Draft->GetCurrentText();
+	TestEqual("Text should be Hi Tom!", CurrentText, TEXT("Hi Tom!"));
+
+	TArray<FPubnubChatMessageElement> Elements = Draft->GetMessageElements();
+	TestTrue("Elements should be properly structured", VerifyMessageElementsStructure(Elements, CurrentText));
+	TestEqual("Should have three elements (text, mention, appended text)", Elements.Num(), 3);
+	if (Elements.Num() == 3)
+	{
+		TestEqual("First element text", Elements[0].Text, TEXT("Hi "));
+		TestEqual("Second element should be mention", Elements[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Second element text", Elements[1].Text, TEXT("Tom"));
+		TestEqual("Third element should be appended text", Elements[2].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+		TestEqual("Third element text", Elements[2].Text, TEXT("!"));
+	}
+
 	return true;
 }
 

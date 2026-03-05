@@ -49,8 +49,28 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::InsertText(int Position, con
 	//Check if position is not above the last element as we shouldn't have gaps between elements
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((Position <= MessageElements.Last().Start + MessageElements.Last().Length), TEXT("Position is too big - above all MessageElements"));
 	
-	//Check if insert text would affect any MentionTarget elements
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!IsPositionWithinMentionTarget(Position, 0), TEXT("Cannot insert text into the middle of a MentionTarget"));
+	// If insert position is strictly inside a mention (not at its start or end): convert that mention to plain text, insert the new text, and shift later elements.
+	// Inserting at the start or end of a mention keeps the mention and uses the existing "insert before/after" logic below.
+	for (int32 i = 0; i < MessageElements.Num(); ++i)
+	{
+		FPubnubChatMessageElement& Element = MessageElements[i];
+		if (Element.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_None)
+		{
+			continue;
+		}
+		int32 ElementStart = Element.Start;
+		int32 ElementEnd = ElementStart + Element.Length;
+		if (Position > ElementStart && Position < ElementEnd)
+		{
+			int32 PositionInElement = Position - ElementStart;
+			Element.MentionTarget = FPubnubChatMentionTarget();
+			Element.InsertText(PositionInElement, Text);
+			MoveMessageElementsAfterPosition(ElementEnd, Text.Len(), true);
+			TriggerTypingIndicator();
+			FireMessageDraftChangedDelegate();
+			return FinalResult;
+		}
+	}
 	
 	TriggerTypingIndicator();
 	
@@ -125,6 +145,11 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::InsertText(int Position, con
 	MessageElements.Add(NewElement);
 	FireMessageDraftChangedDelegate();
 	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatMessageDraft::AppendText(const FString Text)
+{
+	return InsertText(GetCurrentText().Len(), Text);
 }
 
 FPubnubChatOperationResult UPubnubChatMessageDraft::RemoveText(int Position, int Length)
