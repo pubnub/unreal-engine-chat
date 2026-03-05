@@ -133,7 +133,6 @@ UPubnubClient* UPubnubChatSubsystem::CreatePubnubClient(FString PublishKey, FStr
 	ClientConfig.PublishKey = PublishKey;
 	ClientConfig.SubscribeKey = SubscribeKey;
 	ClientConfig.UserID = UserID;
-	ClientConfig.LoggerConfig.DefaultLoggerMinLevel = EPubnubLogLevel::PLL_Trace;
 	
 	UPubnubClient* PubnubClient = PubnubSubsystem->CreatePubnubClient(ClientConfig);
 
@@ -144,6 +143,11 @@ UPubnubClient* UPubnubChatSubsystem::CreatePubnubClient(FString PublishKey, FStr
 	}
 
 	return PubnubClient;
+}
+
+FPubnubChatConfig UPubnubChatSubsystem::GetDefaultChatConfig()
+{
+	return FPubnubChatConfig();
 }
 
 

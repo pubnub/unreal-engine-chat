@@ -52,7 +52,16 @@ struct FPubnubChatConfig
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") int StoreUserActivityInterval = 600000;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") bool StoreUserActivityTimestamps = false;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") FPubnubChatRateLimiterConfig RateLimiter;
-	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PubnubChat|Config") TMap<FString, bool> EmitReadReceiptEvents;
+
+	/** Default: public=false, group=true, direct=true for read receipt events. */
+	FPubnubChatConfig()
+	{
+		EmitReadReceiptEvents.Add(TEXT("public"), false);
+		EmitReadReceiptEvents.Add(TEXT("group"), true);
+		EmitReadReceiptEvents.Add(TEXT("direct"), true);
+	}
+
 	void ValidateConfig();
 };
 

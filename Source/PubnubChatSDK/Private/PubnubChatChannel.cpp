@@ -945,6 +945,61 @@ void UPubnubChatChannel::GetInviteesAsync(FOnPubnubChatMembershipsResponseNative
 	});
 }
 
+FPubnubChatFetchReadReceiptsResult UPubnubChatChannel::FetchReadReceipts(const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	FPubnubChatFetchReadReceiptsResult FinalResult;
+	PUBNUB_CHAT_OBJECT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+
+	FPubnubChatMembershipsResult GetMembersResult = GetMembers(Limit, Filter, Sort, Page);
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembersResult.Result);
+
+	// Map each membership to a read receipt: UserID and LastReadMessageTimetoken.
+	for (UPubnubChatMembership* Membership : GetMembersResult.Memberships)
+	{
+		if (!IsValid(Membership))
+		{
+			continue;
+		}
+
+		FPubnubChatReadReceipt ReadReceipt;
+		ReadReceipt.UserID = Membership->GetUserID();
+		ReadReceipt.LastReadTimetoken = Membership->GetLastReadMessageTimetoken();
+		FinalResult.ReadReceipts.Add(ReadReceipt);
+	}
+
+	// Preserve pagination and total count from the members result.
+	FinalResult.Page = GetMembersResult.Page;
+	FinalResult.Total = GetMembersResult.Total;
+	return FinalResult;
+}
+
+void UPubnubChatChannel::FetchReadReceiptsAsync(FOnPubnubChatFetchReadReceiptsResponse OnFetchReadReceiptsResponse, const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	FOnPubnubChatFetchReadReceiptsResponseNative NativeCallback;
+	NativeCallback.BindLambda([OnFetchReadReceiptsResponse](const FPubnubChatFetchReadReceiptsResult& FetchReadReceiptsResult)
+	{
+		OnFetchReadReceiptsResponse.ExecuteIfBound(FetchReadReceiptsResult);
+	});
+
+	FetchReadReceiptsAsync(NativeCallback, Limit, Filter, Sort, Page);
+}
+
+void UPubnubChatChannel::FetchReadReceiptsAsync(FOnPubnubChatFetchReadReceiptsResponseNative OnFetchReadReceiptsResponseNative, const int Limit, const FString Filter, FPubnubMemberSort Sort, FPubnubPage Page)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_WITH_DELEGATE_IF_NOT_INITIALIZED_WRAPPER(OnFetchReadReceiptsResponseNative, FPubnubChatFetchReadReceiptsResult());
+
+	TWeakObjectPtr<UPubnubChatChannel> WeakThis = MakeWeakObjectPtr(this);
+
+	Chat->AsyncFunctionsThread->AddFunctionToQueue([WeakThis, Limit, Filter, Sort = MoveTemp(Sort), Page = MoveTemp(Page), OnFetchReadReceiptsResponseNative]
+	{
+		if (!WeakThis.IsValid())
+		{ return; }
+
+		FPubnubChatFetchReadReceiptsResult FetchReadReceiptsResult = WeakThis.Get()->FetchReadReceipts(Limit, Filter, Sort, Page);
+		UPubnubUtilities::CallPubnubDelegate(OnFetchReadReceiptsResponseNative, FetchReadReceiptsResult);
+	});
+}
+
 FPubnubChatOperationResult UPubnubChatChannel::SetRestrictions(const FString UserID, bool Ban, bool Mute, FString Reason)
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
@@ -1860,8 +1915,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamReadReceipts()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	FPubnubChatOperationResult FinalResult;
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((GetChannelData().Type != "public"), TEXT("Read receipts are not supported on public channels"));
-
+	
 	//Skip if it's already streaming
 	if (IsStreamingReadReceipts)
 	{ return FinalResult; }

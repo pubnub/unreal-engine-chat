@@ -1253,9 +1253,9 @@ FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const 
 		UPubnubChatMembership* NewMembership = CreateMembershipObject(GetCurrentUser(), Channel, MembershipData);
 		FinalResult.Memberships.Add(NewMembership);
 		
-		//Don't send events on public channels
-		if (Channel->GetChannelData().Type == "public")
-		{ continue;}
+		//Skip sending Receipt event if it's not specified for this channel type
+		if (!UPubnubChatInternalUtilities::CanEmitReceiptEvent(Channel->GetChannelData().Type, ChatConfig))
+		{ continue; }
 		
 		//Emit Receipt event - we check for error, but not stop execution in case of occuring one, just combine ErrorMessage for all events result
 		FPubnubChatOperationResult EmitResult = EmitChatEvent(EPubnubChatEventType::PCET_Receipt, Channel->GetChannelID(), UPubnubChatInternalUtilities::GetReceiptEventPayload(CurrentTimetoken));

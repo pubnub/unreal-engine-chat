@@ -75,6 +75,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
 	void DestroyAllChats();
 
+	/**
+	 * Returns a default chat config with all default values filled (e.g. EmitReadReceiptEvents: public=false, group=true, direct=true).
+	 * Use this in Blueprint instead of "Make FPubnubChatConfig" when you want the standard defaults; "Make Struct" does not run C++ constructors, so the map would otherwise be empty.
+	 *
+	 * @return Default FPubnubChatConfig with EmitReadReceiptEvents and other defaults set.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "PubnubChat")
+	static FPubnubChatConfig GetDefaultChatConfig();
+
 private:
 	UPROPERTY()
 	TMap<FString, UPubnubChat*> Chats;

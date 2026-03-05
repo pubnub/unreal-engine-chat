@@ -4809,5 +4809,484 @@ bool FPubnubChatChannelHasMemberAfterMembershipDeleteTest::RunTest(const FString
 	return true;
 }
 
+// ============================================================================
+// FETCHREADRECEIPTS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelFetchReadReceiptsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.FetchReadReceipts.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelFetchReadReceiptsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_fetch_read_receipts_not_init";
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		FPubnubChatFetchReadReceiptsResult Result = UninitializedChannel->FetchReadReceipts();
+		TestTrue("FetchReadReceipts should fail with uninitialized channel", Result.Result.Error);
+		TestFalse("Result.ErrorMessage should not be empty", Result.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelFetchReadReceiptsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.FetchReadReceipts.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelFetchReadReceiptsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_fetch_read_receipts_happy_init";
+	const FString SecondUserID = SDK_PREFIX + "test_fetch_read_receipts_happy_other";
+	const FString TestChannelID = SDK_PREFIX + "test_fetch_read_receipts_happy";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(SecondUserID, FPubnubChatUserData());
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID, ChannelData, FPubnubChatMembershipData());
+	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	TestNotNull("HostMembership should be created", CreateResult.HostMembership);
+	if(!CreateResult.Channel || !CreateResult.HostMembership)
+	{
+		Chat->DeleteUser(SecondUserID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	const FString TestTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	FPubnubChatOperationResult SetLRMTResult = CreateResult.HostMembership->SetLastReadMessageTimetoken(TestTimetoken);
+	TestFalse("SetLastReadMessageTimetoken should succeed", SetLRMTResult.Error);
+
+	FPubnubChatFetchReadReceiptsResult FetchResult = CreateResult.Channel->FetchReadReceipts();
+	TestFalse("FetchReadReceipts should succeed", FetchResult.Result.Error);
+	TestTrue("ReadReceipts should contain at least one entry (host member)", FetchResult.ReadReceipts.Num() >= 1);
+	TestTrue("Total should be >= 1", FetchResult.Total >= 1);
+
+	bool bFoundInitUserReceipt = false;
+	for(const FPubnubChatReadReceipt& Receipt : FetchResult.ReadReceipts)
+	{
+		if(Receipt.UserID == InitUserID)
+		{
+			bFoundInitUserReceipt = true;
+			TestTrue("Host member LastReadTimetoken should match set value", Receipt.LastReadTimetoken.Contains(TestTimetoken) || Receipt.LastReadTimetoken == TestTimetoken);
+			break;
+		}
+	}
+	TestTrue("ReadReceipts should contain entry for InitUserID", bFoundInitUserReceipt);
+
+	if(CreateResult.HostMembership) { CreateResult.HostMembership->Delete(); }
+	if(CreateResult.InviteeMembership) { CreateResult.InviteeMembership->Delete(); }
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(SecondUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelFetchReadReceiptsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.FetchReadReceipts.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelFetchReadReceiptsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_fetch_read_receipts_full_init";
+	const FString SecondUserID = SDK_PREFIX + "test_fetch_read_receipts_full_other";
+	const FString TestChannelID = SDK_PREFIX + "test_fetch_read_receipts_full";
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(SecondUserID, FPubnubChatUserData());
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel)
+	{
+		Chat->DeleteUser(SecondUserID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	const int TestLimit = 10;
+	FString TestFilter = UPubnubChatInternalUtilities::GetFilterForUserID(InitUserID);
+	FPubnubMemberSort TestSort;
+	FPubnubMemberSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMemberSortType::PMeST_UserID;
+	SingleSort.SortOrder = false;
+	TestSort.MemberSort.Add(SingleSort);
+	FPubnubPage TestPage;
+
+	FPubnubChatFetchReadReceiptsResult FetchResult = CreateResult.Channel->FetchReadReceipts(TestLimit, TestFilter, TestSort, TestPage);
+	TestFalse("FetchReadReceipts with all parameters should succeed", FetchResult.Result.Error);
+	TestTrue("ReadReceipts count should match filter (at least init user)", FetchResult.ReadReceipts.Num() >= 1);
+	TestTrue("Total should be non-negative", FetchResult.Total >= 0);
+
+	if(CreateResult.HostMembership) { CreateResult.HostMembership->Delete(); }
+	if(CreateResult.InviteeMembership) { CreateResult.InviteeMembership->Delete(); }
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(SecondUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// STREAMREADRECEIPTS TESTS
+// ============================================================================
+// VALIDATION
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelStreamReadReceiptsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StreamReadReceipts.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelStreamReadReceiptsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_read_receipts_not_init";
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		FPubnubChatOperationResult Result = UninitializedChannel->StreamReadReceipts();
+		TestTrue("StreamReadReceipts should fail with uninitialized channel", Result.Error);
+		TestFalse("ErrorMessage should not be empty", Result.ErrorMessage.IsEmpty());
+	}
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// HAPPY PATH
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelStreamReadReceiptsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StreamReadReceipts.2HappyPath.DirectChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelStreamReadReceiptsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stream_read_receipts_happy_init";
+	const FString SecondUserID = SDK_PREFIX + "test_stream_read_receipts_happy_other";
+	const FString TestChannelID = SDK_PREFIX + "test_stream_read_receipts_happy";
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat) { AddError("Chat should be initialized"); CleanUp(); return false; }
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(SecondUserID, FPubnubChatUserData());
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User) { CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	TestNotNull("HostMembership should be created", CreateResult.HostMembership);
+	if(!CreateResult.Channel || !CreateResult.HostMembership) { Chat->DeleteUser(SecondUserID); CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamReadReceipts();
+	TestFalse("StreamReadReceipts should succeed on direct channel", StreamResult.Error);
+	FPubnubChatOperationResult StopResult = CreateResult.Channel->StopStreamingReadReceipts();
+	TestFalse("StopStreamingReadReceipts should succeed", StopResult.Error);
+	if(CreateResult.HostMembership) { CreateResult.HostMembership->Delete(); }
+	if(CreateResult.InviteeMembership) { CreateResult.InviteeMembership->Delete(); }
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(SecondUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// STOPSTREAMINGREADRECEIPTS TESTS
+// ============================================================================
+// VALIDATION
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelStopStreamingReadReceiptsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StopStreamingReadReceipts.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelStopStreamingReadReceiptsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_stream_read_receipts_not_init";
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, FPubnubChatConfig());
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		UPubnubChatChannel* UninitializedChannel = NewObject<UPubnubChatChannel>(Chat);
+		FPubnubChatOperationResult Result = UninitializedChannel->StopStreamingReadReceipts();
+		TestTrue("StopStreamingReadReceipts should fail with uninitialized channel", Result.Error);
+		TestFalse("ErrorMessage should not be empty", Result.ErrorMessage.IsEmpty());
+	}
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// HAPPY PATH
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelStopStreamingReadReceiptsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StopStreamingReadReceipts.2HappyPath.AfterStream", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelStopStreamingReadReceiptsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_stream_read_receipts_happy_init";
+	const FString SecondUserID = SDK_PREFIX + "test_stop_stream_read_receipts_happy_other";
+	const FString TestChannelID = SDK_PREFIX + "test_stop_stream_read_receipts_happy";
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat) { AddError("Chat should be initialized"); CleanUp(); return false; }
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(SecondUserID, FPubnubChatUserData());
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User) { CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel) { Chat->DeleteUser(SecondUserID); CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamReadReceipts();
+	TestFalse("StreamReadReceipts should succeed", StreamResult.Error);
+	FPubnubChatOperationResult StopResult = CreateResult.Channel->StopStreamingReadReceipts();
+	TestFalse("StopStreamingReadReceipts should succeed after streaming", StopResult.Error);
+	if(CreateResult.HostMembership) { CreateResult.HostMembership->Delete(); }
+	if(CreateResult.InviteeMembership) { CreateResult.InviteeMembership->Delete(); }
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(SecondUserID);
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ADVANCED: Stop when not streaming is no-op success
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelStopStreamingReadReceiptsWhenNotStreamingTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StopStreamingReadReceipts.3Advanced.WhenNotStreaming", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelStopStreamingReadReceiptsWhenNotStreamingTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_stop_read_receipts_no_stream_init";
+	const FString SecondUserID = SDK_PREFIX + "test_stop_read_receipts_no_stream_other";
+	const FString TestChannelID = SDK_PREFIX + "test_stop_read_receipts_no_stream";
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat) { AddError("Chat should be initialized"); CleanUp(); return false; }
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(SecondUserID, FPubnubChatUserData());
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User) { CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatCreateDirectConversationResult CreateResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	TestFalse("CreateDirectConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel) { Chat->DeleteUser(SecondUserID); CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatOperationResult StopResult = CreateResult.Channel->StopStreamingReadReceipts();
+	TestFalse("StopStreamingReadReceipts when not streaming should succeed (no-op)", StopResult.Error);
+	if(CreateResult.HostMembership) { CreateResult.HostMembership->Delete(); }
+	if(CreateResult.InviteeMembership) { CreateResult.InviteeMembership->Delete(); }
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED: Default config – Receipt event not emitted for public channel
+// ============================================================================
+/**
+ * With default config (EmitReadReceiptEvents: public=false), setting last read on a public channel
+ * should NOT emit a Receipt event; listener should not receive one.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelReadReceiptDefaultConfigPublicNoEmitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StreamReadReceipts.4Advanced.DefaultConfigPublicNoEmit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelReadReceiptDefaultConfigPublicNoEmitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_read_receipt_public_no_emit_init";
+	const FString TestChannelID = SDK_PREFIX + "test_read_receipt_public_no_emit";
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat) { AddError("Chat should be initialized"); CleanUp(); return false; }
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel) { CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join();
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	TestNotNull("Membership should be created", JoinResult.Membership);
+	if(!JoinResult.Membership) { Chat->DeleteChannel(TestChannelID); CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	TSharedPtr<bool> bReceiptReceived = MakeShared<bool>(false);
+	CreateResult.Channel->OnReadReceiptReceivedNative.AddLambda([bReceiptReceived](const FPubnubChatReadReceipt&) { *bReceiptReceived = true; });
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamReadReceipts();
+	TestFalse("StreamReadReceipts should succeed", StreamResult.Error);
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, JoinResult]()
+	{
+		const FString TestTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatOperationResult SetResult = JoinResult.Membership->SetLastReadMessageTimetoken(TestTimetoken);
+		TestFalse("SetLastReadMessageTimetoken should succeed", SetResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bReceiptReceived]()
+	{
+		TestFalse("With default config, Receipt event should NOT be received for public channel", *bReceiptReceived);
+	}, 1.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, JoinResult, Chat, TestChannelID, InitUserID]()
+	{
+		CreateResult.Channel->StopStreamingReadReceipts();
+		if(JoinResult.Membership) { JoinResult.Membership->Delete(); }
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(InitUserID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	return true;
+}
+
+// ============================================================================
+// ADVANCED: Config public=true – Receipt event emitted for public channel
+// ============================================================================
+/**
+ * With config EmitReadReceiptEvents["public"]=true, setting last read on a public channel
+ * should emit a Receipt event; listener should receive it.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelReadReceiptConfigPublicEmitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.StreamReadReceipts.4Advanced.ConfigPublicEmit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatChannelReadReceiptConfigPublicEmitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest()) { AddError("TestInitialization failed"); return false; }
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_read_receipt_public_emit_init";
+	const FString TestChannelID = SDK_PREFIX + "test_read_receipt_public_emit";
+	FPubnubChatConfig ChatConfig;
+	ChatConfig.EmitReadReceiptEvents.Add(TEXT("public"), true);
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat) { AddError("Chat should be initialized"); CleanUp(); return false; }
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel) { CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join();
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	TestNotNull("Membership should be created", JoinResult.Membership);
+	if(!JoinResult.Membership) { Chat->DeleteChannel(TestChannelID); CleanUpCurrentChatUser(Chat); CleanUp(); return false; }
+	TSharedPtr<bool> bReceiptReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatReadReceipt> ReceivedReceipt = MakeShared<FPubnubChatReadReceipt>();
+	const FString TestTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	CreateResult.Channel->OnReadReceiptReceivedNative.AddLambda([bReceiptReceived, ReceivedReceipt](const FPubnubChatReadReceipt& R) { *bReceiptReceived = true; *ReceivedReceipt = R; });
+	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamReadReceipts();
+	TestFalse("StreamReadReceipts should succeed", StreamResult.Error);
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, JoinResult, TestTimetoken]()
+	{
+		FPubnubChatOperationResult SetResult = JoinResult.Membership->SetLastReadMessageTimetoken(TestTimetoken);
+		TestFalse("SetLastReadMessageTimetoken should succeed", SetResult.Error);
+	}, 0.5f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bReceiptReceived]() { return *bReceiptReceived; }, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bReceiptReceived, ReceivedReceipt, TestTimetoken, InitUserID]()
+	{
+		if(!*bReceiptReceived) { AddError("With EmitReadReceiptEvents public=true, Receipt event should be received for public channel"); }
+		else
+		{
+			TestEqual("Received receipt UserID should match", ReceivedReceipt->UserID, InitUserID);
+			TestTrue("Received receipt should contain timetoken", ReceivedReceipt->LastReadTimetoken.Contains(TestTimetoken) || ReceivedReceipt->LastReadTimetoken == TestTimetoken);
+		}
+	}, 0.1f));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, JoinResult, Chat, TestChannelID, InitUserID]()
+	{
+		CreateResult.Channel->StopStreamingReadReceipts();
+		if(JoinResult.Membership) { JoinResult.Membership->Delete(); }
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(InitUserID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 

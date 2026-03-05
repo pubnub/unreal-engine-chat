@@ -454,6 +454,16 @@ void UPubnubChatInternalUtilities::UpdateUserIDByPresenceEvent(TArray<FString>& 
 	}
 }
 
+bool UPubnubChatInternalUtilities::CanEmitReceiptEvent(const FString& ChannelType, const FPubnubChatConfig& CurrentConfig)
+{
+	if (const bool* CanEmitPtr = CurrentConfig.EmitReadReceiptEvents.Find(ChannelType))
+	{
+		return *CanEmitPtr;
+	}
+	
+	return false;
+}
+
 FString UPubnubChatInternalUtilities::GetLastReadMessageTimetokenPropertyKey()
 {
 	return Pubnub_Chat_LRMT_Property_Name;

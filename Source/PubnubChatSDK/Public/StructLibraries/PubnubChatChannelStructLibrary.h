@@ -228,25 +228,33 @@ struct FPubnubChatGetThreadHistoryResult
 };
 
 USTRUCT(BlueprintType)
-struct FPubnubChatUserIDsArray
-{
-	GENERATED_BODY()
-	
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	TArray<FString> UserIDs;
-	
-};
-
-USTRUCT(BlueprintType)
 struct FPubnubChatReadReceipt
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FString UserID = "";
+	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FString LastReadTimetoken = "";
+};
+
+USTRUCT(BlueprintType)
+struct FPubnubChatFetchReadReceiptsResult
+{
+	GENERATED_BODY()
 	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubChatOperationResult Result;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	TArray<FPubnubChatReadReceipt> ReadReceipts;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FPubnubPage Page;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	int Total = 0;
 };
 
 USTRUCT(BlueprintType)

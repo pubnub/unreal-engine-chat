@@ -659,7 +659,42 @@ public:
 	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
 	 */
 	void GetInviteesAsync(FOnPubnubChatMembershipsResponseNative OnMembershipsResponseNative, const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+	
+	/**
+	 * Fetches read receipts for this channel: for each member, returns UserID and last-read message timetoken.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 *
+	 * @param Limit Maximum number of members (and thus read receipts) to return. Pass 0 to use the server default.
+	 * @param Filter Expression used to filter members. Check online documentation for filter formulas.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 * @return Operation result, list of read receipts (UserID + LastReadTimetoken), pagination data, and total count.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel")
+	FPubnubChatFetchReadReceiptsResult FetchReadReceipts(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
 
+	/**
+	 * Fetches read receipts for this channel asynchronously (UserID and last-read timetoken per member).
+	 *
+	 * @param OnFetchReadReceiptsResponse Callback executed when the operation completes.
+	 * @param Limit Maximum number of members to return. Pass 0 to use the server default.
+	 * @param Filter Expression used to filter members. Check online documentation for filter formulas.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnFetchReadReceiptsResponse"))
+	void FetchReadReceiptsAsync(FOnPubnubChatFetchReadReceiptsResponse OnFetchReadReceiptsResponse, const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+	/**
+	 * Fetches read receipts for this channel asynchronously (UserID and last-read timetoken per member).
+	 *
+	 * @param OnFetchReadReceiptsResponseNative Native callback executed when the operation completes (accepts lambdas).
+	 * @param Limit Maximum number of members to return. Pass 0 to use the server default.
+	 * @param Filter Expression used to filter members. Check online documentation for filter formulas.
+	 * @param Sort Key-value pair of a property to sort by and sort direction.
+	 * @param Page Pagination information. Use Page.Next or Page.Prev for next/previous page; Next takes precedence if both set.
+	 */
+	void FetchReadReceiptsAsync(FOnPubnubChatFetchReadReceiptsResponseNative OnFetchReadReceiptsResponseNative, const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
+	
 	/**
 	 * Sets or lifts moderation restrictions (ban, mute) for a user on this channel.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.

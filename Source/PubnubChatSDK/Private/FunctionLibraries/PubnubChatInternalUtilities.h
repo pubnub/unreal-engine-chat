@@ -69,6 +69,7 @@ public:
 	static FString GetTypingEventPayload(const bool IsTyping);
 	static bool GetIsTypingFromEventPayload(const FString& EventPayload);
 	static void UpdateUserIDByPresenceEvent(TArray<FString>& UserIDs, const FString& EventContent);
+	static bool CanEmitReceiptEvent(const FString& ChannelType, const FPubnubChatConfig& CurrentConfig);
 	
 	/* MEMBERSHIP */
 	

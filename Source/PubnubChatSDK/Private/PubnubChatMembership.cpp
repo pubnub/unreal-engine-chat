@@ -171,8 +171,8 @@ FPubnubChatOperationResult UPubnubChatMembership::SetLastReadMessageTimetoken(co
 	FPubnubChatOperationResult UpdateResult = Update(FPubnubChatUpdateMembershipInputData::FromChatMembershipData(MembershipData));
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, UpdateResult);
 
-	//If this is not public channel Emit Receipt Event
-	if(Channel->GetChannelData().Type != "public")
+	//Send Receipt event if it specified for this channel type in config
+	if (UPubnubChatInternalUtilities::CanEmitReceiptEvent(Channel->GetChannelData().Type, Chat->ChatConfig))
 	{
 		//Check if event can be emitted with provided AccessToken
 		bool CanIEmit = Chat->AccessManager->CanI(EPubnubChatAccessManagerPermission::PCAMP_Write, EPubnubChatAccessManagerResourceType::PCAMRT_Channels, GetChannelID());
