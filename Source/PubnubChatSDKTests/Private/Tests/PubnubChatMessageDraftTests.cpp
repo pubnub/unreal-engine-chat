@@ -3,6 +3,7 @@
 #include "PubnubChatMessageDraft.h"
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "FunctionLibraries/PubnubChatMessageDraftUtilities.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/UObjectGlobals.h"
@@ -592,6 +593,352 @@ bool FPubnubChatMessageDraftAppendTextWithMentionAtEndTest::RunTest(const FStrin
 		TestEqual("Third element text", Elements[2].Text, TEXT("!"));
 	}
 
+	return true;
+}
+
+// Helper: compare parsed elements to draft elements (Text, MentionTarget type/target, Start, Length)
+static bool MessageElementsEqual(const TArray<FPubnubChatMessageElement>& Expected, const TArray<FPubnubChatMessageElement>& Actual)
+{
+	if (Expected.Num() != Actual.Num()) return false;
+	for (int32 i = 0; i < Expected.Num(); ++i)
+	{
+		if (Expected[i].Text != Actual[i].Text) return false;
+		if (Expected[i].Start != Actual[i].Start) return false;
+		if (Expected[i].Length != Actual[i].Length) return false;
+		if (Expected[i].MentionTarget.MentionTargetType != Actual[i].MentionTarget.MentionTargetType) return false;
+		if (Expected[i].MentionTarget.Target != Actual[i].MentionTarget.Target) return false;
+	}
+	return true;
+}
+
+/** Compare message elements by content only (Text, MentionTarget). Ignores Start/Length and filters out empty elements so draft vs received round-trip can match. */
+static bool MessageElementsContentEqual(const TArray<FPubnubChatMessageElement>& Expected, const TArray<FPubnubChatMessageElement>& Actual)
+{
+	TArray<FPubnubChatMessageElement> E, A;
+	for (const FPubnubChatMessageElement& El : Expected) { if (El.Text.Len() > 0 || El.MentionTarget.MentionTargetType != EPubnubChatMentionTargetType::PCMTT_None) E.Add(El); }
+	for (const FPubnubChatMessageElement& El : Actual)   { if (El.Text.Len() > 0 || El.MentionTarget.MentionTargetType != EPubnubChatMentionTargetType::PCMTT_None) A.Add(El); }
+	if (E.Num() != A.Num()) return false;
+	for (int32 i = 0; i < E.Num(); ++i)
+	{
+		if (E[i].Text != A[i].Text) return false;
+		if (E[i].MentionTarget.MentionTargetType != A[i].MentionTarget.MentionTargetType) return false;
+		if (E[i].MentionTarget.Target != A[i].MentionTarget.Target) return false;
+	}
+	return true;
+}
+
+// ============================================================================
+// PARSE MESSAGE MARKDOWN TESTS (round-trip: draft -> GetTextToSend -> Parse -> compare to draft elements)
+// ============================================================================
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownPlainTextOnlyTest, "PubnubChat.Unit.ParseMessageMarkdown.PlainTextOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownPlainTextOnlyTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("Hello World"));
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestEqual("Markdown should be plain text", Markdown, TEXT("Hello World"));
+	TestTrue("Parsed elements should match draft", MessageElementsEqual(Expected, Parsed));
+	TestEqual("One element", Parsed.Num(), 1);
+	if (Parsed.Num() == 1)
+	{
+		TestEqual("Text", Parsed[0].Text, TEXT("Hello World"));
+		TestEqual("No mention", Parsed[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_None);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownEmptyTest, "PubnubChat.Unit.ParseMessageMarkdown.Empty", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownEmptyTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(TEXT(""));
+	TestEqual("Empty markdown should parse to zero elements", Parsed.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownSingleUserMentionTest, "PubnubChat.Unit.ParseMessageMarkdown.SingleUserMention", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownSingleUserMentionTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("Tom"));
+	FPubnubChatMentionTarget UserTarget;
+	UserTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserTarget.Target = TEXT("user-123");
+	Draft->AddMention(0, 3, UserTarget);
+
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestTrue("Parsed elements should match draft", MessageElementsEqual(Expected, Parsed));
+	TestEqual("One element", Parsed.Num(), 1);
+	if (Parsed.Num() == 1)
+	{
+		TestEqual("Text", Parsed[0].Text, TEXT("Tom"));
+		TestEqual("User mention", Parsed[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Target", Parsed[0].MentionTarget.Target, TEXT("user-123"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownSingleChannelMentionTest, "PubnubChat.Unit.ParseMessageMarkdown.SingleChannelMention", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownSingleChannelMentionTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("general"));
+	FPubnubChatMentionTarget ChannelTarget;
+	ChannelTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+	ChannelTarget.Target = TEXT("channel-456");
+	Draft->AddMention(0, 7, ChannelTarget);
+
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestTrue("Parsed elements should match draft", MessageElementsEqual(Expected, Parsed));
+	TestEqual("One element", Parsed.Num(), 1);
+	if (Parsed.Num() == 1)
+	{
+		TestEqual("Text", Parsed[0].Text, TEXT("general"));
+		TestEqual("Channel mention", Parsed[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_Channel);
+		TestEqual("Target", Parsed[0].MentionTarget.Target, TEXT("channel-456"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownSingleUrlMentionTest, "PubnubChat.Unit.ParseMessageMarkdown.SingleUrlMention", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownSingleUrlMentionTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("click here"));
+	FPubnubChatMentionTarget UrlTarget;
+	UrlTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Url;
+	UrlTarget.Target = TEXT("https://example.com/page");
+	Draft->AddMention(0, 10, UrlTarget);
+
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestTrue("Parsed elements should match draft", MessageElementsEqual(Expected, Parsed));
+	TestEqual("One element", Parsed.Num(), 1);
+	if (Parsed.Num() == 1)
+	{
+		TestEqual("Text", Parsed[0].Text, TEXT("click here"));
+		TestEqual("Url mention", Parsed[0].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_Url);
+		TestEqual("Target", Parsed[0].MentionTarget.Target, TEXT("https://example.com/page"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownMixedTextAndUserMentionTest, "PubnubChat.Unit.ParseMessageMarkdown.MixedTextAndUserMention", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownMixedTextAndUserMentionTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("Hi "));
+	Draft->InsertText(3, TEXT("Tom"));
+	FPubnubChatMentionTarget UserTarget;
+	UserTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserTarget.Target = TEXT("user_tom");
+	Draft->AddMention(3, 3, UserTarget);
+	Draft->AppendText(TEXT("!"));
+
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestTrue("Parsed elements should match draft", MessageElementsEqual(Expected, Parsed));
+	TestEqual("Three elements", Parsed.Num(), 3);
+	if (Parsed.Num() == 3)
+	{
+		TestEqual("First text", Parsed[0].Text, TEXT("Hi "));
+		TestEqual("Second mention text", Parsed[1].Text, TEXT("Tom"));
+		TestEqual("Second user", Parsed[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_User);
+		TestEqual("Third text", Parsed[2].Text, TEXT("!"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownAllMentionTypesTest, "PubnubChat.Unit.ParseMessageMarkdown.AllMentionTypes", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownAllMentionTypesTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	// "Hi " + user "Tom" + " in " + channel "general" + " see " + url "link"
+	Draft->InsertText(0, TEXT("Hi "));
+	Draft->InsertText(3, TEXT("Tom"));
+	FPubnubChatMentionTarget UserTarget;
+	UserTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserTarget.Target = TEXT("user_tom");
+	Draft->AddMention(3, 3, UserTarget);
+
+	Draft->AppendText(TEXT(" in "));
+	Draft->AppendText(TEXT("general"));
+	FPubnubChatMentionTarget ChannelTarget;
+	ChannelTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+	ChannelTarget.Target = TEXT("ch-general");
+	Draft->AddMention(10, 7, ChannelTarget);
+
+	Draft->AppendText(TEXT(" see "));
+	Draft->AppendText(TEXT("link"));
+	FPubnubChatMentionTarget UrlTarget;
+	UrlTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Url;
+	UrlTarget.Target = TEXT("https://example.com");
+	Draft->AddMention(21, 4, UrlTarget);
+
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	// Draft can have 7 elements (empty TextAfter from AddMention split); parser returns 7 when markdown has 7 segments
+	TestEqual("Seven elements (text, user, text, channel, text, url, optional empty)", Parsed.Num(), 7);
+	if (Parsed.Num() >= 6)
+	{
+		TestEqual("User mention target", Parsed[1].MentionTarget.Target, TEXT("user_tom"));
+		TestEqual("Channel mention target", Parsed[3].MentionTarget.Target, TEXT("ch-general"));
+		// Url mention: find by type in case index varies (e.g. empty segment at 6)
+		int32 UrlIdx = INDEX_NONE;
+		for (int32 k = 0; k < Parsed.Num(); ++k)
+			if (Parsed[k].MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_Url)
+			{ UrlIdx = k; break; }
+		TestTrue("Has url mention", UrlIdx != INDEX_NONE);
+		if (UrlIdx != INDEX_NONE)
+			TestEqual("Url mention target", Parsed[UrlIdx].MentionTarget.Target, TEXT("https://example.com"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownEscapedLinkTextTest, "PubnubChat.Unit.ParseMessageMarkdown.EscapedLinkText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownEscapedLinkTextTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	// Link text can contain ] and \ - draft escapes them. Build draft with text that would be escaped.
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("see [here]"));
+	FPubnubChatMentionTarget UrlTarget;
+	UrlTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Url;
+	UrlTarget.Target = TEXT("https://x.com");
+	Draft->AddMention(4, 6, UrlTarget); // mention "[here]" (6 chars: positions 4-9)
+
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestEqual("Two elements", Parsed.Num(), 2);
+	if (Parsed.Num() == 2)
+	{
+		TestEqual("First text", Parsed[0].Text, TEXT("see "));
+		TestEqual("Link text with brackets", Parsed[1].Text, TEXT("[here]"));
+		TestEqual("Second is Url mention", Parsed[1].MentionTarget.MentionTargetType, EPubnubChatMentionTargetType::PCMTT_Url);
+		TestEqual("Url target", Parsed[1].MentionTarget.Target, TEXT("https://x.com"));
+	}
+	// Round-trip: parsed display text should match draft display text
+	FString ParsedText;
+	for (const auto& E : Parsed) ParsedText.Append(E.Text);
+	TestEqual("Parsed text matches draft", ParsedText, Draft->GetCurrentText());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownEscapedUrlTest, "PubnubChat.Unit.ParseMessageMarkdown.EscapedUrl", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownEscapedUrlTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	// URL can contain ) - draft escapes it. Use a URL with parenthesis.
+	UPubnubChatMessageDraft* Draft = NewObject<UPubnubChatMessageDraft>(GetTransientPackage());
+	TestNotNull("Draft should be created", Draft);
+	if (!Draft) return false;
+
+	Draft->InsertText(0, TEXT("link"));
+	FPubnubChatMentionTarget UrlTarget;
+	UrlTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Url;
+	UrlTarget.Target = TEXT("https://example.com/path(1)");
+	Draft->AddMention(0, 4, UrlTarget);
+
+	TArray<FPubnubChatMessageElement> Expected = Draft->GetMessageElements();
+	FString Markdown = Draft->GetTextToSend();
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(Markdown);
+
+	TestTrue("Parsed elements should match draft (escaped URL)", MessageElementsEqual(Expected, Parsed));
+	TestEqual("One element", Parsed.Num(), 1);
+	if (Parsed.Num() == 1)
+		TestEqual("URL with parenthesis", Parsed[0].MentionTarget.Target, TEXT("https://example.com/path(1)"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPubnubChatParseMessageMarkdownPlainTextNoLinksTest, "PubnubChat.Unit.ParseMessageMarkdown.PlainTextNoLinks", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatParseMessageMarkdownPlainTextNoLinksTest::RunTest(const FString& Parameters)
+{
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	// Text that looks like markdown but isn't (no closing ] for the [) parses as two plain segments
+	TArray<FPubnubChatMessageElement> Parsed = UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(TEXT("Hello [world (no link)"));
+	TestEqual("Malformed markdown parses as plain segments", Parsed.Num(), 2);
+	if (Parsed.Num() >= 2)
+	{
+		TestEqual("First segment", Parsed[0].Text, TEXT("Hello "));
+		TestEqual("Rest as second segment", Parsed[1].Text, TEXT("[world (no link)"));
+	}
+	FString Reconstructed;
+	for (const auto& E : Parsed) Reconstructed.Append(E.Text);
+	TestEqual("Reconstructed equals input", Reconstructed, TEXT("Hello [world (no link)"));
 	return true;
 }
 
@@ -3473,6 +3820,169 @@ bool FPubnubChatMessageDraftSendWithMentionsTest::RunTest(const FString& Paramet
 
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
+	return true;
+}
+
+/**
+ * Integration test: Send a draft with mentions to a channel, receive the message, then compare
+ * GetMessageElements() on the received message with the draft's elements (round-trip).
+ * Category: 4Advanced.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendAndGetMessageElementsRoundTripTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.4Advanced.GetMessageElementsRoundTrip", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendAndGetMessageElementsRoundTripTest::RunTest(const FString& Parameters)
+{
+	if (!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_draft_roundtrip_init";
+	const FString TestChannelID = SDK_PREFIX + "test_draft_roundtrip";
+	const FString TestUserID = SDK_PREFIX + "test_draft_roundtrip_user";
+	const FString TestMentionChannelID = SDK_PREFIX + "test_draft_roundtrip_ch";
+	const FString TestUrl = TEXT("https://example.com/doc");
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if (!Chat)
+	{
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TestUserID, FPubnubChatUserData());
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+
+	FPubnubChatChannelResult CreateMentionChannelResult = Chat->CreatePublicConversation(TestMentionChannelID, FPubnubChatChannelData());
+	TestFalse("CreateMentionChannel should succeed", CreateMentionChannelResult.Result.Error);
+
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+
+	if (!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+
+	FPubnubChatMessageDraftConfig Config;
+	UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+	TestNotNull("Draft should be created", Draft);
+
+	if (!Draft)
+	{
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TestMentionChannelID, TestUserID]()
+		{
+			if (Chat)
+			{
+				Chat->DeleteChannel(TestChannelID);
+				Chat->DeleteChannel(TestMentionChannelID);
+				Chat->DeleteUser(TestUserID);
+			}
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.1f));
+		return true;
+	}
+
+	// Build draft: "Hi @user in #channel see link" with user, channel, and URL mentions
+	Draft->InsertText(0, TEXT("Hi "));
+	Draft->AppendText(TEXT("user"));
+	FPubnubChatMentionTarget UserTarget;
+	UserTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserTarget.Target = TestUserID;
+	FPubnubChatOperationResult AddUserResult = Draft->AddMention(3, 4, UserTarget);
+	TestFalse("AddMention user should succeed", AddUserResult.Error);
+
+	Draft->AppendText(TEXT(" in "));
+	Draft->AppendText(TEXT("channel"));
+	FPubnubChatMentionTarget ChannelTarget;
+	ChannelTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Channel;
+	ChannelTarget.Target = TestMentionChannelID;
+	FPubnubChatOperationResult AddChResult = Draft->AddMention(11, 7, ChannelTarget);
+	TestFalse("AddMention channel should succeed", AddChResult.Error);
+
+	Draft->AppendText(TEXT(" see "));
+	Draft->AppendText(TEXT("link"));
+	FPubnubChatMentionTarget UrlTarget;
+	UrlTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_Url;
+	UrlTarget.Target = TestUrl;
+	FPubnubChatOperationResult AddUrlResult = Draft->AddMention(23, 4, UrlTarget);
+	TestFalse("AddMention url should succeed", AddUrlResult.Error);
+
+	TArray<FPubnubChatMessageElement> ExpectedElements = Draft->GetMessageElements();
+	FString MarkdownSent = Draft->GetTextToSend();
+	FString DraftDisplayText = Draft->GetCurrentText();
+
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	auto MessageLambda = [bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if (Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+
+	FPubnubChatSendTextParams SendParams;
+	FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
+	TestFalse("Send should succeed", SendResult.Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceived, ReceivedMessage, ExpectedElements, MarkdownSent, DraftDisplayText, TestChannelID, TestUserID, TestMentionChannelID, TestUrl]()
+	{
+		TestTrue("Message should have been received", *bMessageReceived);
+
+		if (!*ReceivedMessage || !IsValid(*ReceivedMessage))
+		{
+			CleanUpCurrentChatUser(nullptr);
+			CleanUp();
+			return;
+		}
+
+		UPubnubChatMessage* Msg = *ReceivedMessage;
+		FString ReceivedText = Msg->GetCurrentText();
+		TestEqual("Received message text should equal sent markdown", ReceivedText, MarkdownSent);
+
+		TArray<FPubnubChatMessageElement> ReceivedElements = Msg->GetMessageElements();
+		TestTrue("GetMessageElements round-trip: content should match draft elements", MessageElementsContentEqual(ExpectedElements, ReceivedElements));
+
+		FString Reconstructed;
+		for (const auto& E : ReceivedElements) Reconstructed.Append(E.Text);
+		TestEqual("Reconstructed display text should match draft display text", Reconstructed, DraftDisplayText);
+
+		FPubnubChatMessageData MessageData = Msg->GetMessageData();
+		TestEqual("Received message channel ID should match", MessageData.ChannelID, TestChannelID);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, TestMentionChannelID, TestUserID]()
+	{
+		if (Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteChannel(TestMentionChannelID);
+			Chat->DeleteUser(TestUserID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.2f));
+
 	return true;
 }
 

@@ -31,3 +31,6 @@ constexpr int Pubnub_Chat_Max_Rate_Limiter_Delay = 10000;
 const FString Pubnub_Chat_LastActiveTimestamp_Property_Name = "lastActiveTimestamp";
 //Minimum StoreUserActivityInterval in milliseconds (1 minute)
 constexpr int Pubnub_Chat_Min_StoreUserActivityInterval = 60000;
+// Message draft markdown link URL schemas for mentions (user/channel)
+const FString Pubnub_Schema_User = TEXT("pn-user://");
+const FString Pubnub_Schema_Channel = TEXT("pn-channel://");

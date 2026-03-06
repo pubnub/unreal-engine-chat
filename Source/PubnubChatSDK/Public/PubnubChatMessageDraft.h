@@ -69,6 +69,15 @@ public:
 	TArray<FPubnubChatMessageElement> GetMessageElements() const { return MessageElements; }
 	
 	/**
+	 * Returns the text that would be sent by Send() (mentions serialized as markdown links).
+	 * Use this to obtain the serialized form for parsing tests or preview. Local: does not perform network requests.
+	 *
+	 * @return Serialized draft text (plain segments and [text](url) links). Empty if draft is empty.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
+	FString GetTextToSend() const;
+	
+	/**
 	 * Inserts text at the given position in the draft. Fires OnMessageDraftUpdated (and suggestion delegates); may trigger typing indicator on the channel.
 	 * Local: edits the in-memory draft only. If Position is strictly inside an existing mention (between its start and end), that mention is removed (its text is preserved) and the new text is inserted; all other mentions are preserved and their Start positions are adjusted. Inserting at the start or end of a mention does not remove it (insert before/after behaviour).
 	 *
@@ -184,7 +193,7 @@ private:
 	//Flag to suppress delegate and typing indicator calls during batch operations
 	bool bSuppressDelegateAndTyping = false;
 	
-	FString GetDraftTextToSend();
+	FString GetDraftTextToSend() const;
 	
 	void InitMessageDraft(UPubnubChatChannel* InChannel, const FPubnubChatMessageDraftConfig& InMessageDraftConfig);
 	void FireMessageDraftChangedDelegate();

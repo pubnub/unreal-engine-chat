@@ -10,6 +10,7 @@
 
 /**
  * Blueprint function library for building mention targets used with message drafts (AddMention, InsertSuggestedMention) and suggested mentions.
+ * Also provides utilities to parse message markdown (as sent by MessageDraft) back into message elements.
  */
 UCLASS()
 class PUBNUBCHATSDK_API UPubnubChatMessageDraftUtilities : public UBlueprintFunctionLibrary
@@ -43,6 +44,35 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Mention Target")
 	static FPubnubChatMentionTarget CreateUrlMentionTarget(const FString Url);
+
+	/**
+	 * Unescapes link text as stored in markdown [text](url). Reverses the escaping used when sending (\\ -> \, \] -> ]).
+	 *
+	 * @param EscapedLinkText Escaped link text (e.g. from between '[' and ']' in the markdown).
+	 * @return Unescaped link text suitable for FPubnubChatMessageElement::Text.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
+	static FString UnescapeLinkText(const FString& EscapedLinkText);
+
+	/**
+	 * Unescapes link URL as stored in markdown [text](url). Reverses the escaping used when sending (\\ -> \, \) -> )).
+	 *
+	 * @param EscapedLinkUrl Escaped URL (e.g. from between '(' and ')' in the markdown).
+	 * @return Unescaped URL.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
+	static FString UnescapeLinkUrl(const FString& EscapedLinkUrl);
+
+	/**
+	 * Parses message text containing markdown links (as produced by MessageDraft Send) into message elements.
+	 * Plain text and [text](url) links are converted to FPubnubChatMessageElement with Start/Length in display order.
+	 * Supports pn-user://, pn-channel:// and plain URLs. Escaped sequences in link text and URL are handled.
+	 *
+	 * @param MarkdownText The message text (e.g. from UPubnubChatMessage::GetCurrentText()) which may contain [text](url) links.
+	 * @return Array of message elements; concatenating element.Text yields the display text; Start/Length match draft-style indices.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
+	static TArray<FPubnubChatMessageElement> ParseMessageMarkdownToElements(const FString& MarkdownText);
 	
 
 };

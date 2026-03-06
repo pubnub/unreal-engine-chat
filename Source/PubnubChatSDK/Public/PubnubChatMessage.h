@@ -74,6 +74,17 @@ public:
 	FString GetCurrentText();
 	
 	/**
+	 * Returns message elements (text and mentions) parsed from this message's current text.
+	 * When the message was sent from a MessageDraft, the text contains markdown links [text](url); this method parses them
+	 * and returns the same structure as MessageDraft's GetMessageElements (plain text segments and mention elements with Start, Length, Text, MentionTarget).
+	 * Local: parses from the local cache text (GetCurrentText()). Returns empty array if not initialized.
+	 *
+	 * @return Array of message elements; concatenating element.Text yields the display text; Start/Length match draft-style indices.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	TArray<FPubnubChatMessageElement> GetMessageElements();
+
+	/**
 	 * Returns the message type. For standard chat messages this is "text".
 	 * Local: does not perform any network requests.
 	 *

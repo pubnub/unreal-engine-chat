@@ -2,6 +2,7 @@
 
 #include "PubnubChatMessageDraft.h"
 #include "PubnubChatChannel.h"
+#include "PubnubChatConst.h"
 #include "Internationalization/Regex.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
@@ -9,12 +10,10 @@
 #include "PubnubChatMembership.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubUtilities.h"
+#include "FunctionLibraries/PubnubChatMessageDraftUtilities.h"
 #include "PubnubChatUser.h"
 #include "Threads/PubnubFunctionThread.h"
 
-// Schema constants for markdown link rendering
-static const FString SCHEMA_USER = TEXT("pn-user://");
-static const FString SCHEMA_CHANNEL = TEXT("pn-channel://");
 
 FString UPubnubChatMessageDraft::GetCurrentText() const
 {
@@ -460,7 +459,12 @@ void UPubnubChatMessageDraft::SendAsync(FOnPubnubChatOperationResponseNative OnO
 	Channel->SendTextAsync(DraftMessage, OnOperationResponseNative, SendTextParams);
 }
 
-FString UPubnubChatMessageDraft::GetDraftTextToSend()
+FString UPubnubChatMessageDraft::GetTextToSend() const
+{
+	return GetDraftTextToSend();
+}
+
+FString UPubnubChatMessageDraft::GetDraftTextToSend() const
 {
 	FString FinalText;
 	
@@ -480,10 +484,10 @@ FString UPubnubChatMessageDraft::GetDraftTextToSend()
 			switch (Element.MentionTarget.MentionTargetType)
 			{
 				case EPubnubChatMentionTargetType::PCMTT_User:
-					LinkUrl = SCHEMA_USER + EscapeLinkUrl(Element.MentionTarget.Target);
+					LinkUrl = Pubnub_Schema_User + EscapeLinkUrl(Element.MentionTarget.Target);
 					break;
 				case EPubnubChatMentionTargetType::PCMTT_Channel:
-					LinkUrl = SCHEMA_CHANNEL + EscapeLinkUrl(Element.MentionTarget.Target);
+					LinkUrl = Pubnub_Schema_Channel + EscapeLinkUrl(Element.MentionTarget.Target);
 					break;
 				case EPubnubChatMentionTargetType::PCMTT_Url:
 					LinkUrl = EscapeLinkUrl(Element.MentionTarget.Target);

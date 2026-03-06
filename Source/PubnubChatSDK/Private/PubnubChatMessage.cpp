@@ -15,6 +15,7 @@
 #include "FunctionLibraries/PubnubChatInternalConverters.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
+#include "FunctionLibraries/PubnubChatMessageDraftUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "FunctionLibraries/PubnubUtilities.h"
 #include "Threads/PubnubFunctionThread.h"
@@ -78,6 +79,14 @@ FString UPubnubChatMessage::GetCurrentText()
 	
 	// Return the most recent edit (last in sorted array)
 	return EditedActions.Last().Value;
+}
+
+TArray<FPubnubChatMessageElement> UPubnubChatMessage::GetMessageElements()
+{
+	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(TArray<FPubnubChatMessageElement>());
+
+	FString CurrentText = GetCurrentText();
+	return UPubnubChatMessageDraftUtilities::ParseMessageMarkdownToElements(CurrentText);
 }
 
 FPubnubChatOperationResult UPubnubChatMessage::EditText(const FString NewText)
