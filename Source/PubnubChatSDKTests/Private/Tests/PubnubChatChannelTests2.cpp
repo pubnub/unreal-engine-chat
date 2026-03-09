@@ -745,6 +745,7 @@ bool FPubnubChatChannelWhoIsPresentAsyncFullParametersTest::RunTest(const FStrin
 	}
 	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateResult.Channel->Connect();
 	
 	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatWhoIsPresentResult> CallbackResult = MakeShared<FPubnubChatWhoIsPresentResult>();
@@ -768,6 +769,7 @@ bool FPubnubChatChannelWhoIsPresentAsyncFullParametersTest::RunTest(const FStrin
 	{
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->Disconnect();
 			CreateResult.Channel->Leave();
 		}
 		if(Chat)
@@ -817,6 +819,7 @@ bool FPubnubChatChannelIsPresentAsyncFullParametersTest::RunTest(const FString& 
 		return false;
 	}
 	CreateResult.Channel->Join(FPubnubChatMembershipData());
+	CreateResult.Channel->Connect();
 	
 	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatIsPresentResult> CallbackResult = MakeShared<FPubnubChatIsPresentResult>();
@@ -840,6 +843,7 @@ bool FPubnubChatChannelIsPresentAsyncFullParametersTest::RunTest(const FString& 
 	{
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->Disconnect();
 			CreateResult.Channel->Leave();
 		}
 		if(Chat)

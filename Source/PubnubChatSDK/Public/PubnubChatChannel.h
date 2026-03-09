@@ -201,9 +201,10 @@ public:
 	void ConnectAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
 	/**
-	 * Adds the current user as a member of this channel, then connects to the channel.
-	 * Blocking: performs network requests and subscription on the calling thread. Blocks for the duration of the operation.
-	 * Sets the user's membership (with optional metadata), subscribes for messages, and sets last-read-message timetoken.
+	 * Adds the current user as a member of this channel.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 * Sets the user's membership (with optional metadata) and sets last-read-message timetoken.
+	 * Does not subscribe for messages; use Connect() to start receiving messages after joining.
 	 * For public channels this establishes membership; for group/direct it typically confirms an invite.
 	 *
 	 * @param MembershipData Optional membership metadata (Custom, Status, Type) for the current user in this channel.
@@ -214,8 +215,9 @@ public:
 	FPubnubChatJoinResult Join(FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
 	
 	/**
-	 * Adds the current user as a member of this channel asynchronously, then connects to the channel.
-	 * Sets the user's membership (with optional metadata), subscribes for messages, and sets last-read-message timetoken.
+	 * Adds the current user as a member of this channel asynchronously.
+	 * Sets the user's membership (with optional metadata) and sets last-read-message timetoken.
+	 * Does not subscribe for messages; use ConnectAsync() to start receiving messages after joining.
 	 * For public channels this establishes membership; for group/direct it typically confirms an invite.
 	 *
 	 * @param OnJoinResponse Callback executed when the operation completes.
@@ -225,8 +227,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	void JoinAsync(FOnPubnubChatJoinResponse OnJoinResponse, FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData());
 	/**
-	 * Adds the current user as a member of this channel asynchronously, then connects to the channel.
-	 * Sets the user's membership (with optional metadata), subscribes for messages, and sets last-read-message timetoken.
+	 * Adds the current user as a member of this channel asynchronously.
+	 * Sets the user's membership (with optional metadata) and sets last-read-message timetoken.
+	 * Does not subscribe for messages; use ConnectAsync() to start receiving messages after joining.
 	 * For public channels this establishes membership; for group/direct it typically confirms an invite.
 	 *
 	 * @param OnJoinResponseNative Native callback executed when the operation completes (accepts lambdas).
@@ -262,25 +265,26 @@ public:
 	void DisconnectAsync(FOnPubnubChatOperationResponseNative OnOperationResponseNative = nullptr);
 
 	/**
-	 * Removes the current user's membership from this channel and unsubscribes (Disconnect).
-	 * Blocking: performs network requests and unsubscribe on the calling thread. Blocks for the duration of the operation.
+	 * Removes the current user's membership from this channel.
+	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
+	 * Does not unsubscribe from the channel; use Disconnect() to stop receiving messages before or after leaving.
 	 *
-	 * @return Operation result combining Disconnect and RemoveMemberships steps.
+	 * @return Operation result for the RemoveMemberships step.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Leave();
 	
 	/**
-	 * Removes the current user's membership from this channel asynchronously and unsubscribes (Disconnect).
-	 * Result combines Disconnect and RemoveMemberships steps.
+	 * Removes the current user's membership from this channel asynchronously.
+	 * Does not unsubscribe from the channel; use DisconnectAsync() to stop receiving messages before or after leaving.
 	 *
 	 * @param OnOperationResponse Callback executed when the operation completes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel", meta = (AutoCreateRefTerm = "OnOperationResponse"))
 	void LeaveAsync(FOnPubnubChatOperationResponse OnOperationResponse);
 	/**
-	 * Removes the current user's membership from this channel asynchronously and unsubscribes (Disconnect).
-	 * Result combines Disconnect and RemoveMemberships steps.
+	 * Removes the current user's membership from this channel asynchronously.
+	 * Does not unsubscribe from the channel; use DisconnectAsync() to stop receiving messages before or after leaving.
 	 *
 	 * @param OnOperationResponseNative Native callback executed when the operation completes (accepts lambdas).
 	 */

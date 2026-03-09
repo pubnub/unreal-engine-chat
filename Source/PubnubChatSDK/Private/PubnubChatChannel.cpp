@@ -157,10 +157,6 @@ FPubnubChatJoinResult UPubnubChatChannel::Join(FPubnubChatMembershipData Members
 	//Create membership objects
 	UPubnubChatMembership* CreatedMembership = Chat->CreateMembershipObject(Chat->CurrentUser, this, MembershipData);
 
-	//Connect
-	FPubnubChatOperationResult ConnectResult = Connect();
-	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, ConnectResult);
-
 	//SetLastReadMessageTimetoken for created membership
 	FPubnubChatOperationResult SetLRMTResult =  CreatedMembership->SetLastReadMessageTimetoken(UPubnubTimetokenUtilities::GetCurrentUnixTimetoken());
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, SetLRMTResult);
@@ -248,7 +244,7 @@ FPubnubChatOperationResult UPubnubChatChannel::Leave()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 
-	FPubnubChatOperationResult FinalResult = Disconnect();
+	FPubnubChatOperationResult FinalResult;
 
 	//RemoveMemberships by PubnubClient
 	FPubnubMembershipsResult RemoveMembershipsResult = PubnubClient->RemoveMemberships(Chat->CurrentUserID, {ChannelID}, FPubnubMembershipInclude::FromValue(false), 1);

@@ -2560,8 +2560,8 @@ bool FPubnubChatChannelJoinHappyPathTest::RunTest(const FString& Parameters)
 			}
 			
 			// Verify step results contain expected operations (only PubnubClient function calls create steps)
+			// Join only creates membership - it does not subscribe. Use Connect() separately to subscribe.
 			bool bFoundSetMemberships = false;
-			bool bFoundSubscribe = false;
 			
 			for(const FPubnubChatOperationStepResult& Step : JoinResult.Result.StepResults)
 			{
@@ -2570,15 +2570,9 @@ bool FPubnubChatChannelJoinHappyPathTest::RunTest(const FString& Parameters)
 					bFoundSetMemberships = true;
 					TestFalse("SetMemberships step should not have error", Step.OperationResult.Error);
 				}
-				else if(Step.StepName == TEXT("Subscribe"))
-				{
-					bFoundSubscribe = true;
-					TestFalse("Subscribe step should not have error", Step.OperationResult.Error);
-				}
 			}
 			
 			TestTrue("Should have SetMemberships step", bFoundSetMemberships);
-			TestTrue("Should have Subscribe step", bFoundSubscribe);
 			
 			// Cleanup: Leave and delete channel
 			if(CreateResult.Channel)
@@ -2965,6 +2959,10 @@ bool FPubnubChatChannelJoinSendReceiveTest::RunTest(const FString& Parameters)
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 	TestNotNull("Membership should be created", JoinResult.Membership);
 	
+	// Connect to start receiving messages (Join does not subscribe automatically)
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
 	// Wait a bit for subscription to be ready
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, TestMessage]()
 	{
@@ -2990,11 +2988,12 @@ bool FPubnubChatChannelJoinSendReceiveTest::RunTest(const FString& Parameters)
 		}
 	}, 0.1f));
 	
-	// Cleanup: Leave and delete channel
+	// Cleanup: Disconnect, Leave and delete channel
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->Disconnect();
 			CreateResult.Channel->Leave();
 		}
 		if(Chat)
@@ -3062,9 +3061,10 @@ bool FPubnubChatChannelWhoIsPresentHappyPathTest::RunTest(const FString& Paramet
 		return false;
 	}
 	
-	// Join channel to make user present
+	// Join channel and connect to make user present
 	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateResult.Channel->Connect();
 	
 	// Wait a bit for presence to propagate
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, InitUserID]()
@@ -3077,11 +3077,12 @@ bool FPubnubChatChannelWhoIsPresentHappyPathTest::RunTest(const FString& Paramet
 		TestEqual("Users array should have at least 1 user", WhoIsPresentResult.Users.Num(), 1);
 	}, 1.0f));
 	
-	// Cleanup: Leave channel, delete channel
+	// Cleanup: Disconnect, leave channel, delete channel
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->Disconnect();
 			CreateResult.Channel->Leave();
 		}
 		if(Chat)
@@ -3141,9 +3142,10 @@ bool FPubnubChatChannelIsPresentHappyPathTest::RunTest(const FString& Parameters
 		return false;
 	}
 	
-	// Join channel to make user present
+	// Join channel and connect to make user present
 	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateResult.Channel->Connect();
 	
 	// Wait a bit for presence to propagate
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, InitUserID]()
@@ -3155,11 +3157,12 @@ bool FPubnubChatChannelIsPresentHappyPathTest::RunTest(const FString& Parameters
 		TestTrue("IsPresent should return true when user is present", IsPresentResult.IsPresent);
 	}, 1.0f));
 	
-	// Cleanup: Leave channel, delete channel
+	// Cleanup: Disconnect, leave channel, delete channel
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
 		if(CreateResult.Channel)
 		{
+			CreateResult.Channel->Disconnect();
 			CreateResult.Channel->Leave();
 		}
 		if(Chat)
@@ -3259,29 +3262,23 @@ bool FPubnubChatChannelLeaveHappyPathTest::RunTest(const FString& Parameters)
 			TestNotNull("Membership should be created", JoinResult.Membership);
 			
 			// Leave (no parameters)
+			// Leave only removes membership - it does not unsubscribe. Use Disconnect() separately.
 			FPubnubChatOperationResult LeaveResult = CreateResult.Channel->Leave();
 			
 			TestFalse("Leave should succeed", LeaveResult.Error);
 			
-			// Verify step results contain Disconnect and RemoveMemberships steps
-			bool bFoundUnsubscribe = false;
+			// Verify step results contain RemoveMemberships step
 			bool bFoundRemoveMemberships = false;
 			
 			for(const FPubnubChatOperationStepResult& Step : LeaveResult.StepResults)
 			{
-				if(Step.StepName == TEXT("Unsubscribe"))
-				{
-					bFoundUnsubscribe = true;
-					TestFalse("Unsubscribe step should not have error", Step.OperationResult.Error);
-				}
-				else if(Step.StepName == TEXT("RemoveMemberships"))
+				if(Step.StepName == TEXT("RemoveMemberships"))
 				{
 					bFoundRemoveMemberships = true;
 					TestFalse("RemoveMemberships step should not have error", Step.OperationResult.Error);
 				}
 			}
 			
-			TestTrue("Should have Unsubscribe step", bFoundUnsubscribe);
 			TestTrue("Should have RemoveMemberships step", bFoundRemoveMemberships);
 			
 			// Cleanup: Delete channel
@@ -3341,31 +3338,24 @@ bool FPubnubChatChannelLeaveFullParametersTest::RunTest(const FString& Parameter
 			FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(MembershipData);
 			TestFalse("Join should succeed", JoinResult.Result.Error);
 			
-			// Leave (no parameters, but verify all steps)
+			// Leave only removes membership - it does not unsubscribe. Use Disconnect() separately.
 			FPubnubChatOperationResult LeaveResult = CreateResult.Channel->Leave();
 			
 			TestFalse("Leave should succeed", LeaveResult.Error);
-			TestTrue("StepResults should contain at least two steps", LeaveResult.StepResults.Num() >= 2);
+			TestTrue("StepResults should contain at least one step", LeaveResult.StepResults.Num() >= 1);
 			
-			// Verify all expected steps are present
-			bool bFoundUnsubscribe = false;
+			// Verify RemoveMemberships step is present
 			bool bFoundRemoveMemberships = false;
 			
 			for(const FPubnubChatOperationStepResult& Step : LeaveResult.StepResults)
 			{
-				if(Step.StepName == TEXT("Unsubscribe"))
-				{
-					bFoundUnsubscribe = true;
-					TestFalse("Unsubscribe step should not have error", Step.OperationResult.Error);
-				}
-				else if(Step.StepName == TEXT("RemoveMemberships"))
+				if(Step.StepName == TEXT("RemoveMemberships"))
 				{
 					bFoundRemoveMemberships = true;
 					TestFalse("RemoveMemberships step should not have error", Step.OperationResult.Error);
 				}
 			}
 			
-			TestTrue("Should have Unsubscribe step", bFoundUnsubscribe);
 			TestTrue("Should have RemoveMemberships step", bFoundRemoveMemberships);
 			
 			// Cleanup: Delete channel
@@ -3552,29 +3542,22 @@ bool FPubnubChatChannelLeaveMembershipRemovalTest::RunTest(const FString& Parame
 				TestEqual("Membership UserID should match before leave", JoinResult.Membership->GetUserID(), InitUserID);
 			}
 			
-			// Leave
+			// Leave only removes membership - it does not unsubscribe. Use Disconnect() separately.
 			FPubnubChatOperationResult LeaveResult = CreateResult.Channel->Leave();
 			TestFalse("Leave should succeed", LeaveResult.Error);
 			
-			// Verify step results contain both Disconnect and RemoveMemberships
-			bool bFoundUnsubscribe = false;
+			// Verify step results contain RemoveMemberships
 			bool bFoundRemoveMemberships = false;
 			
 			for(const FPubnubChatOperationStepResult& Step : LeaveResult.StepResults)
 			{
-				if(Step.StepName == TEXT("Unsubscribe"))
-				{
-					bFoundUnsubscribe = true;
-					TestFalse("Unsubscribe step should not have error", Step.OperationResult.Error);
-				}
-				else if(Step.StepName == TEXT("RemoveMemberships"))
+				if(Step.StepName == TEXT("RemoveMemberships"))
 				{
 					bFoundRemoveMemberships = true;
 					TestFalse("RemoveMemberships step should not have error", Step.OperationResult.Error);
 				}
 			}
 			
-			TestTrue("Should have Unsubscribe step", bFoundUnsubscribe);
 			TestTrue("Should have RemoveMemberships step", bFoundRemoveMemberships);
 			
 			// Cleanup: Delete channel

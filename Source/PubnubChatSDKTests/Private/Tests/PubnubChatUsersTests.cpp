@@ -3427,9 +3427,10 @@ bool FPubnubChatUserWherePresentHappyPathTest::RunTest(const FString& Parameters
 		return false;
 	}
 	
-	// Join channel to make user present
+	// Join channel and connect to make user present
 	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
 	
 	// Wait a bit for presence to propagate
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CurrentUser, TestChannelID]()
@@ -3442,11 +3443,12 @@ bool FPubnubChatUserWherePresentHappyPathTest::RunTest(const FString& Parameters
 		TestEqual("Channels array should have at least 1 channel", WherePresentResult.Channels.Num(), 1);
 	}, 1.0f));
 	
-	// Cleanup: Leave channel, delete channel
+	// Cleanup: Disconnect, leave channel, delete channel
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
 	{
 		if(CreateChannelResult.Channel)
 		{
+			CreateChannelResult.Channel->Disconnect();
 			CreateChannelResult.Channel->Leave();
 		}
 		if(Chat)
@@ -3517,9 +3519,10 @@ bool FPubnubChatUserIsPresentOnHappyPathTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
-	// Join channel to make user present
+	// Join channel and connect to make user present
 	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
 	
 	// Wait a bit for presence to propagate
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CurrentUser, TestChannelID]()
@@ -3531,11 +3534,12 @@ bool FPubnubChatUserIsPresentOnHappyPathTest::RunTest(const FString& Parameters)
 		TestTrue("IsPresentOn should return true when user is present", IsPresentResult.IsPresent);
 	}, 1.0f));
 	
-	// Cleanup: Leave channel, delete channel
+	// Cleanup: Disconnect, leave channel, delete channel
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
 	{
 		if(CreateChannelResult.Channel)
 		{
+			CreateChannelResult.Channel->Disconnect();
 			CreateChannelResult.Channel->Leave();
 		}
 		if(Chat)
@@ -4678,6 +4682,7 @@ bool FPubnubChatUserWherePresentAsyncFullParametersTest::RunTest(const FString& 
 	
 	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
 	
 	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatWherePresentResult> CallbackResult = MakeShared<FPubnubChatWherePresentResult>();
@@ -4705,6 +4710,7 @@ bool FPubnubChatUserWherePresentAsyncFullParametersTest::RunTest(const FString& 
 	{
 		if(CreateChannelResult.Channel)
 		{
+			CreateChannelResult.Channel->Disconnect();
 			CreateChannelResult.Channel->Leave();
 		}
 		if(Chat)
@@ -4764,6 +4770,7 @@ bool FPubnubChatUserIsPresentOnAsyncFullParametersTest::RunTest(const FString& P
 	
 	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
 	
 	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatIsPresentResult> CallbackResult = MakeShared<FPubnubChatIsPresentResult>();
@@ -4791,6 +4798,7 @@ bool FPubnubChatUserIsPresentOnAsyncFullParametersTest::RunTest(const FString& P
 	{
 		if(CreateChannelResult.Channel)
 		{
+			CreateChannelResult.Channel->Disconnect();
 			CreateChannelResult.Channel->Leave();
 		}
 		if(Chat)

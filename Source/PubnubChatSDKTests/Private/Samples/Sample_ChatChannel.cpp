@@ -101,14 +101,17 @@ void ASample_ChatChannel::JoinSample()
 
 	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
 
-	// Add listener for received messages before joining
+	// Add listener for received messages before connecting
 	Channel->OnMessageReceivedNative.AddUObject(this, &ASample_ChatChannel::OnChannelMessageReceived_JoinSample);
 
-	// Callback for when join completes (returns membership)
+	// Join the channel to become a member (creates membership)
 	FOnPubnubChatJoinResponseNative Callback;
 	// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
 	Callback.BindUObject(this, &ASample_ChatChannel::OnJoinResponse);
 	Channel->JoinAsync(Callback);
+
+	// Connect to start receiving messages (Join does not subscribe automatically)
+	Channel->ConnectAsync(nullptr);
 
 	// After some time when receiving messages is not needed anymore - disconnect
 	Channel->Disconnect();
@@ -153,7 +156,10 @@ void ASample_ChatChannel::LeaveSample()
 
 	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
 
-	// Remove current user's membership and unsubscribe from this channel
+	// Disconnect to stop receiving messages (Leave does not unsubscribe automatically)
+	Channel->DisconnectAsync(nullptr);
+
+	// Remove current user's membership from this channel
 	Channel->LeaveAsync(nullptr);
 }
 
