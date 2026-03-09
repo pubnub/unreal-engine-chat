@@ -337,4 +337,85 @@ void ASample_ChatUser::OnUserDeleted()
 	/* e.g. remove user from list */
 }
 
+// snippet.stream_mentions
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::StreamMentionsSample()
+{
+	// snippet.hide
+	UPubnubChatUser* User = nullptr;
+	// snippet.show
+
+	// Assumes User is a valid UPubnubChatUser (e.g. from GetCurrentUser)
+
+	// Bind to receive mention notifications for this user
+	User->OnMentionedNative.AddUObject(this, &ASample_ChatUser::OnUserMentioned);
+
+	// Start streaming mentions
+	User->StreamMentionsAsync(nullptr);
+
+	// When mention notifications are no longer needed, stop streaming
+	User->StopStreamingMentionsAsync(nullptr);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::OnUserMentioned(const FPubnubChatUserMention& UserMention)
+{
+	/* e.g. show @mention notification in UI */
+}
+
+// snippet.stream_restrictions
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::StreamRestrictionsSample()
+{
+	// snippet.hide
+	UPubnubChatUser* User = nullptr;
+	// snippet.show
+
+	// Assumes User is a valid UPubnubChatUser (e.g. from GetCurrentUser)
+
+	// Bind to receive moderation restriction changes for this user
+	User->OnRestrictionChangedNative.AddUObject(this, &ASample_ChatUser::OnRestrictionChanged);
+
+	// Start streaming restriction events
+	User->StreamRestrictionsAsync(nullptr);
+
+	// When restriction events are no longer needed, stop streaming
+	User->StopStreamingRestrictionsAsync(nullptr);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::OnRestrictionChanged(const FPubnubChatRestriction& Restriction)
+{
+	/* e.g. update UI to reflect ban/mute changes */
+}
+
+// snippet.stream_invitations
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::StreamInvitationsSample()
+{
+	// snippet.hide
+	UPubnubChatUser* User = nullptr;
+	// snippet.show
+
+	// Assumes User is a valid UPubnubChatUser (e.g. from GetCurrentUser)
+
+	// Bind to receive invite events for this user
+	User->OnInvitedNative.AddUObject(this, &ASample_ChatUser::OnUserInvited);
+
+	// Start streaming invitation events
+	User->StreamInvitationsAsync(nullptr);
+
+	// When invitation events are no longer needed, stop streaming
+	User->StopStreamingInvitationsAsync(nullptr);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatUser with name of your Actor class
+void ASample_ChatUser::OnUserInvited(const FPubnubChatInviteEvent& InviteEvent)
+{
+	/* e.g. show channel invite notification in UI */
+}
+
 // snippet.end

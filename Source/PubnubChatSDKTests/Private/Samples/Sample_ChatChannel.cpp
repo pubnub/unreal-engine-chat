@@ -806,4 +806,88 @@ void ASample_ChatChannel::OnMessageReportReceived(const FPubnubChatReportEvent& 
 	/* e.g. handle moderation events (report payload, user, etc.) */
 }
 
+// snippet.start_typing
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::StartTypingSample()
+{
+	// snippet.hide
+	UPubnubChatChannel* Channel = nullptr;
+	// snippet.show
+
+	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
+
+	// Emit a typing-start event for the current user on this channel
+	Channel->StartTypingAsync(nullptr);
+}
+
+// snippet.stop_typing
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::StopTypingSample()
+{
+	// snippet.hide
+	UPubnubChatChannel* Channel = nullptr;
+	// snippet.show
+
+	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
+
+	// Emit a typing-stop event for the current user on this channel
+	Channel->StopTypingAsync(nullptr);
+}
+
+// snippet.stream_presence
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::StreamPresenceSample()
+{
+	// snippet.hide
+	UPubnubChatChannel* Channel = nullptr;
+	// snippet.show
+
+	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
+
+	// Bind to receive presence updates (user IDs currently subscribed)
+	Channel->OnPresenceChangedNative.AddUObject(this, &ASample_ChatChannel::OnPresenceUpdated);
+
+	// Start streaming presence
+	Channel->StreamPresenceAsync(nullptr);
+
+	// When presence updates are no longer needed, stop streaming
+	Channel->StopStreamingPresenceAsync(nullptr);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::OnPresenceUpdated(const TArray<FString>& UserIDs)
+{
+	/* e.g. update "online users" list in channel UI */
+}
+
+// snippet.stream_custom_events
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::StreamCustomEventsSample()
+{
+	// snippet.hide
+	UPubnubChatChannel* Channel = nullptr;
+	// snippet.show
+
+	// Assumes Channel is a valid UPubnubChatChannel (e.g. from GetChannel)
+
+	// Bind to receive custom events on this channel
+	Channel->OnCustomEventReceivedNative.AddUObject(this, &ASample_ChatChannel::OnCustomEventReceived);
+
+	// Start streaming custom events
+	Channel->StreamCustomEventsAsync(nullptr);
+
+	// When custom events are no longer needed, stop streaming
+	Channel->StopStreamingCustomEventsAsync(nullptr);
+}
+
+// ACTION REQUIRED: Replace ASample_ChatChannel with name of your Actor class
+void ASample_ChatChannel::OnCustomEventReceived(const FPubnubChatCustomEvent& CustomEvent)
+{
+	/* e.g. process application-specific events (game state, commands, etc.) */
+}
+
 // snippet.end

@@ -245,7 +245,47 @@ public:
 	// snippet.connection_status_changed_reconnect
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Connection Status")
 	void ConnectionStatusChangedReconnectSample();
-	
+
+	// snippet.access_manager_set_origin
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Access Manager")
+	void AccessManagerSetOriginSample();
+
+	// snippet.access_manager_can_i
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Access Manager")
+	void AccessManagerCanISample();
+
+	// snippet.access_manager_set_auth_token
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Access Manager")
+	void AccessManagerSetAuthTokenSample();
+
+	// snippet.access_manager_parse_token
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Access Manager")
+	void AccessManagerParseTokenSample();
+
+	// snippet.get_channels_pagination
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
+	void GetChannelsPaginationSample();
+
+	// snippet.get_channels_archived
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
+	void GetChannelsArchivedSample();
+
+	// snippet.get_users_pagination
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
+	void GetUsersPaginationSample();
+
+	// snippet.get_users_archived
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|User")
+	void GetUsersArchivedSample();
+
+	// snippet.create_group_conversation_example
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
+	void CreateGroupConversationExampleSample();
+
+	// snippet.create_public_conversation_example
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|Chat|Channel")
+	void CreatePublicConversationExampleSample();
+
 	// snippet.end
 
 };

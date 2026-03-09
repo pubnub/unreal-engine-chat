@@ -113,5 +113,23 @@ public:
 	void OnUserUpdateReceived(FString UserID, const FPubnubChatUserData& UserData);
 	void OnUserDeleted();
 
+	// snippet.stream_mentions
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
+	void StreamMentionsSample();
+
+	void OnUserMentioned(const FPubnubChatUserMention& UserMention);
+
+	// snippet.stream_restrictions
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
+	void StreamRestrictionsSample();
+
+	void OnRestrictionChanged(const FPubnubChatRestriction& Restriction);
+
+	// snippet.stream_invitations
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatUser")
+	void StreamInvitationsSample();
+
+	void OnUserInvited(const FPubnubChatInviteEvent& InviteEvent);
+
 	// snippet.end
 };

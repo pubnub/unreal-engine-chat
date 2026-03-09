@@ -892,4 +892,281 @@ void ASample_Chat::ConnectionStatusChangedReconnectSample()
 	});
 }
 
+// snippet.access_manager_set_origin
+
+#include "PubnubChatAccessManager.h"
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::AccessManagerSetOriginSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
+
+	FString CustomOrigin = "abc.pubnubapi.com";
+	int Result = AccessManager->SetPubnubOrigin(CustomOrigin);
+
+	if (Result == 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Custom origin set successfully."));
+	}
+	else if (Result == 1)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Custom origin will be applied on reconnect."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Setting custom origin is not enabled."));
+	}
+}
+
+// snippet.access_manager_can_i
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::AccessManagerCanISample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
+
+	FString ChannelName = "customer_XYZ";
+	EPubnubChatAccessManagerResourceType ResourceType = EPubnubChatAccessManagerResourceType::PCAMRT_Channels;
+	EPubnubChatAccessManagerPermission Permission = EPubnubChatAccessManagerPermission::PCAMP_Write;
+
+	bool bCanSendMessage = AccessManager->CanI(Permission, ResourceType, ChannelName);
+}
+
+// snippet.access_manager_set_auth_token
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::AccessManagerSetAuthTokenSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
+
+	FString AuthToken = "p0thisAkFl043rhDdHRsCkNyZXisRGNoYW6hanNlY3JldAFDZ3Jwsample3KgQ3NwY6BDcGF0pERjaGFuoENnctokenVzcqBDc3BjoERtZXRhoENzaWdYIGOAeTyWGJI";
+	AccessManager->SetAuthToken(AuthToken);
+}
+
+// snippet.access_manager_parse_token
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::AccessManagerParseTokenSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
+
+	FString Token = "p0thisAkFl043rhDdHRsCkNyZXisRGNoYW6hanNlY3JldAFDZ3Jwsample3KgQ3NwY6BDcGF0pERjaGFuoENnctokenVzcqBDc3BjoERtZXRhoENzaWdYIGOAeTyWGJI";
+	FString TokenDetails = AccessManager->ParseToken(Token);
+
+	UE_LOG(LogTemp, Log, TEXT("Token Details: %s"), *TokenDetails);
+}
+
+// snippet.get_channels_pagination
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::GetChannelsPaginationSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	// Fetch first 25 channels
+	FPubnubChatGetChannelsResult Channels = Chat->GetChannels(25);
+
+	for (auto& Channel : Channels.Channels)
+	{
+		FString ChannelID = Channel->GetChannelID();
+	}
+
+	// Fetch next 25 channels using the 'next' page token from the previous response
+	if (!Channels.Page.Next.IsEmpty())
+	{
+		FPubnubPage NextPage;
+		NextPage.Next = Channels.Page.Next;
+
+		FPubnubChatGetChannelsResult NextChannels = Chat->GetChannels(25, "", FPubnubGetAllSort(), NextPage);
+
+		for (auto& Channel : NextChannels.Channels)
+		{
+			FString ChannelID = Channel->GetChannelID();
+		}
+	}
+}
+
+// snippet.get_channels_archived
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::GetChannelsArchivedSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	// Fetch all archived (soft-deleted) channels
+	FPubnubChatGetChannelsResult Channels = Chat->GetChannels(100, "status=='deleted'");
+
+	for (auto& Channel : Channels.Channels)
+	{
+		FString ChannelID = Channel->GetChannelID();
+	}
+
+	// Handle pagination if more results exist
+	while (!Channels.Page.Next.IsEmpty())
+	{
+		Channels = Chat->GetChannels(100, "status=='deleted'", FPubnubGetAllSort(), FPubnubPage{Channels.Page.Next, ""});
+		for (auto& Channel : Channels.Channels)
+		{
+			FString ChannelID = Channel->GetChannelID();
+		}
+	}
+}
+
+// snippet.get_users_pagination
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::GetUsersPaginationSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	// Fetch first 25 users
+	FPubnubChatGetUsersResult UsersResponsePage1 = Chat->GetUsers(25);
+
+	for (UPubnubChatUser* User : UsersResponsePage1.Users)
+	{
+		FString UserID = User->GetUserID();
+		UE_LOG(LogTemp, Log, TEXT("User ID: %s"), *UserID);
+	}
+
+	// Fetch next 25 users using the 'next' page token from the previous response
+	if (!UsersResponsePage1.Page.Next.IsEmpty())
+	{
+		FPubnubPage NextPage;
+		NextPage.Next = UsersResponsePage1.Page.Next;
+
+		FPubnubChatGetUsersResult UsersResponsePage2 = Chat->GetUsers(25, "", FPubnubGetAllSort(), NextPage);
+
+		for (UPubnubChatUser* User : UsersResponsePage2.Users)
+		{
+			FString UserID = User->GetUserID();
+			UE_LOG(LogTemp, Log, TEXT("User ID: %s"), *UserID);
+		}
+	}
+}
+
+// snippet.get_users_archived
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::GetUsersArchivedSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	// Fetch all archived (soft-deleted) users
+	FString Filter = "status=='deleted'";
+	FPubnubChatGetUsersResult ArchivedUsersResponse = Chat->GetUsers(0, Filter);
+
+	for (UPubnubChatUser* User : ArchivedUsersResponse.Users)
+	{
+		FString UserId = User->GetUserID();
+		UE_LOG(LogTemp, Log, TEXT("Archived User ID: %s"), *UserId);
+	}
+}
+
+// snippet.create_group_conversation_example
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::CreateGroupConversationExampleSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	// Create user objects for the agents to invite
+	FPubnubChatUserData UserData_007;
+	UserData_007.UserName = "Agent 007";
+	FPubnubChatUserResult UserResult_007 = Chat->CreateUser("agent-007", UserData_007);
+	if (UserResult_007.Result.Error) { return; }
+
+	FPubnubChatUserData UserData_008;
+	UserData_008.UserName = "Agent 008";
+	FPubnubChatUserResult UserResult_008 = Chat->CreateUser("agent-008", UserData_008);
+	if (UserResult_008.Result.Error) { return; }
+
+	// Define the conversation/channel ID and metadata
+	FString ChannelID = "group.agent-007&agent-008&my_user";
+
+	FPubnubChatChannelData ChannelData;
+	ChannelData.ChannelName = "Weekly Sync on Customer XYZ";
+	ChannelData.Description = "Weekly discussion regarding customer XYZ";
+	ChannelData.Custom = "{\"topic\": \"customer XYZ\", \"frequency\": \"weekly\"}";
+	ChannelData.Status = "active";
+	ChannelData.Type = "group";
+
+	FPubnubChatMembershipData MembershipData;
+	MembershipData.Custom = "{\"role\": \"premium-support\"}";
+	MembershipData.Status = "active";
+	MembershipData.Type = "player";
+
+	// Create the group conversation with invited users and custom membership data
+	TArray<UPubnubChatUser*> Users = { UserResult_007.User, UserResult_008.User };
+	FPubnubChatCreateGroupConversationResult CreatedResult = Chat->CreateGroupConversation(Users, ChannelID, ChannelData, MembershipData);
+}
+
+// snippet.create_public_conversation_example
+
+// ACTION REQUIRED: Replace ASample_Chat with name of your Actor class
+void ASample_Chat::CreatePublicConversationExampleSample()
+{
+	// snippet.hide
+	UPubnubChat* Chat = nullptr;
+	// snippet.show
+
+	// Assumes Chat is a valid and initialized instance of UPubnubChat
+
+	// Define the conversation/channel ID
+	FString ChannelID = "ask-support";
+
+	// Define the channel data
+	FPubnubChatChannelData ChannelData;
+	ChannelData.ChannelName = "ask-support";
+	ChannelData.Description = "Space dedicated to answering all support-related questions";
+
+	// Create the public conversation
+	FPubnubChatChannelResult ChannelResult = Chat->CreatePublicConversation(ChannelID, ChannelData);
+	if (ChannelResult.Result.Error) { return; }
+	UPubnubChatChannel* Channel = ChannelResult.Channel;
+}
+
 // snippet.end

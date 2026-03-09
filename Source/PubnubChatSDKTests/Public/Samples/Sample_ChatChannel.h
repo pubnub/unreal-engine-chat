@@ -231,5 +231,25 @@ public:
 
 	void OnMessageReportReceived(const FPubnubChatReportEvent& ReportEvent);
 
+	// snippet.start_typing
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
+	void StartTypingSample();
+
+	// snippet.stop_typing
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
+	void StopTypingSample();
+
+	// snippet.stream_presence
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
+	void StreamPresenceSample();
+
+	void OnPresenceUpdated(const TArray<FString>& UserIDs);
+
+	// snippet.stream_custom_events
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat|Samples|ChatChannel")
+	void StreamCustomEventsSample();
+
+	void OnCustomEventReceived(const FPubnubChatCustomEvent& CustomEvent);
+
 	// snippet.end
 };
