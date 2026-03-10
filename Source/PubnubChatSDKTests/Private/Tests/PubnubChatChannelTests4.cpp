@@ -5151,6 +5151,9 @@ bool FPubnubChatChannelStopStreamingReadReceiptsWhenNotStreamingTest::RunTest(co
 	TestFalse("InitChat should succeed", InitResult.Result.Error);
 	UPubnubChat* Chat = InitResult.Chat;
 	if(!Chat) { AddError("Chat should be initialized"); CleanUp(); return false; }
+	// Ensure clean state from any previous run (e.g. test failed before cleanup)
+	(void)Chat->DeleteChannel(TestChannelID);
+	(void)Chat->DeleteUser(SecondUserID);
 	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(SecondUserID, FPubnubChatUserData());
 	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
 	TestNotNull("User should be created", CreateUserResult.User);
@@ -5163,6 +5166,8 @@ bool FPubnubChatChannelStopStreamingReadReceiptsWhenNotStreamingTest::RunTest(co
 	TestFalse("StopStreamingReadReceipts when not streaming should succeed (no-op)", StopResult.Error);
 	if(CreateResult.HostMembership) { CreateResult.HostMembership->Delete(); }
 	if(CreateResult.InviteeMembership) { CreateResult.InviteeMembership->Delete(); }
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(SecondUserID);
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
 	return true;

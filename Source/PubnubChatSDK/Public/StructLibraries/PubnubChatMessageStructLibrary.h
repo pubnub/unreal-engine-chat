@@ -76,6 +76,29 @@ struct FPubnubChatMessageData
 	static FPubnubChatMessageData FromPubnubHistoryMessageData(const FPubnubHistoryMessageData& FPubnubHistoryMessageData);
 };
 
+/**
+ * Data for a quoted message stored in message metadata (Meta.quotedMessage).
+ * When a message is sent as a reply quoting another message, the quoted message's
+ * timetoken, text, and user ID are stored in the publishing message's metadata.
+ */
+USTRUCT(BlueprintType)
+struct PUBNUBCHATSDK_API FPubnubChatQuotedMessageData
+{
+	GENERATED_BODY()
+
+	/** Timetoken of the quoted message. */
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Timetoken = "";
+
+	/** Text of the quoted message. */
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString Text = "";
+
+	/** User ID of the author of the quoted message. */
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
+	FString UserID = "";
+};
+
 USTRUCT(BlueprintType)
 struct FPubnubChatMessageResult
 {

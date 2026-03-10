@@ -38,6 +38,14 @@ public:
 	static FString PublishedStringToChatMessage(const FString PublishedMessage);
 	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams, UPubnubChatMessage* QuotedMessage = nullptr);
 	static FString GetForwardedMessageMeta(const FString& OriginalMessageMeta, const FString& UserID, const FString& ChannelID);
+
+	/**
+	 * Parses message metadata JSON and extracts quoted message data if present.
+	 * Metadata is expected to contain an optional "quotedMessage" object with keys: timetoken, text, userID.
+	 * @param Meta JSON string (e.g. from FPubnubChatMessageData::Meta).
+	 * @return Quoted message data; all fields empty if Meta is empty or quotedMessage is missing.
+	 */
+	static FPubnubChatQuotedMessageData GetQuotedMessageDataFromMeta(const FString& Meta);
 	
 	
 	/* RESTRICTIONS */

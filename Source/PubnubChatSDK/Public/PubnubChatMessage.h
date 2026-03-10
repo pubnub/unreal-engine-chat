@@ -63,7 +63,18 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
 	FString GetMessageTimetoken() const { return Timetoken; }
-	
+
+	/**
+	 * Returns the quoted message data from this message's metadata, if any.
+	 * When this message was sent as a reply quoting another message, the quoted message's
+	 * timetoken, text, and user ID are stored in Meta.quotedMessage. This method parses that and returns a struct.
+	 * Local: reads from the local cache (GetMessageData().Meta). Does not perform any network requests.
+	 *
+	 * @return Quoted message data (Timetoken, Text, UserID). All fields are empty if this message does not quote another.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message")
+	FPubnubChatQuotedMessageData GetQuotedMessage() const;
+
 	/**
 	 * Returns the current display text of this message, including the latest edit if any.
 	 * Local: reads from the local cache. Resolves the most recent Edited message action to determine the displayed text.

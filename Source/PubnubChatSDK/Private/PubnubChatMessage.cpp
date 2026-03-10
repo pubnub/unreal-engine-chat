@@ -48,6 +48,12 @@ FPubnubChatMessageData UPubnubChatMessage::GetMessageData() const
 	return FPubnubChatMessageData();
 }
 
+FPubnubChatQuotedMessageData UPubnubChatMessage::GetQuotedMessage() const
+{
+	FPubnubChatMessageData MessageData = GetMessageData();
+	return UPubnubChatInternalUtilities::GetQuotedMessageDataFromMeta(MessageData.Meta);
+}
+
 FString UPubnubChatMessage::GetCurrentText()
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED("");

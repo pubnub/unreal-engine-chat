@@ -100,6 +100,32 @@ FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSe
 	return "";
 }
 
+FPubnubChatQuotedMessageData UPubnubChatInternalUtilities::GetQuotedMessageDataFromMeta(const FString& Meta)
+{
+	FPubnubChatQuotedMessageData Out;
+	if (Meta.IsEmpty())
+	{
+		return Out;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	if (!UPubnubJsonUtilities::StringToJsonObject(Meta, JsonObject))
+	{
+		return Out;
+	}
+
+	const TSharedPtr<FJsonObject>* QuotedObj = nullptr;
+	if (!JsonObject->TryGetObjectField(ANSI_TO_TCHAR("quotedMessage"), QuotedObj) || !QuotedObj || !(*QuotedObj).IsValid())
+	{
+		return Out;
+	}
+
+	(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("timetoken"), Out.Timetoken);
+	(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("text"), Out.Text);
+	(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("userID"), Out.UserID);
+	return Out;
+}
+
 FString UPubnubChatInternalUtilities::GetForwardedMessageMeta(const FString& OriginalMessageMeta, const FString& UserID, const FString& ChannelID)
 {
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
