@@ -282,47 +282,7 @@ void UPubnubChatChannel::LeaveAsync(FOnPubnubChatOperationResponseNative OnOpera
 
 FPubnubChatOperationResult UPubnubChatChannel::SendText(const FString Message, FPubnubChatSendTextParams SendTextParams)
 {
-	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Message);
-	FPubnubChatOperationResult FinalResult;
-	
-	//Validate quoted message if it was added to the params
-	if(SendTextParams.QuotedMessage)
-	{
-		PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((SendTextParams.QuotedMessage->GetMessageData().ChannelID == ChannelID), TEXT("You cannot quote messages from other channels"));
-		PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((!SendTextParams.QuotedMessage->GetMessageTimetoken().IsEmpty()), TEXT("Quoted message has empty invalid timetoken"));
-	}
-
-	//Calculate if SendText should be delayed by the RateLimiter
-	float DelaySeconds = CalculateSendTextRateLimiterDelay();
-	if (DelaySeconds > 0.0f)
-	{
-		FPlatformProcess::Sleep(DelaySeconds);
-	}
-
-	//Configure settings specified in the params
-	FPubnubPublishSettings PublishSettings;
-	PublishSettings.MetaData = UPubnubChatInternalUtilities::SendTextMetaFromParams(SendTextParams);
-	PublishSettings.StoreInHistory = SendTextParams.StoreInHistory;
-	if(SendTextParams.SendByPost)
-	{
-		PublishSettings.PublishMethod = EPubnubPublishMethod::PPM_SendViaPOST;
-	}
-
-	FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(ChannelID, UPubnubChatInternalUtilities::ChatMessageToPublishString(Message), PublishSettings);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PublishResult.Result, "PublishMessage");
-
-	//Update RateLimiter state after successful send
-	{
-		FScopeLock Lock(&SendTextRateLimitCriticalSection);
-		LastSendTextTime = FDateTime::UtcNow();
-	}
-
-	//Here it's just an empty function, but ThreadChannel uses it to AddMessageAction about it's creation
-	FPubnubChatOperationResult OnSendTextResult = OnSendText();
-	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, OnSendTextResult);
-	
-	return FinalResult;
+	return SendTextInternal(Message, SendTextParams);
 }
 
 void UPubnubChatChannel::SendTextAsync(const FString Message, FOnPubnubChatOperationResponse OnOperationResponse, FPubnubChatSendTextParams SendTextParams)
@@ -2382,6 +2342,57 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 	
 	FinalResult.Page = GetMembersResult.Page;
 	FinalResult.Total = GetMembersResult.TotalCount;
+	
+	return FinalResult;
+}
+
+FPubnubChatOperationResult UPubnubChatChannel::SendTextInternal(const FString Message, FPubnubChatSendTextParams SendTextParams, UPubnubChatMessage* QuotedMessage, TMap<FString,FString> MentionedUsers)
+{
+	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(Message);
+	FPubnubChatOperationResult FinalResult;
+	
+	//Validate quoted message if it was added to the params
+	if(QuotedMessage)
+	{
+		PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((QuotedMessage->GetMessageData().ChannelID == ChannelID), TEXT("You cannot quote messages from other channels"));
+		PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED((!QuotedMessage->GetMessageTimetoken().IsEmpty()), TEXT("Quoted message has empty invalid timetoken"));
+	}
+
+	//Calculate if SendText should be delayed by the RateLimiter
+	float DelaySeconds = CalculateSendTextRateLimiterDelay();
+	if (DelaySeconds > 0.0f)
+	{
+		FPlatformProcess::Sleep(DelaySeconds);
+	}
+
+	//Configure settings specified in the params
+	FPubnubPublishSettings PublishSettings;
+	PublishSettings.MetaData = UPubnubChatInternalUtilities::SendTextMetaFromParams(SendTextParams, QuotedMessage);
+	PublishSettings.StoreInHistory = SendTextParams.StoreInHistory;
+	if(SendTextParams.SendByPost)
+	{
+		PublishSettings.PublishMethod = EPubnubPublishMethod::PPM_SendViaPOST;
+	}
+
+	FPubnubPublishMessageResult PublishResult = PubnubClient->PublishMessage(ChannelID, UPubnubChatInternalUtilities::ChatMessageToPublishString(Message), PublishSettings);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, PublishResult.Result, "PublishMessage");
+
+	//Update RateLimiter state after successful send
+	{
+		FScopeLock Lock(&SendTextRateLimitCriticalSection);
+		LastSendTextTime = FDateTime::UtcNow();
+	}
+
+	//Here it's just an empty function, but ThreadChannel uses it to AddMessageAction about it's creation
+	FPubnubChatOperationResult OnSendTextResult = OnSendText();
+	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, OnSendTextResult);
+	
+	for (auto& MentionedUser : MentionedUsers)
+	{
+		FPubnubChatOperationResult EmitMentionResult = EmitUserMention(MentionedUser.Key, PublishResult.PublishedMessage.Timetoken, MentionedUser.Value);
+		FinalResult.Merge(EmitMentionResult);
+	}
 	
 	return FinalResult;
 }

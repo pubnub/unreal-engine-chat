@@ -19,9 +19,10 @@ void ASample_ChatMessageDraft::QuoteMessageSample()
 	// Assumes Message is a valid UPubnubChatMessage to quote (e.g. from channel history)
 
 	// Send a message that quotes another message
-	FPubnubChatSendTextParams SendTextParams;
-	SendTextParams.QuotedMessage = Message;
-	Channel->SendTextAsync(TEXT("Quoting this:"), nullptr, SendTextParams);
+	UPubnubChatMessageDraft* MessageDraft = Channel->CreateMessageDraft();
+	MessageDraft->SetQuotedMessage(Message);
+	MessageDraft->InsertText(0, "Quoting this: ");
+	MessageDraft->Send();
 }
 
 // snippet.add_user_mention

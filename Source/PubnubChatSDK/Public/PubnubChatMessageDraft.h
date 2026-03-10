@@ -10,6 +10,7 @@
 #include "PubnubChatMessageDraft.generated.h"
 
 class UPubnubChatChannel;
+class UPubnubChatMessage;
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPubnubChatMessageDraftUpdated, const TArray<FPubnubChatMessageElement>&, MessageElements);
@@ -152,6 +153,25 @@ public:
 	FPubnubChatOperationResult InsertSuggestedMention(const FPubnubChatSuggestedMention SuggestedMention);
 	
 	/**
+	 * Returns the quoted message attached to this draft, if any.
+	 * Local: does not perform any network requests.
+	 *
+	 * @return The quoted message, or nullptr if none is set.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Message Draft")
+	UPubnubChatMessage* GetQuotedMessage() const { return QuotedMessage; }
+
+	/**
+	 * Sets (or clears) the quoted message attached to this draft. Pass nullptr to remove any existing quoted message.
+	 * The quoted message is sent alongside the draft text when Send() is called.
+	 * Local: does not perform any network requests.
+	 *
+	 * @param InQuotedMessage The message to quote, or nullptr to clear.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Message Draft")
+	void SetQuotedMessage(UPubnubChatMessage* InQuotedMessage) { QuotedMessage = InQuotedMessage; }
+
+	/**
 	 * Sends the draft as a message on the associated channel. Draft text is serialized (mentions as markdown links); the channel's SendText is used.
 	 * Blocking: performs network requests on the calling thread. Blocks for the duration of the operation.
 	 * Fails if the channel is invalid or the draft text is empty.
@@ -186,6 +206,9 @@ private:
 	
 	UPROPERTY()
 	TArray<FPubnubChatMessageElement> MessageElements;
+	
+	UPROPERTY()
+	UPubnubChatMessage* QuotedMessage = nullptr;
 	
 	//Cache for suggestion results to avoid repeated API calls
 	TMap<FString, TArray<FPubnubChatSuggestedMention>> SuggestionsCache;

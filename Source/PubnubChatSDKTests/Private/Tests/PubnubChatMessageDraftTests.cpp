@@ -3090,6 +3090,7 @@ bool FPubnubChatMessageDraftInsertSuggestedMentionComplexScenarioTest::RunTest(c
 #include "PubnubChat.h"
 #include "PubnubChatChannel.h"
 #include "PubnubChatMessage.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Kismet/GameplayStatics.h"
@@ -3622,7 +3623,6 @@ bool FPubnubChatMessageDraftSendFullParametersTest::RunTest(const FString& Param
 				SendParams.StoreInHistory = true;
 				SendParams.SendByPost = false;
 				SendParams.Meta = TestMeta;
-				SendParams.QuotedMessage = nullptr; // No quoted message for this test
 				
 				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
 				
@@ -3664,6 +3664,312 @@ bool FPubnubChatMessageDraftSendFullParametersTest::RunTest(const FString& Param
 
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
+	return true;
+}
+
+/**
+ * Advanced test: Send draft with quoted message.
+ * Connects to channel, sends and receives a message, creates a new draft with that message set as quoted,
+ * sends the draft, then verifies the received message has Meta.quotedMessage with correct timetoken, text, userID, channelID.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendWithQuotedMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.4Advanced.WithQuotedMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendWithQuotedMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_send_quoted_init";
+	const FString TestChannelID = SDK_PREFIX + "test_send_quoted";
+	const FString FirstMessageText = TEXT("First message to be quoted");
+	const FString ReplyMessageText = TEXT("Reply quoting the first message");
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+
+	// Listen for messages
+	TSharedPtr<bool> bFirstMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> FirstMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	auto OnFirstMessage = [bFirstMessageReceived, FirstMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*FirstMessage)
+		{
+			*bFirstMessageReceived = true;
+			*FirstMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(OnFirstMessage);
+
+	// Send first message (will be quoted later)
+	FPubnubChatOperationResult SendFirstResult = CreateResult.Channel->SendText(FirstMessageText);
+	TestFalse("SendText first message should succeed", SendFirstResult.Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bFirstMessageReceived]() -> bool { return *bFirstMessageReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, CreateResult, FirstMessage, FirstMessageText, ReplyMessageText, TestChannelID, InitUserID]()
+	{
+		if(!*FirstMessage || !IsValid(*FirstMessage))
+		{
+			AddError("First message was not received");
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return;
+		}
+
+		FString QuotedTimetoken = (*FirstMessage)->GetMessageTimetoken();
+		FPubnubChatMessageData QuotedData = (*FirstMessage)->GetMessageData();
+		TestFalse("Quoted timetoken should not be empty", QuotedTimetoken.IsEmpty());
+		TestEqual("First message text should match", QuotedData.Text, FirstMessageText);
+
+		// Create draft, set quoted message, add reply text, send
+		FPubnubChatMessageDraftConfig Config;
+		UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+		if(!Draft)
+		{
+			AddError("CreateMessageDraft failed");
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return;
+		}
+		Draft->SetQuotedMessage(*FirstMessage);
+		Draft->InsertText(0, ReplyMessageText);
+
+		TSharedPtr<bool> bReplyReceived = MakeShared<bool>(false);
+		TSharedPtr<UPubnubChatMessage*> ReplyMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+		auto OnReply = [bReplyReceived, ReplyMessage](UPubnubChatMessage* Message)
+		{
+			if(Message && !*ReplyMessage)
+			{
+				*bReplyReceived = true;
+				*ReplyMessage = Message;
+			}
+		};
+		CreateResult.Channel->OnMessageReceivedNative.AddLambda(OnReply);
+
+		FPubnubChatOperationResult SendReplyResult = Draft->Send(FPubnubChatSendTextParams());
+		TestFalse("Draft Send with quoted message should succeed", SendReplyResult.Error);
+
+		ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bReplyReceived]() -> bool { return *bReplyReceived; }, MAX_WAIT_TIME));
+
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ReplyMessage, ReplyMessageText, TestChannelID, InitUserID, QuotedTimetoken, FirstMessageText, Chat]()
+		{
+			TestTrue("Reply message should have been received", *ReplyMessage && IsValid(*ReplyMessage));
+			if(!*ReplyMessage || !IsValid(*ReplyMessage))
+			{
+				CleanUpCurrentChatUser(Chat);
+				CleanUp();
+				return;
+			}
+
+			FPubnubChatMessageData ReplyData = (*ReplyMessage)->GetMessageData();
+			TestEqual("Reply message text should match", ReplyData.Text, ReplyMessageText);
+			TestEqual("Reply channel ID should match", ReplyData.ChannelID, TestChannelID);
+
+			// Verify Meta contains quotedMessage with correct values
+			TestFalse("Reply Meta should not be empty", ReplyData.Meta.IsEmpty());
+			TSharedPtr<FJsonObject> MetaJsonObject = MakeShareable(new FJsonObject);
+			bool bParsed = UPubnubJsonUtilities::StringToJsonObject(ReplyData.Meta, MetaJsonObject);
+			TestTrue("Reply Meta should be valid JSON", bParsed);
+			if(bParsed)
+			{
+				const TSharedPtr<FJsonObject>* QuotedObj = nullptr;
+				TestTrue("Meta should contain quotedMessage", MetaJsonObject->TryGetObjectField(ANSI_TO_TCHAR("quotedMessage"), QuotedObj) && QuotedObj && (*QuotedObj).IsValid());
+				if(QuotedObj && (*QuotedObj).IsValid())
+				{
+					FString MetaTimetoken, MetaText, MetaUserID, MetaChannelID;
+					(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("timetoken"), MetaTimetoken);
+					(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("text"), MetaText);
+					(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("userID"), MetaUserID);
+					(*QuotedObj)->TryGetStringField(ANSI_TO_TCHAR("channelID"), MetaChannelID);
+					TestEqual("Quoted message timetoken in Meta should match", MetaTimetoken, QuotedTimetoken);
+					TestEqual("Quoted message text in Meta should match", MetaText, FirstMessageText);
+					TestEqual("Quoted message userID in Meta should match", MetaUserID, InitUserID);
+					TestEqual("Quoted message channelID in Meta should match", MetaChannelID, TestChannelID);
+				}
+			}
+
+			ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
+			{
+				if(Chat) { Chat->DeleteChannel(TestChannelID); }
+				CleanUpCurrentChatUser(Chat);
+				CleanUp();
+			}, 0.1f));
+		}, 0.1f));
+	}, 0.1f));
+
+	return true;
+}
+
+/**
+ * Advanced test: Send draft with user mentions and verify mentioned user receives via StreamMentions.
+ * Two users: sender sends a draft containing a user mention; mentioned user has StreamMentions() active.
+ * Verifies the mentioned user receives OnMentioned with correct MessageTimetoken, ChannelID, Text, MentionedByUserID.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatMessageDraftSendWithMentionedUsersStreamMentionsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.MessageDraft.Send.4Advanced.WithMentionedUsersStreamMentions", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatMessageDraftSendWithMentionedUsersStreamMentionsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString SenderUserID = SDK_PREFIX + "test_send_mention_sender";
+	const FString MentionedUserID = SDK_PREFIX + "test_send_mention_target";
+	const FString TestChannelID = SDK_PREFIX + "test_send_mention_ch";
+	const FString PlainPart = TEXT("Hello ");
+	const FString MentionDisplayText = TEXT("TargetUser");
+	const FString AfterPart = TEXT(", check this");
+	const FString FullDraftText = PlainPart + MentionDisplayText + AfterPart;
+
+	// Sender chat
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult SenderInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, SenderUserID, ChatConfig);
+	TestFalse("InitChat for sender should succeed", SenderInitResult.Result.Error);
+	UPubnubChat* SenderChat = SenderInitResult.Chat;
+	if(!SenderChat)
+	{
+		CleanUp();
+		return false;
+	}
+
+	// Create the user that will be mentioned (so they exist in the system)
+	FPubnubChatUserData MentionedUserData;
+	MentionedUserData.UserName = MentionDisplayText;
+	FPubnubChatUserResult CreateUserResult = SenderChat->CreateUser(MentionedUserID, MentionedUserData);
+	TestFalse("CreateUser for mentioned user should succeed", CreateUserResult.Result.Error);
+
+	// Mentioned user's chat (so they can call StreamMentions)
+	FPubnubChatInitChatResult MentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, MentionedUserID, ChatConfig);
+	TestFalse("InitChat for mentioned user should succeed", MentionedInitResult.Result.Error);
+	UPubnubChat* MentionedChat = MentionedInitResult.Chat;
+	if(!MentionedChat)
+	{
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+		return false;
+	}
+
+	UPubnubChatUser* MentionedUser = PubnubChatTestHelpers::GetCurrentUserFromChat(MentionedChat);
+	TestNotNull("Mentioned user should be obtainable from chat", MentionedUser);
+	if(!MentionedUser)
+	{
+		CleanUpCurrentChatUser(MentionedChat);
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+		return false;
+	}
+
+	// Start listening for mentions (as the mentioned user)
+	TSharedPtr<bool> bMentionReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatUserMention> ReceivedMention = MakeShared<FPubnubChatUserMention>();
+	MentionedUser->OnMentionedNative.AddLambda([bMentionReceived, ReceivedMention](const FPubnubChatUserMention& M)
+	{
+		*bMentionReceived = true;
+		*ReceivedMention = M;
+	});
+	FPubnubChatOperationResult StreamResult = MentionedUser->StreamMentions();
+	TestFalse("StreamMentions should succeed", StreamResult.Error);
+
+	// Sender: create channel, connect, create draft with user mention, send
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = SenderChat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(MentionedChat);
+		CleanUpCurrentChatUser(SenderChat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+
+	FPubnubChatMessageDraftConfig Config;
+	UPubnubChatMessageDraft* Draft = CreateResult.Channel->CreateMessageDraft(Config);
+	TestNotNull("Draft should be created", Draft);
+	if(!Draft)
+	{
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, TestChannelID, MentionedUserID]()
+		{
+			if(SenderChat) { SenderChat->DeleteChannel(TestChannelID); SenderChat->DeleteUser(MentionedUserID); }
+			CleanUpCurrentChatUser(MentionedChat);
+			CleanUpCurrentChatUser(SenderChat);
+			CleanUp();
+		}, 0.0f));
+		return true;
+	}
+
+	Draft->InsertText(0, FullDraftText);
+	int32 MentionStart = PlainPart.Len();
+	int32 MentionLen = MentionDisplayText.Len();
+	FPubnubChatMentionTarget UserMentionTarget;
+	UserMentionTarget.MentionTargetType = EPubnubChatMentionTargetType::PCMTT_User;
+	UserMentionTarget.Target = MentionedUserID;
+	FPubnubChatOperationResult AddMentionResult = Draft->AddMention(MentionStart, MentionLen, UserMentionTarget);
+	TestFalse("AddMention should succeed", AddMentionResult.Error);
+
+	FPubnubChatOperationResult SendResult = Draft->Send(FPubnubChatSendTextParams());
+	TestFalse("Send draft with mention should succeed", SendResult.Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMentionReceived]() -> bool { return *bMentionReceived; }, MAX_WAIT_TIME));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMentionReceived, ReceivedMention, TestChannelID, SenderUserID, MentionedUserID, MentionDisplayText, SenderChat, MentionedChat]()
+	{
+		TestTrue("Mention event should have been received", *bMentionReceived);
+		if(*bMentionReceived)
+		{
+			TestEqual("Mention ChannelID should match", ReceivedMention->ChannelID, TestChannelID);
+			TestEqual("MentionedByUserID should be sender", ReceivedMention->MentionedByUserID, SenderUserID);
+			TestEqual("Mention text should match display text", ReceivedMention->Text, MentionDisplayText);
+			TestFalse("MessageTimetoken should not be empty", ReceivedMention->MessageTimetoken.IsEmpty());
+		}
+
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, TestChannelID, MentionedUserID]()
+		{
+			if(SenderChat)
+			{
+				SenderChat->DeleteChannel(TestChannelID);
+				SenderChat->DeleteUser(MentionedUserID);
+			}
+			CleanUpCurrentChatUser(MentionedChat);
+			CleanUpCurrentChatUser(SenderChat);
+			CleanUp();
+		}, 0.1f));
+	}, 0.1f));
+
 	return true;
 }
 

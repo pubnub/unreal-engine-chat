@@ -63,7 +63,7 @@ FString UPubnubChatInternalUtilities::PublishedStringToChatMessage(const FString
 	return JsonObject->GetStringField(ANSI_TO_TCHAR("text"));
 }
 
-FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams)
+FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams, UPubnubChatMessage* QuotedMessage)
 {
 	bool AnyDataAdded = false;
 	
@@ -77,12 +77,12 @@ FString UPubnubChatInternalUtilities::SendTextMetaFromParams(const FPubnubChatSe
 	}
 
 	//Add quoted message
-	if(SendTextParams.QuotedMessage)
+	if(QuotedMessage)
 	{
-		FPubnubChatMessageData QuotedMessageData = SendTextParams.QuotedMessage->GetMessageData();
+		FPubnubChatMessageData QuotedMessageData = QuotedMessage->GetMessageData();
 		
 		TSharedPtr<FJsonObject> QuotedMessageJsonObject = MakeShareable(new FJsonObject);
-		QuotedMessageJsonObject->SetStringField(ANSI_TO_TCHAR("timetoken"), SendTextParams.QuotedMessage->GetMessageTimetoken());
+		QuotedMessageJsonObject->SetStringField(ANSI_TO_TCHAR("timetoken"), QuotedMessage->GetMessageTimetoken());
 		QuotedMessageJsonObject->SetStringField(ANSI_TO_TCHAR("text"), QuotedMessageData.Text);
 		QuotedMessageJsonObject->SetStringField(ANSI_TO_TCHAR("userID"), QuotedMessageData.UserID);
 		QuotedMessageJsonObject->SetStringField(ANSI_TO_TCHAR("channelID"), QuotedMessageData.ChannelID);

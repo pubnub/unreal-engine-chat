@@ -36,7 +36,7 @@ public:
 	
 	static FString ChatMessageToPublishString(const FString ChatMessage);
 	static FString PublishedStringToChatMessage(const FString PublishedMessage);
-	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams);
+	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams, UPubnubChatMessage* QuotedMessage = nullptr);
 	static FString GetForwardedMessageMeta(const FString& OriginalMessageMeta, const FString& UserID, const FString& ChannelID);
 	
 	

@@ -190,8 +190,6 @@ struct FPubnubChatSendTextParams
 	bool SendByPost = false;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
 	FString Meta = "";
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat")
-	UPubnubChatMessage* QuotedMessage = nullptr;
 };
 
 USTRUCT(BlueprintType)

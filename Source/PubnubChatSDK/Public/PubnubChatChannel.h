@@ -1411,6 +1411,8 @@ protected:
 	
 	FPubnubChatGetRestrictionsResult GetRestrictions(const int Limit = 0, const FString Filter = "", FPubnubMemberSort Sort = FPubnubMemberSort(), FPubnubPage Page = FPubnubPage());
 	
+	FPubnubChatOperationResult SendTextInternal(const FString Message, FPubnubChatSendTextParams SendTextParams = FPubnubChatSendTextParams(), UPubnubChatMessage* QuotedMessage = nullptr, TMap<FString,FString> MentionedUsers = TMap<FString, FString>());
+	
 	//This function is for ThreadChannel which does additional logic during SentText (SendText as UFUNCTION can't be directly overriden)
 	virtual FPubnubChatOperationResult OnSendText();
 	

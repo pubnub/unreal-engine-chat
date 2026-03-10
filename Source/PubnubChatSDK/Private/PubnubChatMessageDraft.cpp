@@ -424,7 +424,15 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::Send(FPubnubChatSendTextPara
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(!GetCurrentText().IsEmpty(), TEXT("Can't send empty message draft."));
 	
 	FString DraftMessage = GetDraftTextToSend();
-	return Channel->SendText(DraftMessage);
+	TMap<FString, FString> MentionedUsers;
+	for (auto& MessageElement : MessageElements)
+	{
+		if (MessageElement.MentionTarget.MentionTargetType == EPubnubChatMentionTargetType::PCMTT_User)
+		{
+			MentionedUsers.Add(MessageElement.MentionTarget.Target, MessageElement.Text);
+		}
+	}
+	return Channel->SendTextInternal(DraftMessage, SendTextParams, QuotedMessage, MentionedUsers);
 }
 
 void UPubnubChatMessageDraft::SendAsync(FOnPubnubChatOperationResponse OnOperationResponse, FPubnubChatSendTextParams SendTextParams)
