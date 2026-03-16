@@ -1,0 +1,150 @@
+# PubnubChat plugin CI: build and run automation tests using Unreal Test Project
+# Runs on: unreal-engine-chat repo (PR or push to main/master)
+# Requires: UE 5.5 at UE_PATH on macOS runner; unreal-test-project has Pubnub + PubnubChat as submodules
+
+name: Unreal Engine Tests (macOS)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  UE_PATH: "/Users/Shared/Epic Games/UE_5.5"
+  TEST_PROJECT_REPO: "https://github.com/pubnub/unreal-test-project.git"
+  PUBNUB_SDK_REPO: "https://github.com/pubnub/unreal-engine.git"
+  TEST_PROJECT_DIR: "unreal-test-project"
+
+jobs:
+  test:
+    runs-on: macos-14  # use macos-gh if your runner has that label
+    timeout-minutes: 45
+
+    steps:
+      # --- Checkout PubnubChat plugin (this repo, PR branch or push branch)
+      - name: Checkout PubnubChat (current branch)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # --- Clone Unreal Test Project (master) with submodules
+      - name: Clone Unreal Test Project
+        run: |
+          git clone --depth 1 --branch master "${{ env.TEST_PROJECT_REPO }}" "${{ env.TEST_PROJECT_DIR }}"
+          cd "${{ env.TEST_PROJECT_DIR }}"
+          git submodule update --init --recursive
+
+      # --- Point Pubnub plugin to unreal-engine master
+      - name: Use Pubnub SDK (unreal-engine) at master
+        run: |
+          cd "${{ env.TEST_PROJECT_DIR }}"
+          if [ -d "Plugins/Pubnub" ]; then
+            cd Plugins/Pubnub
+            git fetch origin master
+            git checkout origin/master
+            cd "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          fi
+
+      # --- Override PubnubChat with this repo (current branch under test)
+      - name: Use PubnubChat from current branch (PR / push)
+        run: |
+          rm -rf "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat"
+          mkdir -p "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat"
+          rsync -a --exclude='.git' --exclude='unreal-test-project' "${{ github.workspace }}/" "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/"
+
+      # --- Resolve .uproject path
+      - name: Find project file
+        id: project
+        run: |
+          cd "${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT=$(find . -maxdepth 1 -name "*.uproject" -print -quit)
+          if [ -z "$UPROJECT" ]; then
+            echo "error=No .uproject found in ${{ env.TEST_PROJECT_DIR }}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          UPROJECT="${UPROJECT#./}"
+          PROJECT_NAME="${UPROJECT%.uproject}"
+          echo "uproject=$UPROJECT" >> "$GITHUB_OUTPUT"
+          echo "name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "Project: $UPROJECT (target: $PROJECT_NAME)"
+
+      # --- Compile project (fail on errors)
+      - name: Compile project
+        id: build
+        run: |
+          set -e
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          TARGET="${{ steps.project.outputs.name }}"
+          BUILD_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/Build.sh"
+          if [ ! -f "$BUILD_SCRIPT" ]; then
+            echo "Build script not found: $BUILD_SCRIPT"
+            exit 1
+          fi
+          "$BUILD_SCRIPT" "$TARGET" Mac Development -project="$PROJ_DIR/$UPROJECT" 2>&1 | tee build.log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "--- Build failed ---"
+            tail -n 200 build.log
+            exit 1
+          fi
+          echo "Build succeeded."
+
+      # --- Run automation tests
+      - name: Run automation tests
+        id: tests
+        run: |
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          REPORT_DIR="$PROJ_DIR/Saved/TestReport"
+          EDITOR_CMD="$UE_PATH/Engine/Binaries/Mac/UnrealEditor-Cmd"
+          if [ ! -f "$EDITOR_CMD" ]; then
+            EDITOR_CMD="$UE_PATH/Engine/Binaries/Mac/UnrealEditor"
+          fi
+          mkdir -p "$REPORT_DIR"
+          set +e
+          "$EDITOR_CMD" "$PROJ_DIR/$UPROJECT" \
+            -ExecCmds="Automation RunTest Pubnub.aUnit+PubnubChat.Unit;Quit" \
+            -unattended -nopause -nullrhi -nosound -nosplash \
+            -ReportOutputPath="$REPORT_DIR" \
+            -log 2>&1 | tee test_run.log
+          EDITOR_EXIT=${PIPESTATUS[0]}
+          echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
+
+      # --- Parse test output and report
+      - name: Parse and report test results
+        if: always()
+        run: |
+          LOG=test_run.log
+          echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
+          echo ""
+          if [ ! -f "$LOG" ]; then
+            echo "No test log found."
+            exit 1
+          fi
+          # Count and list completed/passed/failed (UE log patterns)
+          PASSED=$(grep -c "Test Passed\|passed\|Passed" "$LOG" 2>/dev/null || echo "0")
+          FAILED=$(grep -c "Test Failed\|failed\|Failed\|Error:" "$LOG" 2>/dev/null || echo "0")
+          echo "| Result | Count |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
+          echo ""
+          echo "#### Failed tests / errors (excerpt)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -E "Test Failed|Failure|Error:|Error |failed|FAILED" "$LOG" | tail -n 80 >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          # Also print to job log
+          echo "--- Test log (last 300 lines) ---"
+          tail -n 300 "$LOG"
+          if [ "${{ steps.tests.outputs.exit_code }}" != "0" ]; then
+            echo "Tests reported failure (exit code non-zero)."
+            exit 1
+          fi
+          FAILED_NUM=$(grep -c "Test Failed\|Failure" "$LOG" 2>/dev/null || echo "0")
+          if [ "$FAILED_NUM" -gt 0 ]; then
+            echo "Failing tests detected in log."
+            exit 1
+          fi
