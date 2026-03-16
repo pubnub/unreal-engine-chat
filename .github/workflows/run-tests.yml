@@ -18,7 +18,8 @@ env:
 
 jobs:
   test:
-    runs-on: macos-gh
+    runs-on:
+      group: macos-gh
     timeout-minutes: 45
 
     steps:
