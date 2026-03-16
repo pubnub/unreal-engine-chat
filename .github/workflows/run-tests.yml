@@ -82,8 +82,13 @@ jobs:
       # --- Compile project (fail on errors)
       - name: Compile project
         id: build
+        env:
+          # UnrealBuildTool writes to ~/Documents/Library/Application Support/Epic/UnrealEngine/;
+          # use a writable dir inside the test project so the runner can write.
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
         run: |
           set -e
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
           UE_PATH="${{ env.UE_PATH }}"
           PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           UPROJECT="${{ steps.project.outputs.uproject }}"
@@ -104,7 +109,10 @@ jobs:
       # --- Run automation tests
       - name: Run automation tests
         id: tests
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
         run: |
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
           UE_PATH="${{ env.UE_PATH }}"
           PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           UPROJECT="${{ steps.project.outputs.uproject }}"
