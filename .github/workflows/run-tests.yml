@@ -18,7 +18,7 @@ env:
 
 jobs:
   test:
-    runs-on: macos-14  # use macos-gh if your runner has that label
+    runs-on: macos-gh
     timeout-minutes: 45
 
     steps:
