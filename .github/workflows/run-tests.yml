@@ -29,9 +29,18 @@ jobs:
         with:
           fetch-depth: 1
 
-      # --- Clone Unreal Test Project (master) with submodules
+      # --- Clone Unreal Test Project (master) with submodules (private repo: use token)
       - name: Clone Unreal Test Project
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TOKEN="${GH_TOKEN:-$GITHUB_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "No token available. For private repos, add secret GH_TOKEN (repo scope) or ensure GITHUB_TOKEN can access other org repos."
+            exit 1
+          fi
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
           git clone --depth 1 --branch master "${{ env.TEST_PROJECT_REPO }}" "${{ env.TEST_PROJECT_DIR }}"
           cd "${{ env.TEST_PROJECT_DIR }}"
           git submodule update --init --recursive
