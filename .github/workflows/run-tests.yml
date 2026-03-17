@@ -45,14 +45,14 @@ jobs:
           cd "${{ env.TEST_PROJECT_DIR }}"
           git submodule update --init --recursive
 
-      # --- Point Pubnub plugin to unreal-engine master
-      - name: Use Pubnub SDK (unreal-engine) at master
+      # --- Point Pubnub plugin to unreal-engine branch CLEN-3069_Multiple_contexts
+      - name: Use Pubnub SDK (unreal-engine) at CLEN-3069_Multiple_contexts
         run: |
           cd "${{ env.TEST_PROJECT_DIR }}"
           if [ -d "Plugins/Pubnub" ]; then
             cd Plugins/Pubnub
-            git fetch origin master
-            git checkout origin/master
+            git fetch origin CLEN-3069_Multiple_contexts
+            git checkout origin/CLEN-3069_Multiple_contexts
             cd "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           fi
 
