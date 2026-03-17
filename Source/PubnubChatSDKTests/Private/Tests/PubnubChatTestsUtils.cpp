@@ -12,7 +12,7 @@
 
 FString PubnubChatTests::GetTestPublishKey()
 {
-	FString PublishKey = FPlatformMisc::GetEnvironmentVariable(TEXT("PUBLISH_KEY"));
+	FString PublishKey = FPlatformMisc::GetEnvironmentVariable(TEXT("PN_PUB_KEY"));
 	if(!PublishKey.IsEmpty())
 	{
 		return PublishKey;
@@ -23,7 +23,7 @@ FString PubnubChatTests::GetTestPublishKey()
 
 FString PubnubChatTests::GetTestSubscribeKey()
 {
-	FString SubscribeKey = FPlatformMisc::GetEnvironmentVariable(TEXT("SUBSCRIBE_KEY"));
+	FString SubscribeKey = FPlatformMisc::GetEnvironmentVariable(TEXT("PN_SUB_KEY"));
 	if(!SubscribeKey.IsEmpty())
 	{
 		return SubscribeKey;
