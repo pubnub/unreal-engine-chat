@@ -1,8 +1,10 @@
 // Copyright 2025 PubNUB Inc. All Rights Reserved.
 
 #include "PubnubChatMessageDraft.h"
+#include "PubnubChatUser.h"
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Dom/JsonObject.h"
 #include "FunctionLibraries/PubnubChatMessageDraftUtilities.h"
 #include "StructLibraries/PubnubChatMessageStructLibrary.h"
 #include "Misc/AutomationTest.h"

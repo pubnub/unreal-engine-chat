@@ -7,6 +7,7 @@
 #include "PubnubChatCallbackStop.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubChatSubsystem.h"
+#include "PubnubChatMembership.h"
 #include "PubnubChatObjectsRepository.h"
 #include "Entities/PubnubUserMetadataEntity.h"
 #include "Entities/PubnubSubscription.h"

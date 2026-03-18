@@ -1466,7 +1466,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamPresence()
 	if (IsStreamingPresence)
 	{ return FinalResult; }
 	
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(PresenceSubscription, "Presence subscription is invalid.");
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(PresenceSubscription, TEXT("Presence subscription is invalid."));
 	
 	FPubnubChatWhoIsPresentResult WhoIsPresentResult = WhoIsPresent();
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_OPR_RESULT_IF_ERROR(FinalResult, WhoIsPresentResult.Result);
@@ -2163,7 +2163,7 @@ FPubnubChatOperationResult UPubnubChatChannel::StreamCustomEvents()
 	if (IsStreamingCustomEvents)
 	{ return FinalResult; }
 
-	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(CustomEventsSubscription, "Custom events subscription is invalid.");
+	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_CONDITION_FAILED(CustomEventsSubscription, TEXT("Custom events subscription is invalid."));
 	
 	TWeakObjectPtr<UPubnubChatChannel> ThisWeak = MakeWeakObjectPtr(this);
 
