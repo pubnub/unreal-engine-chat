@@ -6,6 +6,7 @@
 #include "PubnubChatMessage.h"
 #include "PubnubChatMembership.h"
 #include "PubnubChatThreadChannel.h"
+#include "PubnubChatThreadMessage.h"
 #include "PubnubChatUser.h"
 #include "PubnubClient.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
@@ -1724,6 +1725,179 @@ bool FPubnubChatChannelGetHistoryIsMoreFlagTest::RunTest(const FString& Paramete
 	
 	CleanUpCurrentChatUser(Chat);
 	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetHistory on a thread channel (calling GetHistory, not GetThreadHistory).
+ * Creates a thread, sends a message on it, then calls GetHistory on the thread channel.
+ * Verifies that returned messages can be cast to UPubnubChatThreadMessage and that
+ * their ParentChannelID matches the parent of that thread.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelGetHistoryOnThreadReturnsThreadMessagesTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.GetHistory.4Advanced.OnThreadReturnsThreadMessages", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatChannelGetHistoryOnThreadReturnsThreadMessagesTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_history_thread_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_history_on_thread";
+	const FString ParentMessageText = TEXT("Parent message for GetHistory thread test");
+	const FString ThreadMessageText = TEXT("Thread message for GetHistory test");
+
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+
+	if(!CreateChannelResult.Channel)
+	{
+		Chat->DeleteChannel(TestChannelID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+
+	FPubnubChatOperationResult ConnectResult = CreateChannelResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, ParentMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(ParentMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+
+	TSharedPtr<UPubnubChatThreadChannel*> ThreadChannel = MakeShared<UPubnubChatThreadChannel*>(nullptr);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, ReceivedMessage, ThreadChannel]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		FPubnubChatThreadChannelResult CreateThreadResult = Chat->CreateThreadChannel(*ReceivedMessage);
+		TestFalse("CreateThreadChannel should succeed", CreateThreadResult.Result.Error);
+		TestNotNull("ThreadChannel should be created", CreateThreadResult.ThreadChannel);
+		if(CreateThreadResult.ThreadChannel)
+		{
+			*ThreadChannel = CreateThreadResult.ThreadChannel;
+		}
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		FPubnubChatOperationResult ThreadConnectResult = (*ThreadChannel)->Connect();
+		TestFalse("Connect to thread channel should succeed", ThreadConnectResult.Error);
+	}, 0.2f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel, ThreadMessageText]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		FPubnubChatOperationResult SendResult = (*ThreadChannel)->SendText(ThreadMessageText);
+		TestFalse("SendText to thread should succeed", SendResult.Error);
+	}, 0.5f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ThreadChannel, TestChannelID]()
+	{
+		if(!*ThreadChannel)
+		{
+			AddError("ThreadChannel was not created");
+			return;
+		}
+		const FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		const FString StartTimetoken = CurrentTimetoken;
+		const FString EndTimetoken = UPubnubTimetokenUtilities::AddIntToTimetoken(CurrentTimetoken, -100000000);
+
+		// Call GetHistory (not GetThreadHistory) on the thread channel
+		FPubnubChatGetHistoryResult GetHistoryResult = (*ThreadChannel)->GetHistory(StartTimetoken, EndTimetoken);
+
+		TestFalse("GetHistory on thread channel should succeed", GetHistoryResult.Result.Error);
+		TestTrue("GetHistory should return at least one message", GetHistoryResult.Messages.Num() >= 1);
+
+		const FString ExpectedParentChannelID = (*ThreadChannel)->GetParentChannelID();
+		TestEqual("Thread parent channel ID should match test channel", ExpectedParentChannelID, TestChannelID);
+
+		for(UPubnubChatMessage* Message : GetHistoryResult.Messages)
+		{
+			TestNotNull("Each history message should be non-null", Message);
+			if(!Message) { continue; }
+			UPubnubChatThreadMessage* ThreadMessage = Cast<UPubnubChatThreadMessage>(Message);
+			TestNotNull("Each message from GetHistory on thread should cast to UPubnubChatThreadMessage", ThreadMessage);
+			if(ThreadMessage)
+			{
+				TestEqual("ParentChannelID should match parent of thread", ThreadMessage->GetParentChannelID(), ExpectedParentChannelID);
+			}
+		}
+	}, 1.0f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, ReceivedMessage, ThreadChannel]()
+	{
+		if(*ThreadChannel)
+		{
+			(*ThreadChannel)->Disconnect();
+		}
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+		}
+		if(Chat && *ReceivedMessage)
+		{
+			FPubnubChatHasThreadResult HasThreadResult = (*ReceivedMessage)->HasThread();
+			if(HasThreadResult.HasThread)
+			{
+				Chat->RemoveThreadChannel(*ReceivedMessage);
+			}
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
 	return true;
 }
 

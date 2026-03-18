@@ -1092,9 +1092,20 @@ FPubnubChatGetHistoryResult UPubnubChatChannel::GetHistory(const FString StartTi
 	FPubnubFetchHistoryResult FetchHistoryResult = PubnubClient->FetchHistory(ChannelID, FetchHistorySettings);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, FetchHistoryResult.Result, "FetchHistory");
 	
+	// Check if this Channel is a ThreadChannel, if so parse ID to get ParentChannelID
+	bool IsThreadChannel = UPubnubChatInternalUtilities::IsChannelAThread(ChannelID);
+	FString ParentChannelID = "";
+	if (IsThreadChannel)
+	{
+		ParentChannelID = UPubnubChatInternalUtilities::GetParentChannelIDFromThreadID(ChannelID);
+	}
+	
 	for (auto& MessageData : FetchHistoryResult.Messages)
 	{
-		UPubnubChatMessage* Message = Chat->CreateMessageObject(MessageData.Timetoken, MessageData);
+		// Create Messages, if this channel is a thread, these have to be ThreadMessages
+		UPubnubChatMessage* Message = IsThreadChannel ? Chat->CreateThreadMessageObject(MessageData.Timetoken, MessageData, ParentChannelID)
+		: Chat->CreateMessageObject(MessageData.Timetoken, MessageData);
+
 		FinalResult.Messages.Add(Message);
 	}
 	

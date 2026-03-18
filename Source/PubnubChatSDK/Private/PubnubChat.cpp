@@ -357,6 +357,7 @@ FPubnubChatChannelResult UPubnubChat::CreatePublicConversation(const FString Cha
 	FPubnubChatChannelResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, (!UPubnubChatInternalUtilities::IsChannelAThread(ChannelID)), TEXT("Can't create thread with this function. Use CreateThread instead."));
 
 	//Regardless of the provided Channel Type, this method creates public channel
 	ChannelData.Type = "public";
@@ -403,6 +404,7 @@ FPubnubChatCreateGroupConversationResult UPubnubChat::CreateGroupConversation(TA
 {
 	FPubnubChatCreateGroupConversationResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, (!UPubnubChatInternalUtilities::IsChannelAThread(ChannelID)), TEXT("Can't create thread with this function. Use CreateThread instead."));
 	
 	TArray<UPubnubChatUser*> ValidUsers = UPubnubChatInternalUtilities::RemoveInvalidObjects(Users);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, !ValidUsers.IsEmpty(), TEXT("At least one valid user has to be provided"));
@@ -468,6 +470,8 @@ FPubnubChatCreateDirectConversationResult UPubnubChat::CreateDirectConversation(
 	FPubnubChatCreateDirectConversationResult FinalResult;
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_OBJECT_INVALID(FinalResult, User);
+	PUBNUB_CHAT_RETURN_WRAPPER_IF_CONDITION_FAILED(FinalResult, (!UPubnubChatInternalUtilities::IsChannelAThread(ChannelID)), TEXT("Can't create thread with this function. Use CreateThread instead."));
+
 	
 	//If channel ID was not provided generate ID by sorting users and hashing their IDs
 	FString FinalChannelID = ChannelID;

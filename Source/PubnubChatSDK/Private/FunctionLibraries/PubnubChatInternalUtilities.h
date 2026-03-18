@@ -126,6 +126,7 @@ public:
 	/* THREADS */
 	
 	static FString GetThreadID(const FString& ChannelID, const FString& Timetoken);
+	static FString GetParentChannelIDFromThreadID(const FString& ThreadID);
 	static FString GetThreadDescription(const FString& ChannelID, const FString& Timetoken);
 	static bool HasThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
 	static FPubnubChatMessageAction GetThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);

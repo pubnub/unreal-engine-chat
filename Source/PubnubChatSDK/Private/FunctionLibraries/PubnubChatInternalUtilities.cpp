@@ -862,6 +862,18 @@ FString UPubnubChatInternalUtilities::GetThreadID(const FString& ChannelID, cons
 	return FString::Printf(TEXT("%s_%s_%s"), *Pubnub_Chat_Message_Thread_ID_Prefix, *ChannelID, *Timetoken);
 }
 
+FString UPubnubChatInternalUtilities::GetParentChannelIDFromThreadID(const FString& ThreadID)
+{
+	FString ParentChannelID = ThreadID;
+	if (!ParentChannelID.RemoveFromStart(Pubnub_Chat_Message_Thread_ID_Prefix + TEXT("_")))
+		{return "";}
+	
+	// Remove last 18 characters 17-digit timetoken and "_"
+	ParentChannelID = ParentChannelID.LeftChop(18);
+	
+	return ParentChannelID;
+}
+
 FString UPubnubChatInternalUtilities::GetThreadDescription(const FString& ChannelID, const FString& Timetoken)
 {
 	return FString::Printf(TEXT("Thread on channel %s with message timetoken %s"), *ChannelID, *Timetoken);
