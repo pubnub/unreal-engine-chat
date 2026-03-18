@@ -17,6 +17,8 @@
 	"SupportedTargetPlatforms": [
 		"Win64",
 		"Mac",
+		"Android",
+		"IOS",
 		"Linux"
 	],
 	"Modules": [
@@ -27,6 +29,8 @@
 			"PlatformAllowList": [
 				"Win64",
 				"Mac",
+				"Android",
+				"IOS",
 				"Linux"
 			]
 		},
@@ -37,6 +41,8 @@
 			"PlatformAllowList": [
 				"Win64",
 				"Mac",
+				"Android",
+				"IOS",
 				"Linux"
 			]
 		}
