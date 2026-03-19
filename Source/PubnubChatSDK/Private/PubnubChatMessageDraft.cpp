@@ -1,4 +1,4 @@
-// Copyright 2025 PubNUB Inc. All Rights Reserved.
+// Copyright 2026 PubNub Inc. All Rights Reserved.
 
 #include "PubnubChatMessageDraft.h"
 #include "PubnubChatChannel.h"
