@@ -15,12 +15,22 @@ env:
   TEST_PROJECT_REPO: "https://github.com/pubnub/unreal-test-project.git"
   PUBNUB_SDK_REPO: "https://github.com/pubnub/unreal-engine.git"
   TEST_PROJECT_DIR: "unreal-test-project"
+  # Branch of unreal-engine (Pubnub SDK) to use
+  PUBNUB_SDK_BRANCH: "CLEN-3069_Multiple_contexts"
 
 jobs:
   test:
     runs-on:
       group: macos-gh
     timeout-minutes: 45
+
+    env:
+      PN_PUB_KEY: ${{ secrets.PN_PUB_KEY }}
+      PN_SUB_KEY: ${{ secrets.PN_SUB_KEY }}
+      PN_SEC_KEY: ${{ secrets.PN_SEC_KEY }}
+      PN_PUB_KEY_PAM: ${{ secrets.PN_PUB_KEY_PAM }}
+      PN_SUB_KEY_PAM: ${{ secrets.PN_SUB_KEY_PAM }}
+      PN_SEC_KEY_PAM: ${{ secrets.PN_SEC_KEY_PAM }}
 
     steps:
       # --- Checkout PubnubChat plugin (this repo, PR branch or push branch)
@@ -45,14 +55,18 @@ jobs:
           cd "${{ env.TEST_PROJECT_DIR }}"
           git submodule update --init --recursive
 
-      # --- Point Pubnub plugin to unreal-engine branch CLEN-3069_Multiple_contexts
-      - name: Use Pubnub SDK (unreal-engine) at CLEN-3069_Multiple_contexts
+      # --- Point Pubnub plugin to unreal-engine branch (fetch from canonical PUBNUB_SDK_REPO so branch is found)
+      - name: Use Pubnub SDK (unreal-engine) at ${{ env.PUBNUB_SDK_BRANCH }}
         run: |
           cd "${{ env.TEST_PROJECT_DIR }}"
           if [ -d "Plugins/Pubnub" ]; then
             cd Plugins/Pubnub
-            git fetch origin CLEN-3069_Multiple_contexts
-            git checkout origin/CLEN-3069_Multiple_contexts
+            BRANCH="${{ env.PUBNUB_SDK_BRANCH }}"
+            # Ensure origin points to canonical repo (submodule may use relative/fork URL)
+            git remote set-url origin "${{ env.PUBNUB_SDK_REPO }}"
+            git fetch origin "$BRANCH"
+            git checkout "origin/$BRANCH"
+            echo "Using Pubnub SDK branch: $BRANCH"
             cd "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           fi
 
