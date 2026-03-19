@@ -93,12 +93,9 @@ jobs:
           echo "name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           echo "Project: $UPROJECT (target: $PROJECT_NAME)"
 
-      # --- Compile project (fail on errors)
-      - name: Compile project
-        id: build
+      # --- Generate project files (required for Editor build and plugin modules)
+      - name: Generate project files
         env:
-          # UnrealBuildTool writes to ~/Documents/Library/Application Support/Epic/UnrealEngine/;
-          # use a writable dir inside the test project so the runner can write.
           HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
         run: |
           set -e
@@ -106,13 +103,33 @@ jobs:
           UE_PATH="${{ env.UE_PATH }}"
           PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           UPROJECT="${{ steps.project.outputs.uproject }}"
-          TARGET="${{ steps.project.outputs.name }}"
-          BUILD_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/Build.sh"
-          if [ ! -f "$BUILD_SCRIPT" ]; then
-            echo "Build script not found: $BUILD_SCRIPT"
+          GEN_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/GenerateProjectFiles.sh"
+          if [ ! -f "$GEN_SCRIPT" ]; then
+            echo "GenerateProjectFiles.sh not found: $GEN_SCRIPT"
             exit 1
           fi
-          "$BUILD_SCRIPT" "$TARGET" Mac Development -project="$PROJ_DIR/$UPROJECT" 2>&1 | tee build.log
+          "$GEN_SCRIPT" -project="$PROJ_DIR/$UPROJECT" -game
+          echo "Project files generated."
+
+      # --- Compile project (Editor target for running automation tests in UnrealEditor)
+      - name: Compile project
+        id: build
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
+        run: |
+          set -e
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          PROJECT_NAME="${{ steps.project.outputs.name }}"
+          EDITOR_TARGET="${PROJECT_NAME}Editor"
+          UBT_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/RunUBT.sh"
+          if [ ! -f "$UBT_SCRIPT" ]; then
+            UBT_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/Build.sh"
+          fi
+          echo "Building $EDITOR_TARGET (Mac Development)..."
+          "$UBT_SCRIPT" "$EDITOR_TARGET" Mac Development -project="$PROJ_DIR/$UPROJECT" -verbose 2>&1 | tee build.log
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
             echo "--- Build failed ---"
             tail -n 200 build.log
