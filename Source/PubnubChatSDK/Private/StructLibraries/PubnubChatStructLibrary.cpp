@@ -2,7 +2,7 @@
 
 
 #include "StructLibraries/PubnubChatStructLibrary.h"
-#include "kismet/KismetMathLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "PubnubChatConst.h"
 
 
