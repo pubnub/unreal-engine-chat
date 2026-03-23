@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "HAL/CriticalSection.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChat.h"
@@ -11,6 +12,9 @@
 class UPubnubClient;
 
 DECLARE_LOG_CATEGORY_EXTERN(PubnubChatLog, Log, All);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnPubnubChatInitChatResponse, FPubnubChatInitChatResult, InitChatResult);
+DECLARE_DELEGATE_OneParam(FOnPubnubChatInitChatResponseNative, const FPubnubChatInitChatResult& InitChatResult);
 
 
 /**
@@ -40,6 +44,16 @@ public:
 	FPubnubChatInitChatResult InitChat(FString PublishKey, FString SubscribeKey, FString UserID, FPubnubChatConfig Config = FPubnubChatConfig());
 
 	/**
+	 * Async version of InitChat. Runs initialization on a background thread and invokes OnInitChatResponse on the game thread (via the same delegate dispatch as other PubNub Chat async APIs).
+	 * Validates PublishKey, SubscribeKey, and UserID on the calling thread before scheduling work; invalid input invokes the delegate with an error result immediately.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
+	void InitChatAsync(FString PublishKey, FString SubscribeKey, FString UserID, FOnPubnubChatInitChatResponse OnInitChatResponse, FPubnubChatConfig Config = FPubnubChatConfig());
+
+	/** Native delegate variant of InitChatAsync. */
+	void InitChatAsync(FString PublishKey, FString SubscribeKey, FString UserID, FOnPubnubChatInitChatResponseNative OnInitChatResponseNative, FPubnubChatConfig Config = FPubnubChatConfig());
+
+	/**
 	 * Initializes a chat for the given user using an existing UPubnubClient. The client's UserID is set to the provided UserID. The chat is stored in the subsystem and can be retrieved with GetChat(UserID).
 	 * Blocking: initializes the chat on the calling thread. If a chat for this UserID already exists, returns an error result but with the existing Chat in the result (no new chat created).
 	 *
@@ -50,6 +64,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
 	FPubnubChatInitChatResult InitChatWithPubnubClient(FString UserID, UPubnubClient* PubnubClient, FPubnubChatConfig Config = FPubnubChatConfig());
+
+	/**
+	 * Async version of InitChatWithPubnubClient. Runs initialization on a background thread and invokes OnInitChatResponse on the game thread.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "PubnubChat")
+	void InitChatWithPubnubClientAsync(FString UserID, UPubnubClient* PubnubClient, FOnPubnubChatInitChatResponse OnInitChatResponse, FPubnubChatConfig Config = FPubnubChatConfig());
+
+	/** Native delegate variant of InitChatWithPubnubClientAsync. */
+	void InitChatWithPubnubClientAsync(FString UserID, UPubnubClient* PubnubClient, FOnPubnubChatInitChatResponseNative OnInitChatResponseNative, FPubnubChatConfig Config = FPubnubChatConfig());
 	
 	/**
 	 * Returns the chat instance for the given user ID, if one was created by InitChat or InitChatWithPubnubClient.
@@ -87,6 +110,9 @@ public:
 private:
 	UPROPERTY()
 	TMap<FString, UPubnubChat*> Chats;
+
+	/** Serializes access to Chats (sync init, async init, GetChat, destroy, OnChatDestroyed). */
+	FCriticalSection ChatsMutex;
 	
 	UFUNCTION()
 	void OnChatDestroyed(FString UserID);
