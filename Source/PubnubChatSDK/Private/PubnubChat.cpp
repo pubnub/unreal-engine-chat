@@ -1165,6 +1165,10 @@ FPubnubChatGetUnreadMessagesCountsResult UPubnubChat::GetUnreadMessagesCounts(co
 	FPubnubChatMembershipsResult GetMembershipsResult = CurrentUser->GetMemberships(Limit, Filter, Sort, Page);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result);
 	
+	//If there are no any memberships, there is no point to go further
+	if (GetMembershipsResult.Memberships.IsEmpty())
+	{ return FinalResult; }
+	
 	TArray<FString> Channels;
 	TArray<FString> Timetokens;
 	
