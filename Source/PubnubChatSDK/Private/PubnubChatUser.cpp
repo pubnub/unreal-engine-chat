@@ -375,7 +375,7 @@ FPubnubChatOperationResult UPubnubChatUser::SetRestrictions(const FString Channe
 	PUBNUB_CHAT_OBJECT_RETURN_OPERATION_RESULT_IF_NOT_INITIALIZED();
 	PUBNUB_CHAT_RETURN_OPERATION_RESULT_IF_FIELD_EMPTY(ChannelID);
 	
-	return Chat->SetRestrictions(FPubnubChatRestriction(UserID, ChannelID, Ban, Mute, Reason));
+	return Chat->SetRestrictions(FPubnubChatRestriction({UserID, ChannelID, Ban, Mute, Reason}));
 }
 
 void UPubnubChatUser::SetRestrictionsAsync(const FString ChannelID, bool Ban, bool Mute, FOnPubnubChatOperationResponse OnOperationResponse, FString Reason)

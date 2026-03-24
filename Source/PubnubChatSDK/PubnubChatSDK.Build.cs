@@ -42,8 +42,7 @@ public class PubnubChatSDK : ModuleRules
 				"Slate",
 				"SlateCore",
 				"Json",
-				"JsonUtilities",
-				"DeveloperSettings"	
+				"JsonUtilities"
 			}
 			);
 		

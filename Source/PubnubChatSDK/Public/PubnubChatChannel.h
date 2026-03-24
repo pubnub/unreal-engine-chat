@@ -525,7 +525,7 @@ public:
 	 *
 	 * @return Operation result.
 	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Pubnub Chat|Channel")
+	UFUNCTION(BlueprintCallable, Category = "Pubnub Chat|Channel")
 	FPubnubChatOperationResult Delete();
 
 	/**
