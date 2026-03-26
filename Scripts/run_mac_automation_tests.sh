@@ -11,7 +11,6 @@
 #   AUTOMATION_FILTER  - passed to Automation RunTest (default: Pubnub.aUnit)
 #   REPORT_DIR         - defaults to $PROJ_DIR/Saved/TestReport
 #   LOG_FILE           - tee destination (default: ./test_run.log in current working directory)
-#   PREFER_EDITOR_CMD  - set to 1 to prefer UnrealEditor-Cmd (default: 1 on CI, else 0)
 
 set -euo pipefail
 
@@ -24,7 +23,6 @@ UPROJECT="${UPROJECT:-UnrealTestProject.uproject}"
 AUTOMATION_FILTER="${AUTOMATION_FILTER:-Pubnub.aUnit}"
 REPORT_DIR="${REPORT_DIR:-$PROJ_DIR/Saved/TestReport}"
 LOG_FILE="${LOG_FILE:-test_run.log}"
-PREFER_EDITOR_CMD="${PREFER_EDITOR_CMD:-${CI:-0}}"
 
 PROJECT_FILE="$PROJ_DIR/$UPROJECT"
 if [[ ! -f "$PROJECT_FILE" ]]; then
@@ -33,19 +31,11 @@ if [[ ! -f "$PROJECT_FILE" ]]; then
 fi
 
 EDITOR=""
-if [[ "$PREFER_EDITOR_CMD" == "1" || "$PREFER_EDITOR_CMD" == "true" || "$PREFER_EDITOR_CMD" == "TRUE" ]]; then
-  CANDIDATES=(
-    "$UE_PATH/Engine/Binaries/Mac/UnrealEditor-Cmd"
-    "$UE_PATH/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
-    "$UE_PATH/Engine/Binaries/Mac/UnrealEditor"
-  )
-else
-  CANDIDATES=(
-    "$UE_PATH/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
-    "$UE_PATH/Engine/Binaries/Mac/UnrealEditor-Cmd"
-    "$UE_PATH/Engine/Binaries/Mac/UnrealEditor"
-  )
-fi
+CANDIDATES=(
+  "$UE_PATH/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
+  "$UE_PATH/Engine/Binaries/Mac/UnrealEditor-Cmd"
+  "$UE_PATH/Engine/Binaries/Mac/UnrealEditor"
+)
 
 for _c in "${CANDIDATES[@]}"; do
   if [[ -f "$_c" ]]; then
@@ -65,7 +55,6 @@ echo "Editor binary: $EDITOR"
 echo "Project file:  $PROJECT_FILE"
 echo "Report dir:    $REPORT_DIR"
 echo "Automation:    $AUTOMATION_FILTER"
-echo "Prefer Cmd:    $PREFER_EDITOR_CMD"
 
 set +e
 "$EDITOR" -project="$PROJECT_FILE" \
