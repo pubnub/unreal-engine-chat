@@ -162,6 +162,7 @@ jobs:
           AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit" \
           REPORT_DIR="$REPORT_DIR" \
           LOG_FILE="test_run.log" \
+          PREFER_EDITOR_CMD="1" \
           bash "$RUN_SCRIPT"
           EDITOR_EXIT=$?
           echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
