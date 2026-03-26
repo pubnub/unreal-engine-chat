@@ -147,6 +147,8 @@ jobs:
           UE_PATH="${{ env.UE_PATH }}"
           PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           UPROJECT="${{ steps.project.outputs.uproject }}"
+          # Same -project path as Generate project files / Compile project (explicit -project= fixes UnrealEditor-Cmd on macOS)
+          echo "Running automation with -project=$PROJ_DIR/$UPROJECT"
           REPORT_DIR="$PROJ_DIR/Saved/TestReport"
           EDITOR_CMD="$UE_PATH/Engine/Binaries/Mac/UnrealEditor-Cmd"
           if [ ! -f "$EDITOR_CMD" ]; then
@@ -154,7 +156,8 @@ jobs:
           fi
           mkdir -p "$REPORT_DIR"
           set +e
-          "$EDITOR_CMD" "$PROJ_DIR/$UPROJECT" \
+          "$EDITOR_CMD" \
+            -project="$PROJ_DIR/$UPROJECT" \
             -ExecCmds="Automation RunTest Pubnub.aUnit+PubnubChat.Unit;Quit" \
             -unattended -nopause -nullrhi -nosound -nosplash \
             -ReportOutputPath="$REPORT_DIR" \
@@ -188,6 +191,10 @@ jobs:
           # Also print to job log
           echo "--- Test log (last 300 lines) ---"
           tail -n 300 "$LOG"
+          if grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
+            echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
+            exit 1
+          fi
           if [ "${{ steps.tests.outputs.exit_code }}" != "0" ]; then
             echo "Tests reported failure (exit code non-zero)."
             exit 1

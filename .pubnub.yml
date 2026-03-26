@@ -92,5 +92,7 @@ supported-platforms:
   - version: PubNub Unreal Engine Chat SDK
     platforms:
       - Windows
-      - Mac OS     
+      - Mac OS
+      - IOS       
       - Unix 
+      - Android 
