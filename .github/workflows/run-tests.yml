@@ -147,22 +147,23 @@ jobs:
           UE_PATH="${{ env.UE_PATH }}"
           PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           UPROJECT="${{ steps.project.outputs.uproject }}"
-          # Same -project path as Generate project files / Compile project (explicit -project= fixes UnrealEditor-Cmd on macOS)
-          echo "Running automation with -project=$PROJ_DIR/$UPROJECT"
           REPORT_DIR="$PROJ_DIR/Saved/TestReport"
-          EDITOR_CMD="$UE_PATH/Engine/Binaries/Mac/UnrealEditor-Cmd"
-          if [ ! -f "$EDITOR_CMD" ]; then
-            EDITOR_CMD="$UE_PATH/Engine/Binaries/Mac/UnrealEditor"
+          RUN_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/run_mac_automation_tests.sh"
+          if [ ! -f "$RUN_SCRIPT" ]; then
+            echo "Automation script not found: $RUN_SCRIPT"
+            exit 1
           fi
-          mkdir -p "$REPORT_DIR"
+          chmod +x "$RUN_SCRIPT"
+          echo "Running automation script: $RUN_SCRIPT"
           set +e
-          "$EDITOR_CMD" \
-            -project="$PROJ_DIR/$UPROJECT" \
-            -ExecCmds="Automation RunTest Pubnub.aUnit+PubnubChat.Unit;Quit" \
-            -unattended -nopause -nullrhi -nosound -nosplash \
-            -ReportOutputPath="$REPORT_DIR" \
-            -log 2>&1 | tee test_run.log
-          EDITOR_EXIT=${PIPESTATUS[0]}
+          UE_PATH="$UE_PATH" \
+          PROJ_DIR="$PROJ_DIR" \
+          UPROJECT="$UPROJECT" \
+          AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit" \
+          REPORT_DIR="$REPORT_DIR" \
+          LOG_FILE="test_run.log" \
+          bash "$RUN_SCRIPT"
+          EDITOR_EXIT=$?
           echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
 
       # --- Parse test output and report
@@ -170,28 +171,41 @@ jobs:
         if: always()
         run: |
           LOG=test_run.log
+          REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
           echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
-          echo ""
-          if [ ! -f "$LOG" ]; then
-            echo "No test log found."
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$REPORT_JSON" ]; then
+            PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("succeeded",0))' "$REPORT_JSON")
+            FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("failed",0))' "$REPORT_JSON")
+            WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("succeededWithWarnings",0))' "$REPORT_JSON")
+          elif [ -f "$LOG" ]; then
+            PASSED=$(grep -c "Test Passed\|passed\|Passed" "$LOG" 2>/dev/null || echo "0")
+            FAILED=$(grep -c "Test Failed\|failed\|Failed\|Error:" "$LOG" 2>/dev/null || echo "0")
+            WARNINGS=0
+          else
+            echo "No test report or log found."
             exit 1
           fi
-          # Count and list completed/passed/failed (UE log patterns)
-          PASSED=$(grep -c "Test Passed\|passed\|Passed" "$LOG" 2>/dev/null || echo "0")
-          FAILED=$(grep -c "Test Failed\|failed\|Failed\|Error:" "$LOG" 2>/dev/null || echo "0")
           echo "| Result | Count |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
-          echo ""
+          echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "#### Failed tests / errors (excerpt)" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          grep -E "Test Failed|Failure|Error:|Error |failed|FAILED" "$LOG" | tail -n 80 >> "$GITHUB_STEP_SUMMARY" || true
+          if [ -f "$LOG" ]; then
+            grep -E "Test Failed|Failure|Error:|Error |failed|FAILED" "$LOG" | tail -n 80 >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            echo "No log file generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           # Also print to job log
-          echo "--- Test log (last 300 lines) ---"
-          tail -n 300 "$LOG"
-          if grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
+          if [ -f "$LOG" ]; then
+            echo "--- Test log (last 300 lines) ---"
+            tail -n 300 "$LOG"
+          fi
+          if [ -f "$LOG" ] && grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
             echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
             exit 1
           fi
@@ -199,7 +213,7 @@ jobs:
             echo "Tests reported failure (exit code non-zero)."
             exit 1
           fi
-          FAILED_NUM=$(grep -c "Test Failed\|Failure" "$LOG" 2>/dev/null || echo "0")
+          FAILED_NUM="$FAILED"
           if [ "$FAILED_NUM" -gt 0 ]; then
             echo "Failing tests detected in log."
             exit 1
