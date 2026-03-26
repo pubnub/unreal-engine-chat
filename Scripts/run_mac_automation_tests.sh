@@ -10,7 +10,8 @@
 #   UPROJECT           - defaults to UnrealTestProject.uproject
 #   AUTOMATION_FILTER  - passed to Automation RunTest (default: Pubnub.aUnit)
 #   REPORT_DIR         - defaults to $PROJ_DIR/Saved/TestReport
-#   LOG_FILE           - tee destination (default: ./test_run.log in current working directory)
+#   LOG_FILE           - editor log filename (default: test_run.log). Resolved to an absolute path
+#                        for -AbsLog=; on macOS, -Log= is relative to the system log dir, not cwd.
 
 set -euo pipefail
 
@@ -51,16 +52,25 @@ fi
 
 mkdir -p "$REPORT_DIR"
 
+if [[ "$LOG_FILE" = /* ]]; then
+  ABS_LOG="$LOG_FILE"
+else
+  ABS_LOG="$(pwd)/$LOG_FILE"
+fi
+mkdir -p "$(dirname "$ABS_LOG")"
+
 echo "Editor binary: $EDITOR"
 echo "Project file:  $PROJECT_FILE"
 echo "Report dir:    $REPORT_DIR"
 echo "Automation:    $AUTOMATION_FILTER"
+echo "Abs log:       $ABS_LOG"
 
 set +e
 "$EDITOR" -project="$PROJECT_FILE" \
   -ExecCmds="Automation RunTest ${AUTOMATION_FILTER};Quit" \
-  -unattended -nopause -log \
+  -unattended -nopause \
+  -AbsLog="$ABS_LOG" \
   -ReportOutputPath="$REPORT_DIR" \
-  -nullrhi 2>&1 | tee "$LOG_FILE"
+  -nullrhi -nosplash 2>&1 | tee /dev/stderr
 EDITOR_EXIT=${PIPESTATUS[0]}
 exit "$EDITOR_EXIT"
