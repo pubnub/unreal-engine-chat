@@ -12,6 +12,9 @@
 #   REPORT_DIR         - defaults to $PROJ_DIR/Saved/TestReport
 #   LOG_FILE           - editor log filename (default: test_run.log). Resolved to an absolute path
 #                        for -AbsLog=; on macOS, -Log= is relative to the system log dir, not cwd.
+#
+# CI: When GitHub "Enable debug logging" is used, ACTIONS_STEP_DEBUG or ACTIONS_RUNNER_DEBUG is
+#      set to true — we pass -verbose to the editor for noisier logs.
 
 set -euo pipefail
 
@@ -65,8 +68,15 @@ echo "Report dir:    $REPORT_DIR"
 echo "Automation:    $AUTOMATION_FILTER"
 echo "Abs log:       $ABS_LOG"
 
+EDITOR_EXTRA=()
+if [[ "${ACTIONS_STEP_DEBUG:-}" == "true" ]] || [[ "${ACTIONS_RUNNER_DEBUG:-}" == "true" ]]; then
+  EDITOR_EXTRA+=(-verbose)
+  echo "Debug logging env set (ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG): adding -verbose"
+fi
+
 set +e
 "$EDITOR" -project="$PROJECT_FILE" \
+  "${EDITOR_EXTRA[@]}" \
   -ExecCmds="Automation RunTest ${AUTOMATION_FILTER};Quit" \
   -unattended -nopause \
   -AbsLog="$ABS_LOG" \

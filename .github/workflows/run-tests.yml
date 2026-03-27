@@ -159,7 +159,7 @@ jobs:
           UE_PATH="$UE_PATH" \
           PROJ_DIR="$PROJ_DIR" \
           UPROJECT="$UPROJECT" \
-          AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit" \
+          AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit+Channel.SendText" \
           REPORT_DIR="$REPORT_DIR" \
           LOG_FILE="test_run.log" \
           bash "$RUN_SCRIPT"
@@ -174,8 +174,9 @@ jobs:
           TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
           TESTS_OUTCOME: ${{ steps.tests.outcome }}
         run: |
-          LOG=test_run.log
+          LOG="${{ github.workspace }}/test_run.log"
           REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
+          SUMMARY_SCRIPT="${{ github.workspace }}/Plugins/PubnubChat/Scripts/parse_automation_ci_summary.py"
           echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$REPORT_JSON" ]; then
@@ -197,18 +198,36 @@ jobs:
           echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Failed tests / errors (excerpt)" >> "$GITHUB_STEP_SUMMARY"
+          # Per-test table: index.json when it lists tests; else parse editor log (Test Completed lines).
+          if [ -f "$SUMMARY_SCRIPT" ]; then
+            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" --source-note >> "$GITHUB_STEP_SUMMARY" || true
+          fi
+          echo "#### Log errors / failures (excerpt)" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$LOG" ]; then
-            grep -E "Test Failed|Failure|Error:|Error |failed|FAILED" "$LOG" | tail -n 80 >> "$GITHUB_STEP_SUMMARY" || true
+            # Re-run with "Enable debug logging" sets ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG — omit tail limits.
+            if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ]; then
+              grep -E "Result=\{Failure\}|Test Failed|LogAutomationController:.*Failure|PubnubChatLog: Error" "$LOG" >> "$GITHUB_STEP_SUMMARY" || true
+            else
+              grep -E "Result=\{Failure\}|Test Failed|LogAutomationController:.*Failure|PubnubChatLog: Error" "$LOG" | tail -n 60 >> "$GITHUB_STEP_SUMMARY" || true
+            fi
           else
             echo "No log file generated." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          # Also print to job log
+          # Job log: same per-test table (full list is in the step summary)
+          if [ -f "$SUMMARY_SCRIPT" ] && { [ -f "$REPORT_JSON" ] || [ -f "$LOG" ]; }; then
+            echo "--- Per-test results ---"
+            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" || true
+          fi
           if [ -f "$LOG" ]; then
-            echo "--- Test log (last 300 lines) ---"
-            tail -n 300 "$LOG"
+            if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ]; then
+              echo "--- Full test_run.log (GitHub debug logging enabled: ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG) ---"
+              cat "$LOG"
+            else
+              echo "--- Log tail (last 80 lines; re-run with debug logging for full log) ---"
+              tail -n 80 "$LOG"
+            fi
           fi
           if [ -f "$LOG" ] && grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
             echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
