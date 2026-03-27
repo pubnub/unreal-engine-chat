@@ -159,7 +159,8 @@ jobs:
           UE_PATH="$UE_PATH" \
           PROJ_DIR="$PROJ_DIR" \
           UPROJECT="$UPROJECT" \
-          AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit+PubnubChat.Integration.Channel.SendText" \
+          # + = OR; covers all Pubnub.* and PubnubChat.* tests registered in the project.
+          AUTOMATION_FILTER="Pubnub+PubnubChat" \
           REPORT_DIR="$REPORT_DIR" \
           LOG_FILE="test_run.log" \
           bash "$RUN_SCRIPT"
