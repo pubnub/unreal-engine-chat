@@ -165,19 +165,24 @@ jobs:
           bash "$RUN_SCRIPT"
           EDITOR_EXIT=$?
           echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
+          exit "$EDITOR_EXIT"
 
       # --- Parse test output and report
       - name: Parse and report test results
         if: always()
+        env:
+          TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
         run: |
           LOG=test_run.log
           REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
           echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$REPORT_JSON" ]; then
-            PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("succeeded",0))' "$REPORT_JSON")
-            FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("failed",0))' "$REPORT_JSON")
-            WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("succeededWithWarnings",0))' "$REPORT_JSON")
+            # Unreal may write index.json with UTF-8 BOM; utf-8-sig strips it (json.load otherwise fails).
+            PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeeded",0))' "$REPORT_JSON")
+            FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("failed",0))' "$REPORT_JSON")
+            WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeededWithWarnings",0))' "$REPORT_JSON")
           elif [ -f "$LOG" ]; then
             PASSED=$(grep -c "Test Passed\|passed\|Passed" "$LOG" 2>/dev/null || echo "0")
             FAILED=$(grep -c "Test Failed\|failed\|Failed\|Error:" "$LOG" 2>/dev/null || echo "0")
@@ -209,8 +214,19 @@ jobs:
             echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
             exit 1
           fi
-          if [ "${{ steps.tests.outputs.exit_code }}" != "0" ]; then
-            echo "Tests reported failure (exit code non-zero)."
+          # Fail if automation never ran (e.g. build failed → tests step skipped) or was cancelled.
+          if [ "$TESTS_OUTCOME" = "skipped" ] || [ "$TESTS_OUTCOME" = "cancelled" ]; then
+            echo "Tests step was ${TESTS_OUTCOME}; automation did not complete."
+            exit 1
+          fi
+          # Step failed before exit_code was written (e.g. script error before bash "$RUN_SCRIPT").
+          if [ "$TESTS_OUTCOME" = "failure" ] && [ -z "${TESTS_EXIT_CODE:-}" ]; then
+            echo "Tests step failed before editor exit code was recorded."
+            exit 1
+          fi
+          # Editor process exited non-zero.
+          if [ -n "${TESTS_EXIT_CODE:-}" ] && [ "$TESTS_EXIT_CODE" != "0" ]; then
+            echo "Tests reported failure (editor exit code ${TESTS_EXIT_CODE})."
             exit 1
           fi
           FAILED_NUM="$FAILED"
