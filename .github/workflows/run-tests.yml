@@ -192,13 +192,15 @@ jobs:
             echo "No test report or log found."
             exit 1
           fi
-          # Job Summary: counts + expandable log slices per failed/warning test (Test Started → Completed).
+          # Job Summary: index.json counts + log-based segments (failures with log slices; all paths expandable).
           if [ -f "$SPLIT_SCRIPT" ] && [ -f "$LOG" ]; then
+            echo "Automation: building report from test_run.log ($(wc -l < "$LOG" 2>/dev/null || echo 0) lines) → Job Summary"
             if [ -f "$REPORT_JSON" ]; then
-              python3 "$SPLIT_SCRIPT" --log "$LOG" --json "$REPORT_JSON" --redact >> "$GITHUB_STEP_SUMMARY" || true
+              python3 "$SPLIT_SCRIPT" --log "$LOG" --json "$REPORT_JSON" --redact >> "$GITHUB_STEP_SUMMARY"
             else
-              python3 "$SPLIT_SCRIPT" --log "$LOG" --redact >> "$GITHUB_STEP_SUMMARY" || true
+              python3 "$SPLIT_SCRIPT" --log "$LOG" --redact >> "$GITHUB_STEP_SUMMARY"
             fi
+            echo "Automation: done — open the workflow run **Summary** tab for the full report."
           elif [ -f "$LOG" ]; then
             echo "::warning::automation_log_split_report.py missing — commit Plugins/PubnubChat/Scripts/automation_log_split_report.py"
             echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
@@ -210,12 +212,6 @@ jobs:
             echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No log file for split report." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f "$LOG" ]; then
-            if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ]; then
-              echo "--- Full test_run.log (debug logging enabled) ---"
-              cat "$LOG"
-            fi
           fi
           if [ -f "$LOG" ] && grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
             echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
