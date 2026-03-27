@@ -68,15 +68,16 @@ echo "Report dir:    $REPORT_DIR"
 echo "Automation:    $AUTOMATION_FILTER"
 echo "Abs log:       $ABS_LOG"
 
-EDITOR_EXTRA=()
+# Avoid "${arr[@]}" with set -u when the array is empty (macOS bash 3.2 / some runners error).
+EDITOR_VERBOSE_FLAG=""
 if [[ "${ACTIONS_STEP_DEBUG:-}" == "true" ]] || [[ "${ACTIONS_RUNNER_DEBUG:-}" == "true" ]]; then
-  EDITOR_EXTRA+=(-verbose)
+  EDITOR_VERBOSE_FLAG="-verbose"
   echo "Debug logging env set (ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG): adding -verbose"
 fi
 
 set +e
 "$EDITOR" -project="$PROJECT_FILE" \
-  "${EDITOR_EXTRA[@]}" \
+  ${EDITOR_VERBOSE_FLAG:+"$EDITOR_VERBOSE_FLAG"} \
   -ExecCmds="Automation RunTest ${AUTOMATION_FILTER};Quit" \
   -unattended -nopause \
   -AbsLog="$ABS_LOG" \
