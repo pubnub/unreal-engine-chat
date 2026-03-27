@@ -159,7 +159,7 @@ jobs:
           UE_PATH="$UE_PATH" \
           PROJ_DIR="$PROJ_DIR" \
           UPROJECT="$UPROJECT" \
-          AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit+Channel.SendText" \
+          AUTOMATION_FILTER="Pubnub.aUnit+PubnubChat.Unit+PubnubChat.Channel.SendText" \
           REPORT_DIR="$REPORT_DIR" \
           LOG_FILE="test_run.log" \
           bash "$RUN_SCRIPT"
