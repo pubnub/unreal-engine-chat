@@ -73,6 +73,17 @@ def emit_markdown(rows: List[Tuple[str, str]], title: str) -> str:
     return "\n".join(lines)
 
 
+def emit_plain(rows: List[Tuple[str, str]], title: str) -> str:
+    """Readable in raw step logs (no markdown rendering)."""
+    if not rows:
+        return f"{title}: (no matching Test Completed lines — check log format)\n"
+    lines = [f"{title} ({len(rows)} tests):", ""]
+    for path, state in rows:
+        lines.append(f"  [{state}]  {path}")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", type=Path, help="Saved/TestReport/index.json")
@@ -81,6 +92,12 @@ def main() -> int:
         "--source-note",
         action="store_true",
         help="Append which source was used (json vs log)",
+    )
+    ap.add_argument(
+        "--format",
+        choices=("markdown", "plain"),
+        default="markdown",
+        help="markdown for GITHUB_STEP_SUMMARY; plain for readable raw job logs",
     )
     args = ap.parse_args()
 
@@ -112,9 +129,14 @@ def main() -> int:
             print(f"parse_automation_ci_summary: log read failed: {e}", file=sys.stderr)
 
     title = "Per-test results"
-    out = emit_markdown(rows, title)
-    if args.source_note and source:
+    if args.format == "plain":
+        out = emit_plain(rows, title)
+    else:
+        out = emit_markdown(rows, title)
+    if args.source_note and source and args.format == "markdown":
         out += f"\n_Source: {source}._\n"
+    elif args.source_note and source and args.format == "plain":
+        out += f"\nSource: {source}\n"
     sys.stdout.write(out)
     return 0
 

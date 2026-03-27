@@ -177,6 +177,9 @@ jobs:
           LOG="${{ github.workspace }}/test_run.log"
           REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
           SUMMARY_SCRIPT="${{ github.workspace }}/Plugins/PubnubChat/Scripts/parse_automation_ci_summary.py"
+          if [ ! -f "$SUMMARY_SCRIPT" ]; then
+            SUMMARY_SCRIPT="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/Scripts/parse_automation_ci_summary.py"
+          fi
           echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$REPORT_JSON" ]; then
@@ -198,9 +201,11 @@ jobs:
           echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Per-test table: index.json when it lists tests; else parse editor log (Test Completed lines).
+          # Per-test table (markdown) → GitHub Job Summary: workflow run page → Summary tab (not only this log).
           if [ -f "$SUMMARY_SCRIPT" ]; then
-            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" --source-note >> "$GITHUB_STEP_SUMMARY" || true
+            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" --format markdown --source-note >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            echo "::warning::parse_automation_ci_summary.py missing at Plugins/PubnubChat/Scripts/ — commit it on this branch for per-test tables."
           fi
           echo "#### Log errors / failures (excerpt)" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -215,10 +220,13 @@ jobs:
             echo "No log file generated." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          # Job log: same per-test table (full list is in the step summary)
+          # Job log: plain-text list (markdown table is only rendered on the Job Summary page).
           if [ -f "$SUMMARY_SCRIPT" ] && { [ -f "$REPORT_JSON" ] || [ -f "$LOG" ]; }; then
-            echo "--- Per-test results ---"
-            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" || true
+            echo ""
+            echo "=== Per-test results (plain) — formatted table: open this workflow run → Summary tab at the top ==="
+            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" --format plain --source-note || true
+            echo "=== End per-test results ==="
+            echo ""
           fi
           if [ -f "$LOG" ]; then
             if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ]; then
