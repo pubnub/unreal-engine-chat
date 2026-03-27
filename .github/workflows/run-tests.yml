@@ -176,65 +176,45 @@ jobs:
         run: |
           LOG="${{ github.workspace }}/test_run.log"
           REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
-          SUMMARY_SCRIPT="${{ github.workspace }}/Plugins/PubnubChat/Scripts/parse_automation_ci_summary.py"
-          if [ ! -f "$SUMMARY_SCRIPT" ]; then
-            SUMMARY_SCRIPT="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/Scripts/parse_automation_ci_summary.py"
+          SPLIT_SCRIPT="${{ github.workspace }}/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+          if [ ! -f "$SPLIT_SCRIPT" ]; then
+            SPLIT_SCRIPT="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
           fi
-          echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$REPORT_JSON" ]; then
-            # Unreal may write index.json with UTF-8 BOM; utf-8-sig strips it (json.load otherwise fails).
             PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeeded",0))' "$REPORT_JSON")
             FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("failed",0))' "$REPORT_JSON")
             WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeededWithWarnings",0))' "$REPORT_JSON")
           elif [ -f "$LOG" ]; then
-            PASSED=$(grep -c "Test Passed\|passed\|Passed" "$LOG" 2>/dev/null || echo "0")
-            FAILED=$(grep -c "Test Failed\|failed\|Failed\|Error:" "$LOG" 2>/dev/null || echo "0")
-            WARNINGS=0
+            PASSED=$(grep -cE 'Test Completed\. Result=\{Success\}' "$LOG" 2>/dev/null || echo "0")
+            FAILED=$(grep -cE 'Test Completed\. Result=\{Failure\}' "$LOG" 2>/dev/null || echo "0")
+            WARNINGS=$(grep -cE 'Test Completed\. Result=\{SuccessWithWarnings\}' "$LOG" 2>/dev/null || echo "0")
           else
             echo "No test report or log found."
             exit 1
           fi
-          echo "| Result | Count |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Per-test table (markdown) → GitHub Job Summary: workflow run page → Summary tab (not only this log).
-          if [ -f "$SUMMARY_SCRIPT" ]; then
-            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" --format markdown --source-note >> "$GITHUB_STEP_SUMMARY" || true
-          else
-            echo "::warning::parse_automation_ci_summary.py missing at Plugins/PubnubChat/Scripts/ — commit it on this branch for per-test tables."
-          fi
-          echo "#### Log errors / failures (excerpt)" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          if [ -f "$LOG" ]; then
-            # Re-run with "Enable debug logging" sets ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG — omit tail limits.
-            if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ]; then
-              grep -E "Result=\{Failure\}|Test Failed|LogAutomationController:.*Failure|PubnubChatLog: Error" "$LOG" >> "$GITHUB_STEP_SUMMARY" || true
+          # Job Summary: counts + expandable log slices per failed/warning test (Test Started → Completed).
+          if [ -f "$SPLIT_SCRIPT" ] && [ -f "$LOG" ]; then
+            if [ -f "$REPORT_JSON" ]; then
+              python3 "$SPLIT_SCRIPT" --log "$LOG" --json "$REPORT_JSON" --redact >> "$GITHUB_STEP_SUMMARY" || true
             else
-              grep -E "Result=\{Failure\}|Test Failed|LogAutomationController:.*Failure|PubnubChatLog: Error" "$LOG" | tail -n 60 >> "$GITHUB_STEP_SUMMARY" || true
+              python3 "$SPLIT_SCRIPT" --log "$LOG" --redact >> "$GITHUB_STEP_SUMMARY" || true
             fi
+          elif [ -f "$LOG" ]; then
+            echo "::warning::automation_log_split_report.py missing — commit Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+            echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Metric | Count |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "No log file generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          # Job log: plain-text list (markdown table is only rendered on the Job Summary page).
-          if [ -f "$SUMMARY_SCRIPT" ] && { [ -f "$REPORT_JSON" ] || [ -f "$LOG" ]; }; then
-            echo ""
-            echo "=== Per-test results (plain) — formatted table: open this workflow run → Summary tab at the top ==="
-            python3 "$SUMMARY_SCRIPT" --json "$REPORT_JSON" --log "$LOG" --format plain --source-note || true
-            echo "=== End per-test results ==="
-            echo ""
+            echo "No log file for split report." >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -f "$LOG" ]; then
             if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ]; then
-              echo "--- Full test_run.log (GitHub debug logging enabled: ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG) ---"
+              echo "--- Full test_run.log (debug logging enabled) ---"
               cat "$LOG"
-            else
-              echo "--- Log tail (last 80 lines; re-run with debug logging for full log) ---"
-              tail -n 80 "$LOG"
             fi
           fi
           if [ -f "$LOG" ] && grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
