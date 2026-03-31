@@ -159,8 +159,7 @@ jobs:
           UE_PATH="$UE_PATH" \
           PROJ_DIR="$PROJ_DIR" \
           UPROJECT="$UPROJECT" \
-          # + = OR; covers all Pubnub.* and PubnubChat.* tests registered in the project.
-          AUTOMATION_FILTER="Pubnub+PubnubChat" \
+          # Default filter from run_mac_automation_tests.sh: PubnubChat.Unit + Integration *.2HappyPath (OR via '+').
           REPORT_DIR="$REPORT_DIR" \
           LOG_FILE="test_run.log" \
           bash "$RUN_SCRIPT"

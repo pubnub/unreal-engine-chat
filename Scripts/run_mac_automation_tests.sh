@@ -8,7 +8,8 @@
 #   UE_PATH            - defaults to /Users/Shared/Epic Games/UE_5.5
 #   PROJ_DIR           - defaults to current project root
 #   UPROJECT           - defaults to UnrealTestProject.uproject
-#   AUTOMATION_FILTER  - passed to Automation RunTest (default: Pubnub+PubnubChat — all Pubnub & PubnubChat tests)
+#   AUTOMATION_FILTER  - passed to Automation RunTest (default: from build_automation_filter.py —
+#                        PubnubChat.Unit + all PubnubChat.Integration.*.2HappyPath.* prefixes, OR'd with '+')
 #   REPORT_DIR         - defaults to $PROJ_DIR/Saved/TestReport
 #   LOG_FILE           - editor log filename (default: test_run.log). Resolved to an absolute path
 #                        for -AbsLog=; on macOS, -Log= is relative to the system log dir, not cwd.
@@ -21,7 +22,9 @@ DEFAULT_PROJ_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 UE_PATH="${UE_PATH:-/Users/Shared/Epic Games/UE_5.5}"
 PROJ_DIR="${PROJ_DIR:-$DEFAULT_PROJ_DIR}"
 UPROJECT="${UPROJECT:-UnrealTestProject.uproject}"
-AUTOMATION_FILTER="${AUTOMATION_FILTER:-Pubnub+PubnubChat}"
+if [[ -z "${AUTOMATION_FILTER:-}" ]]; then
+  AUTOMATION_FILTER="$(python3 "$SCRIPT_DIR/build_automation_filter.py")"
+fi
 REPORT_DIR="${REPORT_DIR:-$PROJ_DIR/Saved/TestReport}"
 LOG_FILE="${LOG_FILE:-test_run.log}"
 

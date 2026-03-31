@@ -1546,55 +1546,6 @@ bool FPubnubChatChannelSendTextEmptyMessageTest::RunTest(const FString& Paramete
 }
 
 /**
- * Deliberately fails one assertion so CI can verify failure reporting (log slices, Summary).
- * Same scenario as EmptyMessage (empty SendText) — API returns Error=true; we assert Error must be false.
- */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelSendTextIntendedFailTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.SendText.0IntendedFail.CI_ReportSmoke", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
-
-bool FPubnubChatChannelSendTextIntendedFailTest::RunTest(const FString& Parameters)
-{
-	if(!InitTest())
-	{
-		AddError(TEXT("TestInitialization failed"));
-		return false;
-	}
-
-	const FString TestPublishKey = GetTestPublishKey();
-	const FString TestSubscribeKey = GetTestSubscribeKey();
-	const FString InitUserID = SDK_PREFIX + TEXT("test_sendtext_intended_fail");
-	const FString TestChannelID = SDK_PREFIX + TEXT("test_sendtext_intended_fail_ch");
-
-	FPubnubChatConfig ChatConfig;
-	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
-
-	TestFalse(TEXT("InitChat should succeed"), InitResult.Result.Error);
-
-	UPubnubChat* Chat = InitResult.Chat;
-	if(Chat)
-	{
-		FPubnubChatChannelData ChannelData;
-		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
-		TestFalse(TEXT("CreatePublicConversation should succeed"), CreateResult.Result.Error);
-		TestNotNull(TEXT("Channel should be created"), CreateResult.Channel);
-
-		if(CreateResult.Channel)
-		{
-			FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TEXT(""));
-			// Empty message => Error is true; TestFalse expects false => assertion fails on purpose.
-			TestFalse(
-				TEXT("INTENTIONAL CI SMOKE: empty SendText must not set Error (designed to fail; remove after validating reports)"),
-				SendResult.Error);
-
-			Chat->DeleteChannel(TestChannelID);
-		}
-	}
-
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
-}
-
-/**
  * Tests sending text with quoted message from different channel.
  * Note: Full validation testing requires message objects received through Connect callbacks.
  * This test verifies basic functionality with multiple channels.
