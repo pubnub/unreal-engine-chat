@@ -22,7 +22,8 @@ jobs:
   test:
     runs-on:
       group: macos-gh
-    timeout-minutes: 45
+    # Four editor runs (sequential); allow headroom vs single-wave runs.
+    timeout-minutes: 180
 
     env:
       PN_PUB_KEY: ${{ secrets.PN_PUB_KEY }}
@@ -137,9 +138,11 @@ jobs:
           fi
           echo "Build succeeded."
 
-      # --- Run automation tests
-      - name: Run automation tests
-        id: tests
+      # --- Run automation tests (four waves: separate logs + TestReport dirs; merged in parse step)
+      - name: Run automation tests (Pubnub.aUnit)
+        id: tests_aunit
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
         env:
           HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
         run: |
@@ -147,94 +150,222 @@ jobs:
           UE_PATH="${{ env.UE_PATH }}"
           PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
           UPROJECT="${{ steps.project.outputs.uproject }}"
-          REPORT_DIR="$PROJ_DIR/Saved/TestReport"
+          REPORT_DIR="$PROJ_DIR/Saved/TestReport_aunit"
           RUN_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/run_mac_automation_tests.sh"
-          if [ ! -f "$RUN_SCRIPT" ]; then
-            echo "Automation script not found: $RUN_SCRIPT"
-            exit 1
-          fi
           chmod +x "$RUN_SCRIPT"
-          echo "Running automation script: $RUN_SCRIPT"
           set +e
-          UE_PATH="$UE_PATH" \
-          PROJ_DIR="$PROJ_DIR" \
-          UPROJECT="$UPROJECT" \
-          # + = OR; covers all Pubnub.* and PubnubChat.* tests registered in the project.
-          AUTOMATION_FILTER="Pubnub+PubnubChat" \
-          REPORT_DIR="$REPORT_DIR" \
-          LOG_FILE="test_run.log" \
-          bash "$RUN_SCRIPT"
+          UE_PATH="$UE_PATH" PROJ_DIR="$PROJ_DIR" UPROJECT="$UPROJECT" \
+            AUTOMATION_FILTER="Pubnub.aUnit" \
+            REPORT_DIR="$REPORT_DIR" \
+            LOG_FILE="${{ github.workspace }}/test_run_pubnub_aunit.log" \
+            bash "$RUN_SCRIPT"
           EDITOR_EXIT=$?
           echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
           exit "$EDITOR_EXIT"
 
-      # --- Parse test output and report
-      - name: Parse and report test results
-        if: always()
+      - name: Run automation tests (Pubnub.Integration)
+        id: tests_pubnub_integration
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
         env:
-          TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
-          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
         run: |
-          LOG="${{ github.workspace }}/test_run.log"
-          REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
-          SPLIT_SCRIPT="${{ github.workspace }}/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          REPORT_DIR="$PROJ_DIR/Saved/TestReport_pubnub_integration"
+          RUN_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/run_mac_automation_tests.sh"
+          chmod +x "$RUN_SCRIPT"
+          set +e
+          UE_PATH="$UE_PATH" PROJ_DIR="$PROJ_DIR" UPROJECT="$UPROJECT" \
+            AUTOMATION_FILTER="Pubnub.Integration" \
+            REPORT_DIR="$REPORT_DIR" \
+            LOG_FILE="${{ github.workspace }}/test_run_pubnub_integration.log" \
+            bash "$RUN_SCRIPT"
+          EDITOR_EXIT=$?
+          echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
+          exit "$EDITOR_EXIT"
+
+      - name: Run automation tests (PubnubChat.Unit)
+        id: tests_pubnubchat_unit
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
+        run: |
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          REPORT_DIR="$PROJ_DIR/Saved/TestReport_pubnubchat_unit"
+          RUN_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/run_mac_automation_tests.sh"
+          chmod +x "$RUN_SCRIPT"
+          set +e
+          UE_PATH="$UE_PATH" PROJ_DIR="$PROJ_DIR" UPROJECT="$UPROJECT" \
+            AUTOMATION_FILTER="PubnubChat.Unit" \
+            REPORT_DIR="$REPORT_DIR" \
+            LOG_FILE="${{ github.workspace }}/test_run_pubnubchat_unit.log" \
+            bash "$RUN_SCRIPT"
+          EDITOR_EXIT=$?
+          echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
+          exit "$EDITOR_EXIT"
+
+      - name: Run automation tests (PubnubChat.Integration — 1Validation tier)
+        id: tests_pubnubchat_integration_1validation
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
+        run: |
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          REPORT_DIR="$PROJ_DIR/Saved/TestReport_pubnubchat_1validation"
+          RUN_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/run_mac_automation_tests.sh"
+          FILTER_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/pubnubchat_integration_1validation_filter.py"
+          chmod +x "$RUN_SCRIPT"
+          AUTOMATION_FILTER="$(python3 "$FILTER_SCRIPT")" || exit 1
+          set +e
+          UE_PATH="$UE_PATH" PROJ_DIR="$PROJ_DIR" UPROJECT="$UPROJECT" \
+            AUTOMATION_FILTER="$AUTOMATION_FILTER" \
+            REPORT_DIR="$REPORT_DIR" \
+            LOG_FILE="${{ github.workspace }}/test_run_pubnubchat_integration_1validation.log" \
+            bash "$RUN_SCRIPT"
+          EDITOR_EXIT=$?
+          echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
+          exit "$EDITOR_EXIT"
+
+      # --- Parse test output and report (merge four waves)
+      - name: Parse and report test results
+        if: always() && steps.build.outcome == 'success'
+        env:
+          TESTS_AUNIT_EXIT: ${{ steps.tests_aunit.outputs.exit_code }}
+          TESTS_PUBNUB_INT_EXIT: ${{ steps.tests_pubnub_integration.outputs.exit_code }}
+          TESTS_CHAT_UNIT_EXIT: ${{ steps.tests_pubnubchat_unit.outputs.exit_code }}
+          TESTS_CHAT_1VAL_EXIT: ${{ steps.tests_pubnubchat_integration_1validation.outputs.exit_code }}
+          TESTS_AUNIT_OUTCOME: ${{ steps.tests_aunit.outcome }}
+          TESTS_PUBNUB_INT_OUTCOME: ${{ steps.tests_pubnub_integration.outcome }}
+          TESTS_CHAT_UNIT_OUTCOME: ${{ steps.tests_pubnubchat_unit.outcome }}
+          TESTS_CHAT_1VAL_OUTCOME: ${{ steps.tests_pubnubchat_integration_1validation.outcome }}
+        run: |
+          set -e
+          WS="${{ github.workspace }}"
+          TP="$WS/${{ env.TEST_PROJECT_DIR }}"
+          LOG="$WS/test_run_merged.log"
+          MERGED_JSON="$WS/merged_index.json"
+          SPLIT_SCRIPT="$WS/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+          MERGE_JSON_SCRIPT="$WS/Plugins/PubnubChat/Scripts/merge_automation_index_json.py"
           if [ ! -f "$SPLIT_SCRIPT" ]; then
-            SPLIT_SCRIPT="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+            SPLIT_SCRIPT="$TP/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
           fi
-          if [ -f "$REPORT_JSON" ]; then
-            PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeeded",0))' "$REPORT_JSON")
-            FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("failed",0))' "$REPORT_JSON")
-            WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeededWithWarnings",0))' "$REPORT_JSON")
-          elif [ -f "$LOG" ]; then
-            PASSED=$(grep -cE 'Test Completed\. Result=\{Success\}' "$LOG" 2>/dev/null || echo "0")
-            FAILED=$(grep -cE 'Test Completed\. Result=\{Failure\}' "$LOG" 2>/dev/null || echo "0")
-            WARNINGS=$(grep -cE 'Test Completed\. Result=\{SuccessWithWarnings\}' "$LOG" 2>/dev/null || echo "0")
-          else
-            echo "No test report or log found."
-            exit 1
+          if [ ! -f "$MERGE_JSON_SCRIPT" ]; then
+            MERGE_JSON_SCRIPT="$TP/Plugins/PubnubChat/Scripts/merge_automation_index_json.py"
           fi
-          # Job Summary: index.json counts + log-based segments (failures with log slices; all paths expandable).
+
+          # Merge editor logs (wave order) for one split-report pass.
+          {
+            echo ""
+            echo "## CI automation wave: Pubnub.aUnit"
+            echo ""
+            cat "$WS/test_run_pubnub_aunit.log" 2>/dev/null || echo "(missing log)"
+            echo ""
+            echo "## CI automation wave: Pubnub.Integration"
+            echo ""
+            cat "$WS/test_run_pubnub_integration.log" 2>/dev/null || echo "(missing log)"
+            echo ""
+            echo "## CI automation wave: PubnubChat.Unit"
+            echo ""
+            cat "$WS/test_run_pubnubchat_unit.log" 2>/dev/null || echo "(missing log)"
+            echo ""
+            echo "## CI automation wave: PubnubChat.Integration (1Validation)"
+            echo ""
+            cat "$WS/test_run_pubnubchat_integration_1validation.log" 2>/dev/null || echo "(missing log)"
+          } > "$LOG"
+
+          # Sum index.json from each wave (authoritative counts).
+          python3 "$MERGE_JSON_SCRIPT" -o "$MERGED_JSON" \
+            "$TP/Saved/TestReport_aunit/index.json" \
+            "$TP/Saved/TestReport_pubnub_integration/index.json" \
+            "$TP/Saved/TestReport_pubnubchat_unit/index.json" \
+            "$TP/Saved/TestReport_pubnubchat_1validation/index.json"
+
+          PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeeded",0))' "$MERGED_JSON")
+          FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("failed",0))' "$MERGED_JSON")
+          WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeededWithWarnings",0))' "$MERGED_JSON")
+
+          echo "### Combined automation (4 waves)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Wave | Step outcome | Editor exit |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|--------------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pubnub.aUnit | $TESTS_AUNIT_OUTCOME | ${TESTS_AUNIT_EXIT:-} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pubnub.Integration | $TESTS_PUBNUB_INT_OUTCOME | ${TESTS_PUBNUB_INT_EXIT:-} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PubnubChat.Unit | $TESTS_CHAT_UNIT_OUTCOME | ${TESTS_CHAT_UNIT_EXIT:-} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PubnubChat.Integration 1Validation | $TESTS_CHAT_1VAL_OUTCOME | ${TESTS_CHAT_1VAL_EXIT:-} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          FULL_MD="$WS/automation_report_full.md"
           if [ -f "$SPLIT_SCRIPT" ] && [ -f "$LOG" ]; then
-            echo "Automation: building report from test_run.log ($(wc -l < "$LOG" 2>/dev/null || echo 0) lines) → Job Summary"
-            if [ -f "$REPORT_JSON" ]; then
-              python3 "$SPLIT_SCRIPT" --log "$LOG" --json "$REPORT_JSON" --redact >> "$GITHUB_STEP_SUMMARY"
-            else
-              python3 "$SPLIT_SCRIPT" --log "$LOG" --redact >> "$GITHUB_STEP_SUMMARY"
-            fi
-            echo "Automation: done — open the workflow run **Summary** tab for the full report."
+            echo "Automation: merged log lines=$(wc -l < "$LOG" 2>/dev/null || echo 0) → Summary + $FULL_MD"
+            python3 "$SPLIT_SCRIPT" --log "$LOG" --json "$MERGED_JSON" --redact --full-output "$FULL_MD" >> "$GITHUB_STEP_SUMMARY"
+            echo "Download **automation-reports** for merged log, per-wave logs, full markdown, merged_index.json." >> "$GITHUB_STEP_SUMMARY"
           elif [ -f "$LOG" ]; then
-            echo "::warning::automation_log_split_report.py missing — commit Plugins/PubnubChat/Scripts/automation_log_split_report.py"
-            echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Metric | Count |" >> "$GITHUB_STEP_SUMMARY"
-            echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::automation_log_split_report.py missing"
+            echo "### Test run summary (merged JSON only)" >> "$GITHUB_STEP_SUMMARY"
             echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "No log file for split report." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f "$LOG" ] && grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
-            echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
+            echo "No merged log."
             exit 1
           fi
-          # Fail if automation never ran (e.g. build failed → tests step skipped) or was cancelled.
-          if [ "$TESTS_OUTCOME" = "skipped" ] || [ "$TESTS_OUTCOME" = "cancelled" ]; then
-            echo "Tests step was ${TESTS_OUTCOME}; automation did not complete."
+
+          if grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
+            echo "Editor did not load the .uproject (Failed to find game directory)."
             exit 1
           fi
-          # Step failed before exit_code was written (e.g. script error before bash "$RUN_SCRIPT").
-          if [ "$TESTS_OUTCOME" = "failure" ] && [ -z "${TESTS_EXIT_CODE:-}" ]; then
-            echo "Tests step failed before editor exit code was recorded."
+
+          for name in "tests_aunit" "tests_pubnub_integration" "tests_pubnubchat_unit" "tests_pubnubchat_integration_1validation"; do
+            case "$name" in
+              tests_aunit) O="$TESTS_AUNIT_OUTCOME" ;;
+              tests_pubnub_integration) O="$TESTS_PUBNUB_INT_OUTCOME" ;;
+              tests_pubnubchat_unit) O="$TESTS_CHAT_UNIT_OUTCOME" ;;
+              *) O="$TESTS_CHAT_1VAL_OUTCOME" ;;
+            esac
+            if [ "$O" = "skipped" ] || [ "$O" = "cancelled" ]; then
+              echo "A test wave was $O; expected all four waves after successful build."
+              exit 1
+            fi
+          done
+
+          ANY_FAIL=0
+          for code in "$TESTS_AUNIT_EXIT" "$TESTS_PUBNUB_INT_EXIT" "$TESTS_CHAT_UNIT_EXIT" "$TESTS_CHAT_1VAL_EXIT"; do
+            if [ -n "$code" ] && [ "$code" != "0" ]; then
+              ANY_FAIL=1
+              break
+            fi
+          done
+          if [ "$ANY_FAIL" -ne 0 ]; then
+            echo "One or more automation waves exited non-zero."
             exit 1
           fi
-          # Editor process exited non-zero.
-          if [ -n "${TESTS_EXIT_CODE:-}" ] && [ "$TESTS_EXIT_CODE" != "0" ]; then
-            echo "Tests reported failure (editor exit code ${TESTS_EXIT_CODE})."
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "Merged index.json reports failed=$FAILED."
             exit 1
           fi
-          FAILED_NUM="$FAILED"
-          if [ "$FAILED_NUM" -gt 0 ]; then
-            echo "Failing tests detected in log."
-            exit 1
-          fi
+
+      - name: Upload automation reports (full markdown + editor log)
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation-reports
+          path: |
+            automation_report_full.md
+            merged_index.json
+            test_run_merged.log
+            test_run_pubnub_aunit.log
+            test_run_pubnub_integration.log
+            test_run_pubnubchat_unit.log
+            test_run_pubnubchat_integration_1validation.log
+          if-no-files-found: warn

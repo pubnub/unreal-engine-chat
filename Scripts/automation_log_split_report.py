@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Build GitHub Job Summary markdown from Unreal editor log: pair Test Started / Test Completed
-by Path, attach log lines between them. Emit <details> for failures; passes are counted only.
+Build markdown from Unreal editor log: pair Test Started / Test Completed by Path.
+
+- **stdout**: GitHub Job Summary–safe (under ~1MiB per step); failures truncated/count-limited.
+- **--full-output**: complete report for CI artifact (no size cap).
 
 Optional index.json for aggregate counts when present (authoritative).
 """
@@ -191,9 +193,15 @@ def _emit_detail_blocks(
     redact: bool,
     max_bytes: int,
     trunc_note: str,
+    max_segments: Optional[int] = None,
+    artifact_note: str = "automation_report_full.md",
 ) -> None:
     if not segs:
         return
+    remainder = 0
+    if max_segments is not None and len(segs) > max_segments:
+        remainder = len(segs) - max_segments
+        segs = segs[:max_segments]
     parts.append(title)
     parts.append("")
     for seg in segs:
@@ -208,6 +216,11 @@ def _emit_detail_blocks(
         parts.append("")
         parts.append("</details>")
         parts.append("")
+    if remainder > 0:
+        parts.append(
+            f"_… and **{remainder}** more — full log slices in artifact `{artifact_note}`._"
+        )
+        parts.append("")
 
 
 def _emit_orphans_section(parts: List[str], orphans: List[str], redact: bool, max_bytes: int) -> None:
@@ -221,6 +234,20 @@ def _emit_orphans_section(parts: List[str], orphans: List[str], redact: bool, ma
     parts.append("```text")
     parts.append(ob[:max_bytes] if len(ob.encode("utf-8")) > max_bytes else ob)
     parts.append("```")
+    parts.append("")
+
+
+def _emit_github_paths_note(parts: List[str], segments: List[Segment]) -> None:
+    """Single paragraph: full list lives in artifact (Job Summary 1MiB/step limit)."""
+    if not segments:
+        return
+    parts.append("### All tests")
+    parts.append("")
+    parts.append(
+        f"_**{len(segments)}** bounded runs in `test_run.log`. The expandable path list and "
+        f"full per-test log slices are in the **`automation_report_full.md`** artifact "
+        "(omitted here so the Job Summary stays under GitHub’s 1 MiB per-step limit)._"
+    )
     parts.append("")
 
 
@@ -261,12 +288,29 @@ def _emit_no_pairs_notice(parts: List[str], segments: List[Segment], orphans: Li
     parts.append("")
 
 
+def _truncate_utf8_bytes(s: str, max_bytes: int) -> str:
+    """Truncate so encoded size <= max_bytes without splitting a UTF-8 codepoint."""
+    data = s.encode("utf-8")
+    if len(data) <= max_bytes:
+        return s
+    data = data[:max_bytes]
+    while data and (data[-1] & 0xC0) == 0x80:
+        data = data[:-1]
+    return data.decode("utf-8", errors="ignore")
+
+
 def emit_summary_md(
     segments: List[Segment],
     orphans: List[str],
     json_path: Optional[Path],
     max_bytes: int,
     redact: bool,
+    *,
+    mode: str = "full",
+    github_max_failures: int = 25,
+    github_max_warnings: int = 15,
+    github_max_bytes_per_block: int = 16384,
+    github_orphan_max_bytes: int = 32768,
 ) -> str:
     parts: List[str] = []
     trunc_fail = "\n\n… (truncated; use --max-bytes-per-block to raise limit)\n"
@@ -277,14 +321,26 @@ def emit_summary_md(
     failed_segs = [s for s in segments if classify_result(s.result) == "failed"]
     warn_segs = [s for s in segments if classify_result(s.result) == "warned"]
 
+    if mode == "github":
+        fail_limit: Optional[int] = github_max_failures
+        warn_limit: Optional[int] = github_max_warnings
+        block_b = github_max_bytes_per_block
+        orphan_cap = github_orphan_max_bytes
+    else:
+        fail_limit = None
+        warn_limit = None
+        block_b = max_bytes
+        orphan_cap = max_bytes
+
     _emit_detail_blocks(
         parts,
         "### Failed tests (expand for log)",
         failed_segs,
         "❌",
         redact,
-        max_bytes,
+        block_b,
         trunc_fail,
+        max_segments=fail_limit,
     )
     _emit_detail_blocks(
         parts,
@@ -292,11 +348,17 @@ def emit_summary_md(
         warn_segs,
         "⚠️",
         redact,
-        max_bytes,
+        block_b,
         trunc_warn,
+        max_segments=warn_limit,
     )
-    _emit_orphans_section(parts, orphans, redact, max_bytes)
-    _emit_all_paths_list(parts, segments)
+    _emit_orphans_section(parts, orphans, redact, orphan_cap)
+
+    if mode == "github":
+        _emit_github_paths_note(parts, segments)
+    else:
+        _emit_all_paths_list(parts, segments)
+
     _emit_no_pairs_notice(parts, segments, orphans)
 
     return "\n".join(parts)
@@ -306,7 +368,36 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--log", type=Path, required=True)
     ap.add_argument("--json", type=Path, help="Saved/TestReport/index.json for counts")
+    ap.add_argument(
+        "--full-output",
+        type=Path,
+        help="Write complete report (full mode) for CI artifact; not size-capped",
+    )
     ap.add_argument("--max-bytes-per-block", type=int, default=65536)
+    ap.add_argument(
+        "--max-summary-bytes",
+        type=int,
+        default=950_000,
+        help="Hard cap for stdout (GitHub Job Summary per-step limit is 1MiB)",
+    )
+    ap.add_argument(
+        "--github-max-failures",
+        type=int,
+        default=25,
+        help="Max failed-test detail blocks on stdout",
+    )
+    ap.add_argument(
+        "--github-max-warnings",
+        type=int,
+        default=15,
+        help="Max warning-test detail blocks on stdout",
+    )
+    ap.add_argument(
+        "--github-max-bytes-per-block",
+        type=int,
+        default=16384,
+        help="Per-test log slice size cap for stdout",
+    )
     ap.add_argument(
         "--redact",
         action="store_true",
@@ -326,8 +417,48 @@ def main() -> int:
         f"segments={len(segments)} orphans={len(orphans)}",
         file=sys.stderr,
     )
-    md = emit_summary_md(segments, orphans, args.json, args.max_bytes_per_block, args.redact)
-    sys.stdout.write(md)
+
+    if args.full_output:
+        full_md = emit_summary_md(
+            segments,
+            orphans,
+            args.json,
+            args.max_bytes_per_block,
+            args.redact,
+            mode="full",
+        )
+        args.full_output.parent.mkdir(parents=True, exist_ok=True)
+        args.full_output.write_text(full_md, encoding="utf-8")
+        print(
+            f"automation_log_split_report: wrote full report ({len(full_md.encode('utf-8'))} bytes) → {args.full_output}",
+            file=sys.stderr,
+        )
+
+    gh_md = emit_summary_md(
+        segments,
+        orphans,
+        args.json,
+        args.max_bytes_per_block,
+        args.redact,
+        mode="github",
+        github_max_failures=args.github_max_failures,
+        github_max_warnings=args.github_max_warnings,
+        github_max_bytes_per_block=args.github_max_bytes_per_block,
+    )
+    raw = gh_md.encode("utf-8")
+    if len(raw) > args.max_summary_bytes:
+        gh_md = _truncate_utf8_bytes(gh_md, args.max_summary_bytes)
+        gh_md += (
+            "\n\n---\n_**Hard-truncated** to `--max-summary-bytes` so the Job Summary upload "
+            "succeeds (GitHub limit 1 MiB per step). Use the `automation_report_full.md` artifact "
+            "for the complete report._\n"
+        )
+        print(
+            f"automation_log_split_report: GitHub summary truncated "
+            f"{len(raw)} → {len(gh_md.encode('utf-8'))} bytes",
+            file=sys.stderr,
+        )
+    sys.stdout.write(gh_md)
     return 0
 
 
