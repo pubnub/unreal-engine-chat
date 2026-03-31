@@ -1549,7 +1549,7 @@ bool FPubnubChatChannelSendTextEmptyMessageTest::RunTest(const FString& Paramete
  * Deliberately fails one assertion so CI can verify failure reporting (log slices, Summary).
  * Same scenario as EmptyMessage (empty SendText) — API returns Error=true; we assert Error must be false.
  */
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelSendTextIntendedFailTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.SendText.1Validation.IntendedFail", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatChannelSendTextIntendedFailTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Channel.SendText.0IntendedFail.CI_ReportSmoke", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
 
 bool FPubnubChatChannelSendTextIntendedFailTest::RunTest(const FString& Parameters)
 {
