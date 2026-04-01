@@ -119,6 +119,6 @@ private:
 
 	UPubnubClient* CreatePubnubClient(FString PublishKey, FString SubscribeKey, FString UserID);
 
-	FPubnubChatInitChatResult InitChatInternal(FString UserID, FPubnubChatConfig Config, UPubnubClient* PubnubClient);
+	FPubnubChatInitChatResult InitChatInternal(FString UserID, FPubnubChatConfig Config, UPubnubClient* PubnubClient, bool bChatOwnsPubnubClient);
 
 };

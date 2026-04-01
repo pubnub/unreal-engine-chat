@@ -1139,6 +1139,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<UPubnubClient> PubnubClient = nullptr;
 	UPROPERTY()
+	bool bOwnsPubnubClient = false;
+	UPROPERTY()
 	TObjectPtr<UPubnubChatUser> CurrentUser = nullptr;
 	UPROPERTY()
 	TObjectPtr<UPubnubChatAccessManager> AccessManager = nullptr;
@@ -1165,7 +1167,7 @@ private:
 	UFUNCTION()
 	void OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus Status, FPubnubSubscriptionStatusData StatusData);
 
-	FPubnubChatInitChatResult InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient);
+	FPubnubChatInitChatResult InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient, bool bInOwnsPubnubClient);
 	FPubnubChatUserResult GetUserForInit(const FString InUserID);
 	
 	void StoreUserActivityTimestamp();

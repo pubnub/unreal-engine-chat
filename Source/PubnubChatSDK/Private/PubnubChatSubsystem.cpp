@@ -45,7 +45,7 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChat(FString PublishKey, FSt
 		return FinalResult;
 	}
 
-	return InitChatInternal(UserID, Config, PubnubClient);
+	return InitChatInternal(UserID, Config, PubnubClient, true);
 }
 
 FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatWithPubnubClient(FString UserID, UPubnubClient* PubnubClient, FPubnubChatConfig Config)
@@ -57,7 +57,7 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatWithPubnubClient(FString
 	//Make sure PubnubClient has correct UserID
 	PubnubClient->SetUserID(UserID);
 
-	return InitChatInternal(UserID, Config, PubnubClient);
+	return InitChatInternal(UserID, Config, PubnubClient, false);
 }
 
 void UPubnubChatSubsystem::InitChatAsync(FString PublishKey, FString SubscribeKey, FString UserID, FOnPubnubChatInitChatResponse OnInitChatResponse, FPubnubChatConfig Config)
@@ -257,8 +257,8 @@ UPubnubClient* UPubnubChatSubsystem::CreatePubnubClient(FString PublishKey, FStr
 	ClientConfig.PublishKey = PublishKey;
 	ClientConfig.SubscribeKey = SubscribeKey;
 	ClientConfig.UserID = UserID;
-	ClientConfig.LoggerConfig.DefaultLoggerMinLevel = EPubnubLogLevel::PLL_Debug;
-	ClientConfig.LoggerConfig.DefaultLoggerMinCCoreLevel = EPubnubLogLevel::PLL_Debug;
+	ClientConfig.LoggerConfig.DefaultLoggerMinLevel = EPubnubLogLevel::PLL_Trace;
+	ClientConfig.LoggerConfig.DefaultLoggerMinCCoreLevel = EPubnubLogLevel::PLL_Trace;
 	
 	UPubnubClient* PubnubClient = PubnubSubsystem->CreatePubnubClient(ClientConfig);
 
@@ -277,7 +277,7 @@ FPubnubChatConfig UPubnubChatSubsystem::GetDefaultChatConfig()
 }
 
 
-FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatInternal(FString UserID, FPubnubChatConfig Config, UPubnubClient* PubnubClient)
+FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatInternal(FString UserID, FPubnubChatConfig Config, UPubnubClient* PubnubClient, bool bChatOwnsPubnubClient)
 {
 	FScopeLock Lock(&ChatsMutex);
 
@@ -288,6 +288,11 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatInternal(FString UserID,
 	{
 		if(*ExistingChat)
 		{
+			if(bChatOwnsPubnubClient && PubnubClient)
+			{
+				PubnubClient->DestroyClient();
+			}
+			
 			UE_LOG(PubnubChatLog, Warning, TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID);
 			FinalResult.Result = FPubnubChatOperationResult::CreateError(FString::Printf(TEXT("Chat with UserID '%s' already exists. Returning existing Chat"), *UserID));
 			FinalResult.Chat = *ExistingChat;
@@ -300,7 +305,12 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatInternal(FString UserID,
 
 	UPubnubChat* NewChat = NewObject<UPubnubChat>(this);
 	NewChat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
-	FPubnubChatInitChatResult InitChatResult = NewChat->InitChat(UserID, Config, PubnubClient);
+	FPubnubChatInitChatResult InitChatResult = NewChat->InitChat(UserID, Config, PubnubClient, bChatOwnsPubnubClient);
+
+	if(InitChatResult.Result.Error && bChatOwnsPubnubClient && PubnubClient)
+	{
+		PubnubClient->DestroyClient();
+	}
 
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_RESULT_FAILED(FinalResult, InitChatResult);
 

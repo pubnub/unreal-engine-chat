@@ -53,7 +53,16 @@ void UPubnubChat::DestroyChat()
 	delete AsyncFunctionsThread;
 	AsyncFunctionsThread = nullptr;
 	
-	PubnubClient->OnSubscriptionStatusChanged.RemoveDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
+	if(PubnubClient)
+	{
+		PubnubClient->OnSubscriptionStatusChanged.RemoveDynamic(this, &UPubnubChat::OnPubnubSubscriptionStatusChanged);
+		
+		// Chats created with InitChat own their dedicated client and must release it during teardown.
+		if(bOwnsPubnubClient)
+		{
+			PubnubClient->DestroyClient();
+		}
+	}
 
 	// Clear repository data
 	if (ObjectsRepository)
@@ -63,6 +72,8 @@ void UPubnubChat::DestroyChat()
 	}
 
 	IsInitialized = false;
+	bOwnsPubnubClient = false;
+	PubnubClient = nullptr;
 	
 	OnChatDestroyed.Broadcast(CurrentUserID);
 	OnChatDestroyedNative.Broadcast(CurrentUserID);
@@ -1578,7 +1589,7 @@ void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus St
 	});
 }
 
-FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient)
+FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient, bool bInOwnsPubnubClient)
 {
 	FPubnubChatInitChatResult FinalResult;
 	
@@ -1592,6 +1603,7 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 
 	ChatConfig = InChatConfig;
 	PubnubClient = InPubnubClient;
+	bOwnsPubnubClient = bInOwnsPubnubClient;
 	CurrentUserID = InUserID;
 	
 	//Create repository for managing shared User and Channel data
