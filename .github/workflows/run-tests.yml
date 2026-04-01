@@ -159,7 +159,7 @@ jobs:
           UE_PATH="$UE_PATH" \
           PROJ_DIR="$PROJ_DIR" \
           UPROJECT="$UPROJECT" \
-          # Default filter from run_mac_automation_tests.sh: PubnubChat.Unit + Integration 2HappyPath / 1Validation / 3FullParameters (OR via '+').
+          # Default filter: PubnubChat.Unit+.1Validation+.2HappyPath+.3FullParameters (see run_mac_automation_tests.sh).
           REPORT_DIR="$REPORT_DIR" \
           LOG_FILE="test_run.log" \
           bash "$RUN_SCRIPT"
