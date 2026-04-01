@@ -20,6 +20,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
+#include "HAL/PlatformProcess.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;
@@ -1520,6 +1521,9 @@ bool FPubnubChatUserGetChannelRestrictionsHappyPathTest::RunTest(const FString& 
 	
 	FPubnubChatOperationResult SetResult = Chat->SetRestrictions(Restriction);
 	TestFalse("SetRestrictions should succeed", SetResult.Error);
+
+	// Give the backend a moment to surface the moderation membership before reading it back.
+	FPlatformProcess::Sleep(1.0f);
 	
 	// Get channel restrictions from user perspective
 	UPubnubChatUser* TargetUser = CreateUserResult.User;
