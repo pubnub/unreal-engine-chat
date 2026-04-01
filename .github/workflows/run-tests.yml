@@ -16,7 +16,7 @@ env:
   PUBNUB_SDK_REPO: "https://github.com/pubnub/unreal-engine.git"
   TEST_PROJECT_DIR: "unreal-test-project"
   # Branch of unreal-engine (Pubnub SDK) to use
-  PUBNUB_SDK_BRANCH: "CLEN-3069_Multiple_Contexts"
+  PUBNUB_SDK_BRANCH: "master"
 
 jobs:
   test:
