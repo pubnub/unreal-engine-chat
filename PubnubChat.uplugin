@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 20,
-	"VersionName": "0.4.4",
+	"Version": 21,
+	"VersionName": "1.0.0",
 	"FriendlyName": "Pubnub Chat SDK",
 	"Description": "Quickly and easily integrate a real-time text chat solution that is reliable, flexible, and scalable.",
 	"Category": "Code",
@@ -17,18 +17,40 @@
 	"SupportedTargetPlatforms": [
 		"Win64",
 		"Mac",
+		"Android",
+		"IOS",
 		"Linux"
 	],
 	"Modules": [
 		{
 			"Name": "PubnubChatSDK",
 			"Type": "Runtime",
-			"LoadingPhase": "PostEngineInit",
+			"LoadingPhase": "Default",
 			"PlatformAllowList": [
 				"Win64",
 				"Mac",
+				"Android",
+				"IOS",
 				"Linux"
 			]
+		},
+		{
+			"Name": "PubnubChatSDKTests",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"Android",
+				"IOS",
+				"Linux"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "PubnubLibrary",
+			"Enabled": true
 		}
 	]
 }

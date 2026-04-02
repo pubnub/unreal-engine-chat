@@ -1,0 +1,250 @@
+# PubnubChat plugin CI: build and run automation tests using Unreal Test Project
+# Runs on: unreal-engine-chat repo (PR or push to main/master)
+# Requires: UE 5.5 at UE_PATH on macOS runner; unreal-test-project has Pubnub + PubnubChat as submodules
+
+name: Unreal Engine Tests (macOS)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  UE_PATH: "/Users/Shared/Epic Games/UE_5.5"
+  TEST_PROJECT_REPO: "https://github.com/pubnub/unreal-test-project.git"
+  PUBNUB_SDK_REPO: "https://github.com/pubnub/unreal-engine.git"
+  TEST_PROJECT_DIR: "unreal-test-project"
+  # Branch of unreal-engine (Pubnub SDK) to use
+  PUBNUB_SDK_BRANCH: "master"
+
+jobs:
+  test:
+    runs-on:
+      group: macos-gh
+    timeout-minutes: 90
+
+    env:
+      PN_PUB_KEY: ${{ secrets.PN_PUB_KEY }}
+      PN_SUB_KEY: ${{ secrets.PN_SUB_KEY }}
+      PN_SEC_KEY: ${{ secrets.PN_SEC_KEY }}
+      PN_PUB_KEY_PAM: ${{ secrets.PN_PUB_KEY_PAM }}
+      PN_SUB_KEY_PAM: ${{ secrets.PN_SUB_KEY_PAM }}
+      PN_SEC_KEY_PAM: ${{ secrets.PN_SEC_KEY_PAM }}
+
+    steps:
+      # --- Checkout PubnubChat plugin (this repo, PR branch or push branch)
+      - name: Checkout PubnubChat (current branch)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # --- Clone Unreal Test Project (master) with submodules (private repo: use token)
+      - name: Clone Unreal Test Project
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TOKEN="${GH_TOKEN:-$GITHUB_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "No token available. For private repos, add secret GH_TOKEN (repo scope) or ensure GITHUB_TOKEN can access other org repos."
+            exit 1
+          fi
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+          git clone --depth 1 --branch master "${{ env.TEST_PROJECT_REPO }}" "${{ env.TEST_PROJECT_DIR }}"
+          cd "${{ env.TEST_PROJECT_DIR }}"
+          git submodule update --init --recursive
+
+      # --- Point Pubnub plugin to unreal-engine branch (fetch from canonical PUBNUB_SDK_REPO so branch is found)
+      - name: Use Pubnub SDK (unreal-engine) at ${{ env.PUBNUB_SDK_BRANCH }}
+        run: |
+          cd "${{ env.TEST_PROJECT_DIR }}"
+          if [ -d "Plugins/Pubnub" ]; then
+            cd Plugins/Pubnub
+            BRANCH="${{ env.PUBNUB_SDK_BRANCH }}"
+            # Ensure origin points to canonical repo (submodule may use relative/fork URL)
+            git remote set-url origin "${{ env.PUBNUB_SDK_REPO }}"
+            git fetch origin "$BRANCH"
+            git checkout "origin/$BRANCH"
+            echo "Using Pubnub SDK branch: $BRANCH"
+            cd "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          fi
+
+      # --- Override PubnubChat with this repo (current branch under test)
+      - name: Use PubnubChat from current branch (PR / push)
+        run: |
+          rm -rf "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat"
+          mkdir -p "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat"
+          rsync -a --exclude='.git' --exclude='unreal-test-project' "${{ github.workspace }}/" "${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/"
+
+      # --- Resolve .uproject path
+      - name: Find project file
+        id: project
+        run: |
+          cd "${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT=$(find . -maxdepth 1 -name "*.uproject" -print -quit)
+          if [ -z "$UPROJECT" ]; then
+            echo "error=No .uproject found in ${{ env.TEST_PROJECT_DIR }}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          UPROJECT="${UPROJECT#./}"
+          PROJECT_NAME="${UPROJECT%.uproject}"
+          echo "uproject=$UPROJECT" >> "$GITHUB_OUTPUT"
+          echo "name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "Project: $UPROJECT (target: $PROJECT_NAME)"
+
+      # --- Generate project files (required for Editor build and plugin modules)
+      - name: Generate project files
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
+        run: |
+          set -e
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          GEN_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/GenerateProjectFiles.sh"
+          if [ ! -f "$GEN_SCRIPT" ]; then
+            echo "GenerateProjectFiles.sh not found: $GEN_SCRIPT"
+            exit 1
+          fi
+          "$GEN_SCRIPT" -project="$PROJ_DIR/$UPROJECT" -game
+          echo "Project files generated."
+
+      # --- Compile project (Editor target for running automation tests in UnrealEditor)
+      - name: Compile project
+        id: build
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
+        run: |
+          set -e
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          PROJECT_NAME="${{ steps.project.outputs.name }}"
+          EDITOR_TARGET="${PROJECT_NAME}Editor"
+          UBT_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/RunUBT.sh"
+          if [ ! -f "$UBT_SCRIPT" ]; then
+            UBT_SCRIPT="$UE_PATH/Engine/Build/BatchFiles/Mac/Build.sh"
+          fi
+          echo "Building $EDITOR_TARGET (Mac Development)..."
+          "$UBT_SCRIPT" "$EDITOR_TARGET" Mac Development -project="$PROJ_DIR/$UPROJECT" -verbose 2>&1 | tee build.log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "--- Build failed ---"
+            tail -n 200 build.log
+            exit 1
+          fi
+          echo "Build succeeded."
+
+      # --- Run automation tests
+      - name: Run automation tests
+        id: tests
+        env:
+          HOME: ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/UEHome
+        run: |
+          mkdir -p "$HOME/Documents/Library/Application Support/Epic/UnrealEngine"
+          UE_PATH="${{ env.UE_PATH }}"
+          PROJ_DIR="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}"
+          UPROJECT="${{ steps.project.outputs.uproject }}"
+          REPORT_DIR="$PROJ_DIR/Saved/TestReport"
+          RUN_SCRIPT="$PROJ_DIR/Plugins/PubnubChat/Scripts/run_mac_automation_tests.sh"
+          if [ ! -f "$RUN_SCRIPT" ]; then
+            echo "Automation script not found: $RUN_SCRIPT"
+            exit 1
+          fi
+          chmod +x "$RUN_SCRIPT"
+          echo "Running automation script: $RUN_SCRIPT"
+          set +e
+          UE_PATH="$UE_PATH" \
+          PROJ_DIR="$PROJ_DIR" \
+          UPROJECT="$UPROJECT" \
+          # Default filter: PubnubChat.Unit+.1Validation+.2HappyPath+.3FullParameters (see run_mac_automation_tests.sh).
+          REPORT_DIR="$REPORT_DIR" \
+          LOG_FILE="test_run.log" \
+          bash "$RUN_SCRIPT"
+          EDITOR_EXIT=$?
+          echo "exit_code=$EDITOR_EXIT" >> "$GITHUB_OUTPUT"
+          exit "$EDITOR_EXIT"
+
+      # --- Parse test output and report
+      - name: Parse and report test results
+        if: always()
+        env:
+          TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          LOG="${{ github.workspace }}/test_run.log"
+          REPORT_JSON="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json"
+          SPLIT_SCRIPT="${{ github.workspace }}/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+          if [ ! -f "$SPLIT_SCRIPT" ]; then
+            SPLIT_SCRIPT="${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+          fi
+          if [ -f "$REPORT_JSON" ]; then
+            PASSED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeeded",0))' "$REPORT_JSON")
+            FAILED=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("failed",0))' "$REPORT_JSON")
+            WARNINGS=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("succeededWithWarnings",0))' "$REPORT_JSON")
+          elif [ -f "$LOG" ]; then
+            PASSED=$(grep -cE 'Test Completed\. Result=\{Success\}' "$LOG" 2>/dev/null || echo "0")
+            FAILED=$(grep -cE 'Test Completed\. Result=\{Failure\}' "$LOG" 2>/dev/null || echo "0")
+            WARNINGS=$(grep -cE 'Test Completed\. Result=\{SuccessWithWarnings\}' "$LOG" 2>/dev/null || echo "0")
+          else
+            echo "No test report or log found."
+            exit 1
+          fi
+          # Job Summary: index.json counts + log-based segments (failures with log slices; all paths expandable).
+          if [ -f "$SPLIT_SCRIPT" ] && [ -f "$LOG" ]; then
+            echo "Automation: building report from test_run.log ($(wc -l < "$LOG" 2>/dev/null || echo 0) lines) → Job Summary"
+            if [ -f "$REPORT_JSON" ]; then
+              python3 "$SPLIT_SCRIPT" --log "$LOG" --json "$REPORT_JSON" --redact >> "$GITHUB_STEP_SUMMARY"
+            else
+              python3 "$SPLIT_SCRIPT" --log "$LOG" --redact >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "Automation: done — open the workflow run **Summary** tab for the full report."
+          elif [ -f "$LOG" ]; then
+            echo "::warning::automation_log_split_report.py missing — commit Plugins/PubnubChat/Scripts/automation_log_split_report.py"
+            echo "### Test run summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Metric | Count |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Warnings | $WARNINGS |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No log file for split report." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f "$LOG" ] && grep -q "Failed to find game directory" "$LOG" 2>/dev/null; then
+            echo "Editor did not load the .uproject (see Failed to find game directory). Fix -project path."
+            exit 1
+          fi
+          # Fail if automation never ran (e.g. build failed → tests step skipped) or was cancelled.
+          if [ "$TESTS_OUTCOME" = "skipped" ] || [ "$TESTS_OUTCOME" = "cancelled" ]; then
+            echo "Tests step was ${TESTS_OUTCOME}; automation did not complete."
+            exit 1
+          fi
+          # Step failed before exit_code was written (e.g. script error before bash "$RUN_SCRIPT").
+          if [ "$TESTS_OUTCOME" = "failure" ] && [ -z "${TESTS_EXIT_CODE:-}" ]; then
+            echo "Tests step failed before editor exit code was recorded."
+            exit 1
+          fi
+          # Editor process exited non-zero.
+          if [ -n "${TESTS_EXIT_CODE:-}" ] && [ "$TESTS_EXIT_CODE" != "0" ]; then
+            echo "Tests reported failure (editor exit code ${TESTS_EXIT_CODE})."
+            exit 1
+          fi
+          FAILED_NUM="$FAILED"
+          if [ "$FAILED_NUM" -gt 0 ]; then
+            echo "Failing tests detected in log."
+            exit 1
+          fi
+
+      # Full editor log + JSON report (Job Summary is capped at ~1 MiB per step by automation_log_split_report.py)
+      - name: Upload automation logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-automation-logs
+          if-no-files-found: warn
+          path: |
+            ${{ github.workspace }}/test_run.log
+            ${{ github.workspace }}/${{ env.TEST_PROJECT_DIR }}/Saved/TestReport/index.json

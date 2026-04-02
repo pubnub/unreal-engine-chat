@@ -1,4 +1,4 @@
-// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2026 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
@@ -13,6 +13,4 @@ public:
 	virtual void ShutdownModule() override;
 
 private:
-	/** Handle to the test dll we will load */
-	void*	ChatSDKLibraryHandle;
 };

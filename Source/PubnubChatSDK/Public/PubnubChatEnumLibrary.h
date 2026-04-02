@@ -1,77 +1,92 @@
-// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2026 PubNub Inc. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/EnumRange.h"
 #include "PubnubChatEnumLibrary.generated.h"
 
+
 UENUM(BlueprintType)
-enum class EPubnubMessageActionType : uint8
+enum class EPubnubChatConnectionStatus : uint8
 {
-	PMAT_Reaction			 UMETA(DisplayName="Reaction"),
-	PMAT_Receipt			 UMETA(DisplayName="Receipt"),
-	PMAT_Custom				 UMETA(DisplayName="Custom"),
-	PMAT_Edited				 UMETA(DisplayName="Edited"),
-	PMAT_Deleted			 UMETA(DisplayName="Deleted"),
-	PMAT_ThreadRootId		 UMETA(DisplayName="ThreadRootId")
+	PCCS_ConnectionOnline		UMETA(DisplayName="ConnectionOnline"),
+	PCCS_ConnectionOffline		UMETA(DisplayName="ConnectionOffline"),
+	PCCS_ConnectionError		UMETA(DisplayName="ConnectionError")
+};
+
+UENUM(BlueprintType)
+enum class EPubnubChatMessageActionType : uint8
+{
+	PCMAT_Reaction				UMETA(DisplayName="Reaction"),
+	PCMAT_Receipt				UMETA(DisplayName="Receipt"),
+	PCMAT_Custom				UMETA(DisplayName="Custom"),
+	PCMAT_Edited				UMETA(DisplayName="Edited"),
+	PCMAT_Deleted				UMETA(DisplayName="Deleted"),
+	PCMAT_ThreadRootId			UMETA(DisplayName="ThreadRootId")
 };
 
 UENUM(BlueprintType)
 enum class EPubnubChatEventType : uint8
 {
-	PCET_TYPING				 UMETA(DisplayName="Typing"),
-	PCET_REPORT				 UMETA(DisplayName="Report"),
-	PCET_RECEPIT			 UMETA(DisplayName="Receipt"),
-	PCET_MENTION			 UMETA(DisplayName="Mention"),
-	PCET_INVITE				 UMETA(DisplayName="Invite"),
-	PCET_CUSTOM				 UMETA(DisplayName="Custom"),
-	PCET_MODERATION			 UMETA(DisplayName="Moderation")
+	PCET_Typing					UMETA(DisplayName="Typing"),
+	PCET_Report					UMETA(DisplayName="Report"),
+	PCET_Receipt				UMETA(DisplayName="Receipt"),
+	PCET_Mention				UMETA(DisplayName="Mention"),
+	PCET_Invite					UMETA(DisplayName="Invite"),
+	PCET_Custom					UMETA(DisplayName="Custom"),
+	PCET_Moderation				UMETA(DisplayName="Moderation"),
+	
+	Count
+};
+ENUM_RANGE_BY_COUNT(EPubnubChatEventType, EPubnubChatEventType::Count);
+
+UENUM(BlueprintType)
+enum class EPubnubChatEventMethod : uint8
+{
+	PCEM_Default				UMETA(DisplayName="Default"),
+	PCEM_Publish				UMETA(DisplayName="Publish"),
+	PCEM_Signal					UMETA(DisplayName="Signal")
 };
 
 UENUM(BlueprintType)
-enum class EPubnubChatMessageType : uint8
+enum class EPubnubChatAccessManagerPermission : uint8
 {
-	PCMT_TEXT				UMETA(DisplayName="Text")
+	PCAMP_Read					UMETA(DisplayName="Read"),
+	PCAMP_Write					UMETA(DisplayName="Write"),
+	PCAMP_Manage				UMETA(DisplayName="Manage"),
+	PCAMP_Delete				UMETA(DisplayName="Delete"),
+	PCAMP_Get					UMETA(DisplayName="Get"),
+	PCAMP_Join					UMETA(DisplayName="Join"),
+	PCAMP_Update				UMETA(DisplayName="Update"),
 };
 
 UENUM(BlueprintType)
-enum class EPubnubAccessManagerResourceType : uint8
+enum class EPubnubChatAccessManagerResourceType : uint8
 {
-	PAMRT_UUIDS				UMETA(DisplayName="Uuids"),
-	PAMRT_CHANNELS			UMETA(DisplayName="Channels"),
+	PCAMRT_Users			UMETA(DisplayName="Uuids"),
+	PCAMRT_Channels			UMETA(DisplayName="Channels"),
 };
 
 UENUM(BlueprintType)
-enum class EPubnubAccessManagerPermission : uint8
+enum class EPubnubChatStreamedUpdateType : uint8
 {
-	PAMP_READ				UMETA(DisplayName="Read"),
-	PAMP_WRITE				UMETA(DisplayName="Write"),
-	PAMP_MANAGE				UMETA(DisplayName="Manage"),
-	PAMP_DELETE				UMETA(DisplayName="Delete"),
-	PAMP_GET				UMETA(DisplayName="Get"),
-	PAMP_JOIN				UMETA(DisplayName="Join"),
-	PAMP_UPDATE				UMETA(DisplayName="Update"),
+	PCSUT_Updated			UMETA(DisplayName="Updated"),
+	PCSUT_Deleted			UMETA(DisplayName="Deleted"),
 };
 
 UENUM(BlueprintType)
-enum class EPubnubMentionTargetType : uint8
+enum class EPubnubChatMessageDraftSuggestionSource : uint8
 {
-	PMTT_User				UMETA(DisplayName="User"),
-	PMTT_Channel			UMETA(DisplayName="Channel"),
-	PMTT_Url				UMETA(DisplayName="Url")
+	PCMDSS_Channel			UMETA(DisplayName="Channel"),
+	PCMDSS_Global			UMETA(DisplayName="Global"),
 };
 
 UENUM(BlueprintType)
-enum class EPubnubMessageDraftSuggestionSource : uint8
+enum class EPubnubChatMentionTargetType : uint8
 {
-	PMDSS_Channel			UMETA(DisplayName="Channel"),
-	PMDSS_Global			UMETA(DisplayName="Global"),
-};
-
-UENUM(BlueprintType)
-enum class EPubnubConnectionStatus : uint8
-{
-	PCS_CONNECTION_ONLINE		UMETA(DisplayName="ConnectionOnline"),
-	PCS_CONNECTION_OFFLINE		UMETA(DisplayName="ConnectionOffline"),
-	PCS_CONNECTION_ERROR		UMETA(DisplayName="ConnectionError")
+	PCMTT_None				UMETA(DisplayName="None"),
+	PCMTT_User				UMETA(DisplayName="User"),
+	PCMTT_Channel			UMETA(DisplayName="Channel"),
+	PCMTT_Url				UMETA(DisplayName="Url")
 };

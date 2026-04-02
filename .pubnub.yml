@@ -1,8 +1,47 @@
 name: unreal-engine-chat
-version: v0.4.4
+version: 1.0.0
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2026-04-02
+    version: 1.0.0
+    changes:
+      - type: feature
+        text: "The subsystem now supports multiple simultaneous chat sessions keyed by UserID."
+      - type: feature
+        text: "All public methods now have synchronous and asynchronous variants. Async methods use the 'Async' suffix and accept a delegate for handling the result."
+      - type: feature
+        text: "Entity objects (channels, users, memberships, messages) are now synchronized by ID. All references to the same entity ID share the latest locally known data, so updating one instance updates the others."
+      - type: feature
+        text: "Added a chat config option to specify which channel types publish read receipt events."
+      - type: feature
+        text: "Memberships can now be hard-deleted."
+      - type: feature
+        text: "Added methods for retrieving and checking singular memberships for users and channels."
+      - type: feature
+        text: "Added a plug-and-play chat UI sample in Content/SampleChat, including the W_PubnubChat_Sample widget."
+      - type: feature
+        text: "Added a utility AppendText() method to Membership."
+      - type: feature
+        text: "Added GetMessageElements() to Message. It returns the same data model as MessageDraft."
+      - type: improvement
+        text: "BREAKING CHANGE: The precompiled external Cpp Chat library is no longer required. PubNub UE Chat SDK now depends on PubNub UE SDK (Core)."
+      - type: improvement
+        text: "BREAKING CHANGE: Public types now follow a consistent FPubnubChat... / UPubnubChat... naming scheme so classes, delegates, results, and input types belong to this plugin and do not collide with other PubNub plugins."
+      - type: improvement
+        text: "BREAKING CHANGE: All operation result types now include a common FPubnubChatOperationResult inside dedicated FPubnubChat...Result structs, for both synchronous returns and async callbacks. Use it to handle success and error state consistently across all operations."
+      - type: improvement
+        text: "Connect and Join are now separate concepts. Join only adds a member to a channel and no longer calls Connect internally. Use Join + Connect to preserve the previous behavior."
+      - type: improvement
+        text: "BREAKING CHANGE: ListenForEvents has been replaced with dedicated streams for each event type, exposed on the related entities."
+      - type: improvement
+        text: "BREAKING CHANGE: Read receipts now use per-user read events instead of aggregated event data."
+      - type: improvement
+        text: "BREAKING CHANGE: Message reactions now use a simpler, easier-to-use format."
+      - type: improvement
+        text: "BREAKING CHANGE: Most advanced message sending features, such as files, quotes, and mentions, are now available only through MessageDraft."
+      - type: improvement
+        text: "BREAKING CHANGE: Internal events such as invites and mentions can no longer be sent manually. Only events with the Custom type may be sent directly."
   - date: 2025-08-21
     version: v0.4.4
     changes:
@@ -92,5 +131,7 @@ supported-platforms:
   - version: PubNub Unreal Engine Chat SDK
     platforms:
       - Windows
-      - Mac OS     
+      - Mac OS
+      - IOS       
       - Unix 
+      - Android 

@@ -1,0 +1,207 @@
+// Copyright 2026 PubNub Inc. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
+#include "PubnubChatEnumLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
+#include "PubnubStructLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
+#include "StructLibraries/PubnubChatUserStructLibrary.h"
+#include "PubnubChatInternalUtilities.generated.h"
+
+class FJsonObject;
+
+
+/**
+ * 
+ */
+UCLASS()
+class PUBNUBCHATSDK_API UPubnubChatInternalUtilities : public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+public:
+	
+	/* FILTERS */
+	
+	static FString GetFilterForUserID(const FString& UserID);
+	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
+	static FString GetFilterForChannelID(const FString& ChannelID);
+	static FString GetFilterForChannelsRestrictions();
+	static FString GetChatSdkVersionSuffix();
+
+	
+	/* PUBLISH MESSAGE */
+	
+	static FString ChatMessageToPublishString(const FString ChatMessage);
+	static FString PublishedStringToChatMessage(const FString PublishedMessage);
+	static FString SendTextMetaFromParams(const FPubnubChatSendTextParams& SendTextParams, UPubnubChatMessage* QuotedMessage = nullptr);
+	static FString GetForwardedMessageMeta(const FString& OriginalMessageMeta, const FString& UserID, const FString& ChannelID);
+
+	/**
+	 * Parses message metadata JSON and extracts quoted message data if present.
+	 * Metadata is expected to contain an optional "quotedMessage" object with keys: timetoken, text, userID.
+	 * @param Meta JSON string (e.g. from FPubnubChatMessageData::Meta).
+	 * @return Quoted message data; all fields empty if Meta is empty or quotedMessage is missing.
+	 */
+	static FPubnubChatQuotedMessageData GetQuotedMessageDataFromMeta(const FString& Meta);
+	
+	
+	/* RESTRICTIONS */
+	
+	static FString GetRestrictionsChannelForChannelID(const FString ChannelID);
+	static FString GetModerationEventChannelForUserID(const FString UserID);
+	static FString GetChannelIDFromModerationChannel(const FString ModerationChannelID);
+	static FString GetChannelMemberCustomForRestriction(const FPubnubChatRestriction& Restriction);
+	static FPubnubChatRestriction GetRestrictionFromChannelMemberCustom(const FString& Custom);
+
+	
+	/* EVENTS */
+	
+	static EPubnubChatEventMethod GetDefaultChatEventMethodForEventType(EPubnubChatEventType EventType);
+	static FPubnubChatEvent GetEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
+	static FPubnubChatEvent GetEventFromPubnubHistoryMessageData(const FPubnubHistoryMessageData& MessageData);
+	static FPubnubChatReportEvent GetReportEventFromChatEvent(const FPubnubChatEvent& Event);
+	static FPubnubChatUserMention GetUserMentionFromChatEvent(const FPubnubChatEvent& Event);
+	static FPubnubChatInviteEvent GetInviteEventFromChatEvent(const FPubnubChatEvent& Event);
+	static FPubnubChatRestriction GetRestrictionFromModerationEvent(const FPubnubChatEvent& Event, const FString& RestrictedUserID);
+	static bool IsCustomEventMessage(const FString& MessageContent);
+	static FPubnubChatCustomEvent GetCustomEventFromPubnubMessageData(const FPubnubMessageData& MessageData);
+	static FString GetReceiptEventPayload(const FString& Timetoken);
+	static FString GetInviteEventPayload(const FString ChannelID, const FString ChannelType);
+	static FString GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason);
+	static bool IsThisEventMessage(const FString& MessageContent);
+	static FString GetMentionEventPayload(const FString& ChannelID, const FString& Timetoken, const FString& Text, const FString& ParentChannel = "");
+	static FString GetReportMessageEventPayload(const FString& Text, const FString& Reason, const FString& ChannelID, const FString& UserID, const FString& Timetoken);
+	static FString GetTypingEventPayload(const bool IsTyping);
+	static bool GetIsTypingFromEventPayload(const FString& EventPayload);
+	static void UpdateUserIDByPresenceEvent(TArray<FString>& UserIDs, const FString& EventContent);
+	static bool CanEmitReceiptEvent(const FString& ChannelType, const FPubnubChatConfig& CurrentConfig);
+	
+	/* MEMBERSHIP */
+	
+	static FString GetLastReadMessageTimetokenPropertyKey();
+	static void AddLastReadMessageTimetokenToMembershipData(FPubnubChatMembershipData& MembershipData, const FString Timetoken);
+	static FString GetLastReadMessageTimetokenFromMembershipData(const FPubnubChatMembershipData& MembershipData);
+	
+	
+	/* CHANNEL */
+	
+	static bool IsPubnubInternalChannel(const FString& ChannelID);
+	static FString GetPinnedMessageTimetokenPropertyKey();
+	static FString GetPinnedMessageChannelIDPropertyKey();
+	static void AddPinnedMessageToChannelData(FPubnubChatChannelData& ChannelData, UPubnubChatMessage* Message);
+	static bool RemovePinnedMessageFromChannelData(FPubnubChatChannelData& ChannelData);
+	
+	
+	/* MESSAGE ACTIONS */
+	
+	static TArray<FPubnubChatMessageAction> FilterMessageActionsOfType(const TArray<FPubnubChatMessageAction>& MessageActions, const EPubnubChatMessageActionType& MessageActionType);
+	static FPubnubChatMessageAction GetMessageReactionForUserID(const TArray<FPubnubChatMessageAction>& MessageReactions, const FString& Reaction, const FString& UserID);
+	static bool RemoveReactionFromReactionsArray(TArray<FPubnubChatMessageAction>& MessageReactions, const FPubnubChatMessageAction& Reaction);
+	static bool IsChatMessageActionEqualPubnubAction(const FPubnubChatMessageAction& ChatAction, const FPubnubMessageActionData& PubnubAction);
+	static TArray<FPubnubChatMessageReaction> GetMessageReactionsFromMessageActions(const FString& CurrentUserID, const TArray<FPubnubChatMessageAction>& MessageActions);
+	static FPubnubChatMessageReaction GetReactionFromArrayByValue(const FString& Value, const TArray<FPubnubChatMessageReaction>& Reactions);
+	
+	/* STREAM UPDATES */
+	
+	static bool IsPubnubMessageChannelUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageUserUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageMembershipUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageChatMessageUpdate(const FString& MessageContent);
+	static bool IsPubnubMessageDeleteEvent(const FString& MessageContent);
+	static void UpdateChatChannelFromPubnubChannelUpdateData(const FPubnubChannelUpdateData& PubnubChannelUpdateData, FPubnubChatChannelData& ChannelData);
+	static void UpdateChatUserFromPubnubUserUpdateData(const FPubnubUserUpdateData& PubnubUserUpdateData, FPubnubChatUserData& UserData);
+	static void UpdateChatMembershipFromPubnubMembershipUpdateData(const FPubnubMembershipUpdateData& PubnubMembershipUpdateData, FPubnubChatMembershipData& MembershipData);
+	//Returns true if data was updated
+	static bool UpdateChatMessageDataFromPubnubMessage(const FPubnubMessageData& MessageData, const FString& ChatMessageTimetoken, FPubnubChatMessageData& ChatMessageData);
+	
+	
+	/* TYPING */
+	
+	static void RemoveExpiredTypingIndicators(TMap<FString, FTypingIndicatorData>& TypingIndicators, const int TypingTimeout, FDateTime CurrentTime);
+	
+	
+	/* THREADS */
+	
+	static FString GetThreadID(const FString& ChannelID, const FString& Timetoken);
+	static FString GetParentChannelIDFromThreadID(const FString& ThreadID);
+	static FString GetThreadDescription(const FString& ChannelID, const FString& Timetoken);
+	static bool HasThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
+	static FPubnubChatMessageAction GetThreadRootMessageAction(const TArray<FPubnubChatMessageAction>& MessageActions);
+	static void RemoveThreadRootFromMessageActions(TArray<FPubnubChatMessageAction>& MessageActions);
+	static bool IsChannelAThread(const FString& ChannelID);
+	
+	/* ACCESS MANAGER */
+
+	/**
+	 * Checks if a permission exists and is true for a given resource in Resources (exact match).
+	 */
+	static bool CheckResourcePermission(const TSharedPtr<FJsonObject>& ResourcesObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr);
+
+	/**
+	 * Checks if a permission exists and is true for a given resource in Patterns (regex match).
+	 */
+	static bool CheckPatternPermission(const TSharedPtr<FJsonObject>& PatternsObject, const FString& ResourceTypeStr, const FString& ResourceName, const FString& PermissionStr);
+
+	/* USER ACTIVITY TIMESTAMP */
+
+	/**
+	 * Gets the property key name for lastActiveTimestamp in custom JSON.
+	 */
+	static FString GetLastActiveTimestampPropertyKey();
+
+	/**
+	 * Gets the lastActiveTimestamp value from custom JSON string.
+	 * @param CurrentCustom The custom JSON string
+	 * @return The timestamp string if found, empty string otherwise
+	 */
+	static FString GetLastActiveTimestampFromCustom(const FString& CurrentCustom);
+
+	/**
+	 * Adds or updates the lastActiveTimestamp in custom JSON string.
+	 * @param CurrentCustom The current custom JSON string
+	 * @param Timestamp The timestamp string to set (milliseconds since epoch as string)
+	 * @return Updated custom JSON string with lastActiveTimestamp
+	 */
+	static FString AddLastActiveTimestampToCustom(const FString& CurrentCustom, const FString& Timestamp);
+
+	/* HASHING */
+
+	/**
+	 * Hashes a string using the cyrb53a algorithm.
+	 * @param Str The string to hash
+	 * @param Seed Optional seed value (defaults to 0)
+	 * @return 64-bit unsigned hash value
+	 */
+	static uint64 HashString(const FString& Str, int32 Seed = 0);
+
+	/* MESSAGE ACTIONS */
+
+	/**
+	 * Sorts message actions by timetoken in ascending order (oldest first, most recent last).
+	 * Timetokens are compared numerically after conversion to int64.
+	 * @param MessageActions Array of message actions to sort (modified in place)
+	 */
+	static void SortMessageActionsByTimetoken(TArray<FPubnubChatMessageAction>& MessageActions);
+
+
+	/* TEMPLATES */
+	
+	template<typename ObjectType>
+	static TArray<ObjectType> RemoveInvalidObjects(const TArray<ObjectType>& ObjectsArray)
+	{
+		TArray<ObjectType> ObjectsArrayCopy = ObjectsArray;
+		for (int i = ObjectsArray.Num() - 1; i >= 0; i--)
+		{
+			if(!ObjectsArray[i])
+			{
+				ObjectsArrayCopy.RemoveAt(i);
+			}
+		}
+
+		return ObjectsArrayCopy;
+	}
+};

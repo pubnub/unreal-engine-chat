@@ -1,4 +1,4 @@
-// Copyright 2025 PubNub Inc. All Rights Reserved.
+// Copyright 2026 PubNub Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -28,8 +28,8 @@ public class PubnubChatSDK : ModuleRules
 			new string[]
 			{
 				"Core",
-				"ChatSDKModule",
-				"Projects"
+				"Projects",
+				"PubnubLibrary"
 			}
 			);
 			
@@ -42,8 +42,7 @@ public class PubnubChatSDK : ModuleRules
 				"Slate",
 				"SlateCore",
 				"Json",
-				"JsonUtilities",
-				"DeveloperSettings"	
+				"JsonUtilities"
 			}
 			);
 		

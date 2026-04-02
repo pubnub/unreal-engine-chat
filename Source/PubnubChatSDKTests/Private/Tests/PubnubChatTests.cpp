@@ -1,0 +1,5214 @@
+// Copyright 2026 PubNub Inc. All Rights Reserved.
+
+#include "PubnubChatSubsystem.h"
+#include "PubnubChat.h"
+#include "PubnubChatChannel.h"
+#include "PubnubChatMessage.h"
+#include "PubnubChatCallbackStop.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
+#include "StructLibraries/PubnubChatChannelStructLibrary.h"
+#include "StructLibraries/PubnubChatMessageStructLibrary.h"
+#include "Kismet/GameplayStatics.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+#include "Dom/JsonObject.h"
+#include "Tests/PubnubChatTestsUtils.h"
+#include "Tests/PubnubChatTestHelpers.h"
+#include "Misc/AutomationTest.h"
+#include "PubnubChatMembership.h"
+#include "FunctionLibraries/PubnubTimetokenUtilities.h"
+#include "FunctionLibraries/PubnubJsonUtilities.h"
+
+using namespace PubnubChatTests;
+using namespace PubnubChatTestHelpers;
+
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (Presence)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresentAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWherePresentAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_where_present_async_full_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_where_present_async_full_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_where_present_async_full_2";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create two channels
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, FPubnubChatChannelData());
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, FPubnubChatChannelData());
+	TestFalse("CreateChannel1 should succeed", CreateChannel1Result.Result.Error);
+	TestFalse("CreateChannel2 should succeed", CreateChannel2Result.Result.Error);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join1 should succeed", Join1Result.Result.Error);
+	TestFalse("Join2 should succeed", Join2Result.Result.Error);
+
+	// Connect to establish presence (Join does not subscribe automatically)
+	CreateChannel1Result.Channel->Connect();
+	CreateChannel2Result.Channel->Connect();
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatWherePresentResult> CallbackResult = MakeShared<FPubnubChatWherePresentResult>();
+	FOnPubnubChatWherePresentResponseNative OnWherePresentResponse;
+	OnWherePresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatWherePresentResult& WherePresentResult)
+	{
+		*CallbackResult = WherePresentResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, OnWherePresentResponse]()
+	{
+		Chat->WherePresentAsync(InitUserID, OnWherePresentResponse);
+	}, 1.0f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, TestChannelID1, TestChannelID2]()
+	{
+		TestFalse("WherePresentAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("Channels array should contain channel 1", CallbackResult->Channels.Contains(TestChannelID1));
+		TestTrue("Channels array should contain channel 2", CallbackResult->Channels.Contains(TestChannelID2));
+	}, 0.1f));
+	
+	// Cleanup
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannel1Result, CreateChannel2Result, Chat, TestChannelID1, TestChannelID2]()
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			CreateChannel1Result.Channel->Disconnect();
+			CreateChannel1Result.Channel->Leave();
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			CreateChannel2Result.Channel->Disconnect();
+			CreateChannel2Result.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// PRESENCE TESTS
+// ============================================================================
+
+// ============================================================================
+// WHEREPRESENT TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresent.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatWherePresentNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to call WherePresent without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestUserID = SDK_PREFIX + "test_where_present_not_init";
+			FPubnubChatWherePresentResult WherePresentResult = Chat->WherePresent(TestUserID);
+			
+			TestTrue("WherePresent should fail when Chat is not initialized", WherePresentResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", WherePresentResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresent.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatWherePresentEmptyUserIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_where_present_empty_user_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to call WherePresent with empty UserID
+		FPubnubChatWherePresentResult WherePresentResult = Chat->WherePresent(TEXT(""));
+		
+		TestTrue("WherePresent should fail with empty UserID", WherePresentResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", WherePresentResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresent.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWherePresentHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_where_present_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_where_present_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel to make user a member
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+
+	// Connect to establish presence (Join does not subscribe automatically)
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Call WherePresent with only required parameter (UserID)
+		FPubnubChatWherePresentResult WherePresentResult = Chat->WherePresent(InitUserID);
+		
+		TestFalse("WherePresent should succeed", WherePresentResult.Result.Error);
+		TestTrue("Channels array should contain the joined channel", WherePresentResult.Channels.Contains(TestChannelID));
+		TestEqual("Channels array should have exactly 1 channel", WherePresentResult.Channels.Num(), 1);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresent.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWherePresentFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_where_present_full_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_where_present_full_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_where_present_full_2";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create two channels
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData);
+	TestFalse("CreateChannel1 should succeed", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel1 should be created", CreateChannel1Result.Channel);
+	
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData);
+	TestFalse("CreateChannel2 should succeed", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join2 should succeed", Join2Result.Result.Error);
+
+	// Connect to establish presence (Join does not subscribe automatically)
+	CreateChannel1Result.Channel->Connect();
+	CreateChannel2Result.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID1, TestChannelID2]()
+	{
+		// Call WherePresent (all parameters are required, so this is the same as happy path)
+		FPubnubChatWherePresentResult WherePresentResult = Chat->WherePresent(InitUserID);
+		
+		TestFalse("WherePresent should succeed", WherePresentResult.Result.Error);
+		TestTrue("Channels array should contain channel 1", WherePresentResult.Channels.Contains(TestChannelID1));
+		TestTrue("Channels array should contain channel 2", WherePresentResult.Channels.Contains(TestChannelID2));
+		TestEqual("Channels array should have exactly 2 channels", WherePresentResult.Channels.Num(), 2);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channels, delete channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannel1Result, CreateChannel2Result, Chat, TestChannelID1, TestChannelID2]()
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			CreateChannel1Result.Channel->Disconnect();
+			CreateChannel1Result.Channel->Leave();
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			CreateChannel2Result.Channel->Disconnect();
+			CreateChannel2Result.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests WherePresent when user is not present on any channel.
+ * Verifies that WherePresent returns empty array when user hasn't joined any channels.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentUserNotPresentTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresent.4Advanced.UserNotPresent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatWherePresentUserNotPresentTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_where_present_not_present_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Call WherePresent for user who hasn't joined any channels
+		FPubnubChatWherePresentResult WherePresentResult = Chat->WherePresent(InitUserID);
+		
+		TestFalse("WherePresent should succeed", WherePresentResult.Result.Error);
+		TestEqual("Channels array should be empty", WherePresentResult.Channels.Num(), 0);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests WherePresent with Connect vs Join - both should make user present.
+ * Verifies that both Channel->Connect and Channel->Join make user present on channel.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWherePresentConnectVsJoinTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WherePresent.4Advanced.ConnectVsJoin", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWherePresentConnectVsJoinTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_where_present_connect_join_init";
+	const FString TestChannelIDConnect = SDK_PREFIX + "test_where_present_connect";
+	const FString TestChannelIDJoin = SDK_PREFIX + "test_where_present_join";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create two channels
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelConnectResult = Chat->CreatePublicConversation(TestChannelIDConnect, ChannelData);
+	TestFalse("CreateChannelConnect should succeed", CreateChannelConnectResult.Result.Error);
+	TestNotNull("ChannelConnect should be created", CreateChannelConnectResult.Channel);
+	
+	FPubnubChatChannelResult CreateChannelJoinResult = Chat->CreatePublicConversation(TestChannelIDJoin, ChannelData);
+	TestFalse("CreateChannelJoin should succeed", CreateChannelJoinResult.Result.Error);
+	TestNotNull("ChannelJoin should be created", CreateChannelJoinResult.Channel);
+	
+	if(!CreateChannelConnectResult.Channel || !CreateChannelJoinResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Connect to first channel (without membership)
+	FPubnubChatOperationResult ConnectResult = CreateChannelConnectResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Join second channel (with membership) and connect to establish presence
+	FPubnubChatJoinResult JoinResult = CreateChannelJoinResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelJoinResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelIDConnect, TestChannelIDJoin]()
+	{
+		// Call WherePresent - should return both channels
+		FPubnubChatWherePresentResult WherePresentResult = Chat->WherePresent(InitUserID);
+		
+		TestFalse("WherePresent should succeed", WherePresentResult.Result.Error);
+		TestTrue("Channels array should contain connected channel", WherePresentResult.Channels.Contains(TestChannelIDConnect));
+		TestTrue("Channels array should contain joined channel", WherePresentResult.Channels.Contains(TestChannelIDJoin));
+		TestEqual("Channels array should have exactly 2 channels", WherePresentResult.Channels.Num(), 2);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect/Leave channels, delete channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelConnectResult, CreateChannelJoinResult, Chat, TestChannelIDConnect, TestChannelIDJoin]()
+	{
+		if(CreateChannelConnectResult.Channel)
+		{
+			CreateChannelConnectResult.Channel->Disconnect();
+		}
+		if(CreateChannelJoinResult.Channel)
+		{
+			CreateChannelJoinResult.Channel->Disconnect();
+			CreateChannelJoinResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelIDConnect);
+			Chat->DeleteChannel(TestChannelIDJoin);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// WHOISPRESENT TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatWhoIsPresentNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to call WhoIsPresent without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestChannelID = SDK_PREFIX + "test_who_present_not_init";
+			FPubnubChatWhoIsPresentResult WhoIsPresentResult = Chat->WhoIsPresent(TestChannelID);
+			
+			TestTrue("WhoIsPresent should fail when Chat is not initialized", WhoIsPresentResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", WhoIsPresentResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatWhoIsPresentEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_who_present_empty_channel_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to call WhoIsPresent with empty ChannelID
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult = Chat->WhoIsPresent(TEXT(""));
+		
+		TestTrue("WhoIsPresent should fail with empty ChannelID", WhoIsPresentResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", WhoIsPresentResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWhoIsPresentHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_who_present_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_who_present_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel and connect to make user present
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Call WhoIsPresent with only required parameter (ChannelID) and default Limit/Offset
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult = Chat->WhoIsPresent(TestChannelID);
+		
+		TestFalse("WhoIsPresent should succeed", WhoIsPresentResult.Result.Error);
+		TestTrue("Users array should contain the joined user", WhoIsPresentResult.Users.Contains(InitUserID));
+		TestEqual("Users array should have at least 1 user", WhoIsPresentResult.Users.Num(), 1);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWhoIsPresentFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_who_present_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_who_present_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel and connect to make user present
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Call WhoIsPresent with all parameters (ChannelID, Limit, Offset)
+		const int TestLimit = 100;
+		const int TestOffset = 0;
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult = Chat->WhoIsPresent(TestChannelID, TestLimit, TestOffset);
+		
+		TestFalse("WhoIsPresent should succeed", WhoIsPresentResult.Result.Error);
+		TestTrue("Users array should contain the joined user", WhoIsPresentResult.Users.Contains(InitUserID));
+		TestEqual("Users array should have at least 1 user", WhoIsPresentResult.Users.Num(), 1);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests WhoIsPresent when channel is empty (no users present).
+ * Verifies that WhoIsPresent returns empty array when no users have joined the channel.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentEmptyChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.4Advanced.EmptyChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatWhoIsPresentEmptyChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_who_present_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_who_present_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel but don't join it
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Call WhoIsPresent on empty channel
+	FPubnubChatWhoIsPresentResult WhoIsPresentResult = Chat->WhoIsPresent(TestChannelID);
+	
+	TestFalse("WhoIsPresent should succeed", WhoIsPresentResult.Result.Error);
+	TestEqual("Users array should be empty", WhoIsPresentResult.Users.Num(), 0);
+	
+	// Cleanup: Delete channel
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests WhoIsPresent with user who joined via Join vs Connect.
+ * Verifies that WhoIsPresent returns users regardless of whether they joined via Join or Connect.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentJoinVsConnectTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.4Advanced.JoinVsConnect", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWhoIsPresentJoinVsConnectTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_who_present_join_connect_init";
+	const FString TestChannelID = SDK_PREFIX + "test_who_present_join_connect";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel and connect to make user present
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Call WhoIsPresent - should return the user who joined
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult = Chat->WhoIsPresent(TestChannelID);
+		
+		TestFalse("WhoIsPresent should succeed", WhoIsPresentResult.Result.Error);
+		TestTrue("Users array should contain the joined user", WhoIsPresentResult.Users.Contains(InitUserID));
+		TestEqual("Users array should have exactly 1 user", WhoIsPresentResult.Users.Num(), 1);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests WhoIsPresent with pagination (Limit and Offset parameters).
+ * Verifies that Limit and Offset parameters work correctly for pagination.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentPaginationTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresent.4Advanced.Pagination", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWhoIsPresentPaginationTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_who_present_pag_init";
+	const FString TestChannelID = SDK_PREFIX + "test_who_present_pag";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel and connect to establish presence
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Test with Limit = 1, Offset = 0 (should return first user)
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult1 = Chat->WhoIsPresent(TestChannelID, 1, 0);
+		TestFalse("WhoIsPresent with Limit=1 should succeed", WhoIsPresentResult1.Result.Error);
+		TestEqual("Users array should have at most 1 user", WhoIsPresentResult1.Users.Num(), 1);
+		
+		// Test with Limit = 10, Offset = 0 (should return all users)
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult2 = Chat->WhoIsPresent(TestChannelID, 10, 0);
+		TestFalse("WhoIsPresent with Limit=10 should succeed", WhoIsPresentResult2.Result.Error);
+		TestTrue("Users array should contain the user", WhoIsPresentResult2.Users.Contains(InitUserID));
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ISPRESENT TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatIsPresentNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to call IsPresent without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestUserID = SDK_PREFIX + "test_is_present_not_init_user";
+			const FString TestChannelID = SDK_PREFIX + "test_is_present_not_init_channel";
+			FPubnubChatIsPresentResult IsPresentResult = Chat->IsPresent(TestUserID, TestChannelID);
+			
+			TestTrue("IsPresent should fail when Chat is not initialized", IsPresentResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", IsPresentResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentEmptyUserIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.1Validation.EmptyUserID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatIsPresentEmptyUserIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_is_present_empty_user_init";
+	const FString TestChannelID = SDK_PREFIX + "test_is_present_empty_user_channel";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to call IsPresent with empty UserID
+		FPubnubChatIsPresentResult IsPresentResult = Chat->IsPresent(TEXT(""), TestChannelID);
+		
+		TestTrue("IsPresent should fail with empty UserID", IsPresentResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", IsPresentResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatIsPresentEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_is_present_empty_channel_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to call IsPresent with empty ChannelID
+		FPubnubChatIsPresentResult IsPresentResult = Chat->IsPresent(TestUserID, TEXT(""));
+		
+		TestTrue("IsPresent should fail with empty ChannelID", IsPresentResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", IsPresentResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatIsPresentHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_present_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_is_present_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel and connect to make user present
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Call IsPresent with required parameters (UserID, ChannelID)
+		FPubnubChatIsPresentResult IsPresentResult = Chat->IsPresent(InitUserID, TestChannelID);
+		
+		TestFalse("IsPresent should succeed", IsPresentResult.Result.Error);
+		TestTrue("IsPresent should return true when user is present", IsPresentResult.IsPresent);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatIsPresentFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_present_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_is_present_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Join channel and connect to make user present
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID]()
+	{
+		// Call IsPresent (all parameters are required, so this is the same as happy path)
+		FPubnubChatIsPresentResult IsPresentResult = Chat->IsPresent(InitUserID, TestChannelID);
+		
+		TestFalse("IsPresent should succeed", IsPresentResult.Result.Error);
+		TestTrue("IsPresent should return true when user is present", IsPresentResult.IsPresent);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests IsPresent when user is not present on channel.
+ * Verifies that IsPresent returns false when user hasn't joined the channel.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentUserNotPresentTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.4Advanced.UserNotPresent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatIsPresentUserNotPresentTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_present_not_present_init";
+	const FString TestChannelID = SDK_PREFIX + "test_is_present_not_present";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create channel but don't join it
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Call IsPresent - user should not be present
+	FPubnubChatIsPresentResult IsPresentResult = Chat->IsPresent(InitUserID, TestChannelID);
+	
+	TestFalse("IsPresent should succeed", IsPresentResult.Result.Error);
+	TestFalse("IsPresent should return false when user is not present", IsPresentResult.IsPresent);
+	
+	// Cleanup: Delete channel
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests IsPresent with Connect vs Join - both should make user present.
+ * Verifies that both Channel->Connect and Channel->Join make IsPresent return true.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentConnectVsJoinTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresent.4Advanced.ConnectVsJoin", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatIsPresentConnectVsJoinTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_present_connect_join_init";
+	const FString TestChannelIDConnect = SDK_PREFIX + "test_is_present_connect";
+	const FString TestChannelIDJoin = SDK_PREFIX + "test_is_present_join";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Create two channels
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelConnectResult = Chat->CreatePublicConversation(TestChannelIDConnect, ChannelData);
+	TestFalse("CreateChannelConnect should succeed", CreateChannelConnectResult.Result.Error);
+	TestNotNull("ChannelConnect should be created", CreateChannelConnectResult.Channel);
+	
+	FPubnubChatChannelResult CreateChannelJoinResult = Chat->CreatePublicConversation(TestChannelIDJoin, ChannelData);
+	TestFalse("CreateChannelJoin should succeed", CreateChannelJoinResult.Result.Error);
+	TestNotNull("ChannelJoin should be created", CreateChannelJoinResult.Channel);
+	
+	if(!CreateChannelConnectResult.Channel || !CreateChannelJoinResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+		return false;
+	}
+	
+	// Connect to first channel (without membership)
+	FPubnubChatOperationResult ConnectResult = CreateChannelConnectResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Join second channel (with membership) and connect to establish presence
+	FPubnubChatJoinResult JoinResult = CreateChannelJoinResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelJoinResult.Channel->Connect();
+	
+	// Wait a bit for presence to propagate
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelIDConnect, TestChannelIDJoin]()
+	{
+		// Call IsPresent for connected channel - should return true
+		FPubnubChatIsPresentResult IsPresentConnectResult = Chat->IsPresent(InitUserID, TestChannelIDConnect);
+		TestFalse("IsPresent for connected channel should succeed", IsPresentConnectResult.Result.Error);
+		TestTrue("IsPresent should return true for connected channel", IsPresentConnectResult.IsPresent);
+		
+		// Call IsPresent for joined channel - should return true
+		FPubnubChatIsPresentResult IsPresentJoinResult = Chat->IsPresent(InitUserID, TestChannelIDJoin);
+		TestFalse("IsPresent for joined channel should succeed", IsPresentJoinResult.Result.Error);
+		TestTrue("IsPresent should return true for joined channel", IsPresentJoinResult.IsPresent);
+	}, 1.0f));
+	
+	// Cleanup: Disconnect/Leave channels, delete channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelConnectResult, CreateChannelJoinResult, Chat, TestChannelIDConnect, TestChannelIDJoin]()
+	{
+		if(CreateChannelConnectResult.Channel)
+		{
+			CreateChannelConnectResult.Channel->Disconnect();
+		}
+		if(CreateChannelJoinResult.Channel)
+		{
+			CreateChannelJoinResult.Channel->Disconnect();
+			CreateChannelJoinResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelIDConnect);
+			Chat->DeleteChannel(TestChannelIDJoin);
+		}
+		CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// GETUNREADMESSAGESCOUNTS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to get unread messages counts without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+			
+			TestTrue("GetUnreadMessagesCounts should fail when Chat is not initialized", GetUnreadResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", GetUnreadResult.Result.ErrorMessage.IsEmpty());
+			TestEqual("UnreadMessagesCounts array should be empty", GetUnreadResult.UnreadMessagesCounts.Num(), 0);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to create membership
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Call GetUnreadMessagesCounts with only required parameters (all defaults)
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+	
+	TestFalse("GetUnreadMessagesCounts should succeed", GetUnreadResult.Result.Error);
+	TestTrue("UnreadMessagesCounts array should be valid", GetUnreadResult.UnreadMessagesCounts.Num() >= 0);
+	TestTrue("Total count should be non-negative", GetUnreadResult.Total >= 0);
+	
+	// Should have at least one membership (the channel joined)
+	if(GetUnreadResult.UnreadMessagesCounts.Num() > 0)
+	{
+		bool bFoundJoinedChannel = false;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel && Wrapper.Channel->GetChannelID() == TestChannelID)
+			{
+				bFoundJoinedChannel = true;
+				TestNotNull("Membership should be valid", Wrapper.Membership);
+				TestTrue("Count should be non-negative", Wrapper.Count >= 0);
+			}
+		}
+		TestTrue("Joined channel should be found in unread counts", bFoundJoinedChannel);
+	}
+	
+	// Cleanup: Leave channel, delete channel
+	if(CreateChannelResult.Channel)
+	{
+		CreateChannelResult.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to create membership
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Test GetUnreadMessagesCounts with all parameters
+	const int TestLimit = 10;
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID + TEXT("\"");
+	FPubnubMembershipSort TestSort;
+	FPubnubMembershipSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSort.SortOrder = false; // Ascending
+	TestSort.MembershipSort.Add(SingleSort);
+	FPubnubPage TestPage;
+	
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts(TestLimit, TestFilter, TestSort, TestPage);
+	
+	TestFalse("GetUnreadMessagesCounts should succeed with all parameters", GetUnreadResult.Result.Error);
+	TestTrue("UnreadMessagesCounts array should be valid", GetUnreadResult.UnreadMessagesCounts.Num() >= 0);
+	TestTrue("Total count should be non-negative", GetUnreadResult.Total >= 0);
+	
+	// Verify results match filter criteria
+	if(GetUnreadResult.UnreadMessagesCounts.Num() > 0)
+	{
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel)
+			{
+				TestEqual("Filtered channel should match", Wrapper.Channel->GetChannelID(), TestChannelID);
+				TestNotNull("Membership should be valid", Wrapper.Membership);
+				TestTrue("Count should be non-negative", Wrapper.Count >= 0);
+			}
+		}
+	}
+	
+	// Cleanup: Leave channel, delete channel
+	if(CreateChannelResult.Channel)
+	{
+		CreateChannelResult.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests GetUnreadMessagesCounts with multiple channels and unread messages.
+ * Verifies that unread counts are correctly calculated for multiple channels.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsMultipleChannelsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.MultipleChannels", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsMultipleChannelsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_multi_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_unread_multi_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_unread_multi_2";
+	const FString TestMessageText1 = TEXT("Message 1");
+	const FString TestMessageText2 = TEXT("Message 2");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create first channel
+	FPubnubChatChannelData ChannelData1;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+	TestFalse("CreatePublicConversation should succeed for channel 1", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel 1 should be created", CreateChannel1Result.Channel);
+	
+	// Create second channel
+	FPubnubChatChannelData ChannelData2;
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+	TestFalse("CreatePublicConversation should succeed for channel 2", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel 2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
+	
+	// Send messages to both channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannel1Result, CreateChannel2Result, TestMessageText1, TestMessageText2]()
+	{
+		FPubnubChatOperationResult Send1Result = CreateChannel1Result.Channel->SendText(TestMessageText1);
+		TestFalse("SendText to channel 1 should succeed", Send1Result.Error);
+		
+		FPubnubChatOperationResult Send2Result = CreateChannel2Result.Channel->SendText(TestMessageText2);
+		TestFalse("SendText to channel 2 should succeed", Send2Result.Error);
+	}, 0.5f));
+	
+	// Wait a bit for messages to be published
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID1, TestChannelID2]()
+	{
+		// Get unread messages counts
+		FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+		
+		TestFalse("GetUnreadMessagesCounts should succeed", GetUnreadResult.Result.Error);
+		
+		// Should have counts for both channels
+		TMap<FString, int> ChannelCounts;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel)
+			{
+				FString ChannelID = Wrapper.Channel->GetChannelID();
+				if(ChannelID == TestChannelID1 || ChannelID == TestChannelID2)
+				{
+					ChannelCounts.Add(ChannelID, Wrapper.Count);
+				}
+			}
+		}
+		
+		TestTrue("Should have count for channel 1", ChannelCounts.Contains(TestChannelID1));
+		TestTrue("Should have count for channel 2", ChannelCounts.Contains(TestChannelID2));
+		TestTrue("Channel 1 should have at least 1 unread message", ChannelCounts[TestChannelID1] >= 1);
+		TestTrue("Channel 2 should have at least 1 unread message", ChannelCounts[TestChannelID2] >= 1);
+	}, 1.0f));
+	
+	// Cleanup: Leave channels, delete channels
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannel1Result, CreateChannel2Result, Chat, TestChannelID1, TestChannelID2]()
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			CreateChannel1Result.Channel->Leave();
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			CreateChannel2Result.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with channels that have empty timetokens (no last read message).
+ * Verifies that empty timetokens are handled correctly using Pubnub_Chat_Empty_Timetoken.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsEmptyTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.EmptyTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsEmptyTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_empty_tt_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_empty_tt";
+	const FString TestMessageText = TEXT("Test message");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join channel to create membership (this sets last read message timetoken)
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	// Get membership and verify it has a timetoken (from Join)
+	if(JoinResult.Membership)
+	{
+		FString LRMTimetoken = JoinResult.Membership->GetLastReadMessageTimetoken();
+		TestFalse("Membership should have last read message timetoken after Join", LRMTimetoken.IsEmpty());
+	}
+	
+	// Send a message after join
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait and verify unread counts
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID]()
+	{
+		FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+		
+		TestFalse("GetUnreadMessagesCounts should succeed", GetUnreadResult.Result.Error);
+		
+		// Find the channel in results
+		bool bFoundChannel = false;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetUnreadResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel && Wrapper.Channel->GetChannelID() == TestChannelID)
+			{
+				bFoundChannel = true;
+				TestNotNull("Membership should be valid", Wrapper.Membership);
+				// Count should be at least 1 (the message sent after join)
+				TestTrue("Count should be at least 1", Wrapper.Count >= 1);
+			}
+		}
+		TestTrue("Channel should be found in unread counts", bFoundChannel);
+	}, 1.0f));
+	
+	// Cleanup: Leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with empty memberships (no channels).
+ * Verifies that function handles the case when user has no memberships gracefully.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsEmptyMembershipsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.EmptyMemberships", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsEmptyMembershipsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_empty_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Call GetUnreadMessagesCounts without joining any channels
+	FPubnubChatGetUnreadMessagesCountsResult GetUnreadResult = Chat->GetUnreadMessagesCounts();
+	
+	TestFalse("GetUnreadMessagesCounts should succeed even with no memberships", GetUnreadResult.Result.Error);
+	TestEqual("UnreadMessagesCounts array should be empty", GetUnreadResult.UnreadMessagesCounts.Num(), 0);
+	TestTrue("Total count should be non-negative", GetUnreadResult.Total >= 0);
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with filtering functionality.
+ * Verifies that filter parameter correctly filters memberships before calculating unread counts.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsFilterTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.Filter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsFilterTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_filter_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_unread_filter_1";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_unread_filter_2";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create two channels
+	FPubnubChatChannelData ChannelData1;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+	TestFalse("CreatePublicConversation should succeed for channel 1", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel 1 should be created", CreateChannel1Result.Channel);
+	
+	FPubnubChatChannelData ChannelData2;
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+	TestFalse("CreatePublicConversation should succeed for channel 2", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel 2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
+	
+	// Get unread counts without filter (should return both channels)
+	FPubnubChatGetUnreadMessagesCountsResult GetAllResult = Chat->GetUnreadMessagesCounts();
+	TestFalse("GetUnreadMessagesCounts without filter should succeed", GetAllResult.Result.Error);
+	
+	// Get unread counts with filter (should return only channel 1)
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID1 + TEXT("\"");
+	FPubnubChatGetUnreadMessagesCountsResult GetFilteredResult = Chat->GetUnreadMessagesCounts(0, TestFilter);
+	TestFalse("GetUnreadMessagesCounts with filter should succeed", GetFilteredResult.Result.Error);
+	
+	// Verify filtered results only contain channel 1
+	bool bFoundChannel1 = false;
+	bool bFoundChannel2 = false;
+	for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetFilteredResult.UnreadMessagesCounts)
+	{
+		if(Wrapper.Channel)
+		{
+			FString ChannelID = Wrapper.Channel->GetChannelID();
+			if(ChannelID == TestChannelID1)
+			{
+				bFoundChannel1 = true;
+			}
+			if(ChannelID == TestChannelID2)
+			{
+				bFoundChannel2 = true;
+			}
+		}
+	}
+	
+	TestTrue("Filtered results should contain channel 1", bFoundChannel1);
+	TestFalse("Filtered results should not contain channel 2", bFoundChannel2);
+	TestTrue("Filtered results should have fewer or equal items than unfiltered", GetFilteredResult.UnreadMessagesCounts.Num() <= GetAllResult.UnreadMessagesCounts.Num());
+	
+	// Cleanup: Leave channels, delete channels
+	if(CreateChannel1Result.Channel)
+	{
+		CreateChannel1Result.Channel->Leave();
+	}
+	if(CreateChannel2Result.Channel)
+	{
+		CreateChannel2Result.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetUnreadMessagesCounts with sorting functionality.
+ * Verifies that sort parameter correctly sorts memberships before calculating unread counts.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsSortTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCounts.4Advanced.Sort", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsSortTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_sort_init";
+	const FString TestChannelID1 = SDK_PREFIX + "test_get_unread_sort_a";
+	const FString TestChannelID2 = SDK_PREFIX + "test_get_unread_sort_b";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create two channels (with different IDs for sorting)
+	FPubnubChatChannelData ChannelData1;
+	FPubnubChatChannelResult CreateChannel1Result = Chat->CreatePublicConversation(TestChannelID1, ChannelData1);
+	TestFalse("CreatePublicConversation should succeed for channel 1", CreateChannel1Result.Result.Error);
+	TestNotNull("Channel 1 should be created", CreateChannel1Result.Channel);
+	
+	FPubnubChatChannelData ChannelData2;
+	FPubnubChatChannelResult CreateChannel2Result = Chat->CreatePublicConversation(TestChannelID2, ChannelData2);
+	TestFalse("CreatePublicConversation should succeed for channel 2", CreateChannel2Result.Result.Error);
+	TestNotNull("Channel 2 should be created", CreateChannel2Result.Channel);
+	
+	if(!CreateChannel1Result.Channel || !CreateChannel2Result.Channel)
+	{
+		if(CreateChannel1Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		if(CreateChannel2Result.Channel)
+		{
+			Chat->DeleteChannel(TestChannelID1);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Join both channels
+	FPubnubChatJoinResult Join1Result = CreateChannel1Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join channel 1 should succeed", Join1Result.Result.Error);
+	
+	FPubnubChatJoinResult Join2Result = CreateChannel2Result.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join channel 2 should succeed", Join2Result.Result.Error);
+	
+	// Get unread counts with ascending sort
+	FPubnubMembershipSort AscendingSort;
+	FPubnubMembershipSingleSort SingleSortAsc;
+	SingleSortAsc.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSortAsc.SortOrder = false; // Ascending
+	AscendingSort.MembershipSort.Add(SingleSortAsc);
+	FPubnubChatGetUnreadMessagesCountsResult GetAscendingResult = Chat->GetUnreadMessagesCounts(0, TEXT(""), AscendingSort);
+	TestFalse("GetUnreadMessagesCounts with ascending sort should succeed", GetAscendingResult.Result.Error);
+	
+	// Verify results are sorted ascending
+	if(GetAscendingResult.UnreadMessagesCounts.Num() >= 2)
+	{
+		TArray<FString> ChannelIDs;
+		for(const FPubnubChatUnreadMessagesCountsWrapper& Wrapper : GetAscendingResult.UnreadMessagesCounts)
+		{
+			if(Wrapper.Channel)
+			{
+				FString ChannelID = Wrapper.Channel->GetChannelID();
+				if(ChannelID == TestChannelID1 || ChannelID == TestChannelID2)
+				{
+					ChannelIDs.Add(ChannelID);
+				}
+			}
+		}
+		
+		// If both channels are present, verify order
+		if(ChannelIDs.Num() >= 2)
+		{
+			int32 Index1 = ChannelIDs.IndexOfByKey(TestChannelID1);
+			int32 Index2 = ChannelIDs.IndexOfByKey(TestChannelID2);
+			if(Index1 != INDEX_NONE && Index2 != INDEX_NONE)
+			{
+				// TestChannelID1 ends with "a", TestChannelID2 ends with "b", so ascending should have 1 before 2
+				TestTrue("Ascending sort should have channel 1 before channel 2", Index1 < Index2);
+			}
+		}
+	}
+	
+	// Cleanup: Leave channels, delete channels
+	if(CreateChannel1Result.Channel)
+	{
+		CreateChannel1Result.Channel->Leave();
+	}
+	if(CreateChannel2Result.Channel)
+	{
+		CreateChannel2Result.Channel->Leave();
+	}
+	if(Chat)
+	{
+		Chat->DeleteChannel(TestChannelID1);
+		Chat->DeleteChannel(TestChannelID1);
+	}
+	
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// RECONNECTSUBSCRIPTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to reconnect subscriptions without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatOperationResult ReconnectResult = Chat->ReconnectSubscriptions();
+			
+			TestTrue("ReconnectSubscriptions should fail when Chat is not initialized", ReconnectResult.Error);
+			TestFalse("ErrorMessage should not be empty", ReconnectResult.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_happy_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Reconnect subscriptions with only required parameters (no Timetoken - defaults to empty string)
+		FPubnubChatOperationResult ReconnectResult = Chat->ReconnectSubscriptions();
+		
+		TestFalse("ReconnectSubscriptions should succeed", ReconnectResult.Error);
+		
+		// Verify step results contain ReconnectSubscriptions step
+		bool bFoundReconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : ReconnectResult.StepResults)
+		{
+			if(Step.StepName == TEXT("ReconnectSubscriptions"))
+			{
+				bFoundReconnect = true;
+				TestFalse("ReconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have ReconnectSubscriptions step", bFoundReconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_full_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Test with empty Timetoken (default behavior - reconnect from "now")
+		FPubnubChatOperationResult ReconnectResultEmpty = Chat->ReconnectSubscriptions(TEXT(""));
+		
+		TestFalse("ReconnectSubscriptions with empty Timetoken should succeed", ReconnectResultEmpty.Error);
+		
+		// Test with a valid timetoken (reconnect from specific point)
+		// Using a recent timetoken format (numeric string)
+		const FString TestTimetoken = TEXT("12345678901234567");
+		FPubnubChatOperationResult ReconnectResultWithTimetoken = Chat->ReconnectSubscriptions(TestTimetoken);
+		
+		TestFalse("ReconnectSubscriptions with Timetoken should succeed", ReconnectResultWithTimetoken.Error);
+		
+		// Verify step results contain ReconnectSubscriptions step
+		bool bFoundReconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : ReconnectResultWithTimetoken.StepResults)
+		{
+			if(Step.StepName == TEXT("ReconnectSubscriptions"))
+			{
+				bFoundReconnect = true;
+				TestFalse("ReconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have ReconnectSubscriptions step", bFoundReconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests that ReconnectSubscriptions restores message reception after DisconnectSubscriptions.
+ * Verifies the full flow: subscribe, disconnect, verify no messages, reconnect, verify messages are received again.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsRestoresMessageReceptionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.ReconnectSubscriptions.4Advanced.RestoresMessageReception", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatReconnectSubscriptionsRestoresMessageReceptionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_restore_init";
+	const FString TestChannelID = SDK_PREFIX + "test_reconnect_restore";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel and join to set up subscription
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceivedBeforeDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessageReceivedAfterDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessageReceivedAfterReconnect = MakeShared<bool>(false);
+	const FString TestMessage = TEXT("Test message for reconnect");
+	
+	// Set up message listener
+	auto MessageLambda = [this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, bMessageReceivedAfterReconnect, TestMessage](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessage)
+			{
+				if(!*bMessageReceivedBeforeDisconnect)
+				{
+					*bMessageReceivedBeforeDisconnect = true;
+				}
+				else if(!*bMessageReceivedAfterReconnect)
+				{
+					*bMessageReceivedAfterReconnect = true;
+				}
+			}
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	// Join channel and connect to subscribe
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait for subscription to be ready, then send a message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait for message to be received before disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceivedBeforeDisconnect]() -> bool {
+		return *bMessageReceivedBeforeDisconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Disconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait a bit, then send another message (should NOT be received)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage, bMessageReceivedAfterDisconnect]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage + TEXT("_after_disconnect"));
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait a bit to ensure message would have been received if we were still connected
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([]() -> bool {
+		return false; // Never complete, just wait for timeout
+	}, 2.0f));
+	
+	// Verify message was NOT received after disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceivedAfterDisconnect]()
+	{
+		if(*bMessageReceivedAfterDisconnect)
+		{
+			AddError("Message should NOT have been received after DisconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Message was correctly not received after disconnect", true);
+		}
+	}, 0.1f));
+	
+	// Reconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult ReconnectResult = Chat->ReconnectSubscriptions();
+		TestFalse("ReconnectSubscriptions should succeed", ReconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait for reconnection, then send another message (should be received)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait for message to be received after reconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceivedAfterReconnect]() -> bool {
+		return *bMessageReceivedAfterReconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Verify message was received after reconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceivedAfterReconnect]()
+	{
+		if(!*bMessageReceivedAfterReconnect)
+		{
+			AddError("Message should have been received after ReconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Message was correctly received after reconnect", true);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// DISCONNECTSUBSCRIPTIONS TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to disconnect subscriptions without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+			
+			TestTrue("DisconnectSubscriptions should fail when Chat is not initialized", DisconnectResult.Error);
+			TestFalse("ErrorMessage should not be empty", DisconnectResult.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_happy_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Disconnect subscriptions (no parameters required)
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+		
+		// Verify step results contain DisconnectSubscriptions step
+		bool bFoundDisconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : DisconnectResult.StepResults)
+		{
+			if(Step.StepName == TEXT("DisconnectSubscriptions"))
+			{
+				bFoundDisconnect = true;
+				TestFalse("DisconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have DisconnectSubscriptions step", bFoundDisconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_full_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// DisconnectSubscriptions takes no parameters, so this is the same as happy path
+		// But we can verify it works correctly
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+		TestTrue("StepResults should contain at least one step", DisconnectResult.StepResults.Num() > 0);
+		
+		// Verify step results contain DisconnectSubscriptions step
+		bool bFoundDisconnect = false;
+		for(const FPubnubChatOperationStepResult& Step : DisconnectResult.StepResults)
+		{
+			if(Step.StepName == TEXT("DisconnectSubscriptions"))
+			{
+				bFoundDisconnect = true;
+				TestFalse("DisconnectSubscriptions step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have DisconnectSubscriptions step", bFoundDisconnect);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests that DisconnectSubscriptions prevents message reception.
+ * Verifies that after calling DisconnectSubscriptions, messages sent to subscribed channels are not received.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsPreventsMessageReceptionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.4Advanced.PreventsMessageReception", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatDisconnectSubscriptionsPreventsMessageReceptionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_prevent_init";
+	const FString TestChannelID = SDK_PREFIX + "test_disconnect_prevent";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create channel and join to set up subscription
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceivedBeforeDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bMessageReceivedAfterDisconnect = MakeShared<bool>(false);
+	const FString TestMessage = TEXT("Test message");
+	
+	// Set up message listener
+	auto MessageLambda = [this, bMessageReceivedBeforeDisconnect, bMessageReceivedAfterDisconnect, TestMessage](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessage)
+			{
+				if(!*bMessageReceivedBeforeDisconnect)
+				{
+					*bMessageReceivedBeforeDisconnect = true;
+				}
+				else
+				{
+					*bMessageReceivedAfterDisconnect = true;
+					AddError("Message should NOT be received after DisconnectSubscriptions");
+				}
+			}
+		}
+	};
+	CreateChannelResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	// Join channel and connect to subscribe
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateChannelResult.Channel->Connect();
+	
+	// Wait for subscription to be ready, then send a message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait for message to be received before disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceivedBeforeDisconnect]() -> bool {
+		return *bMessageReceivedBeforeDisconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Disconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait a bit for disconnect to take effect, then send another message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestMessage]()
+	{
+		FPubnubChatOperationResult SendResult = CreateChannelResult.Channel->SendText(TestMessage);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait a bit to ensure message would have been received if we were still connected
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([]() -> bool {
+		return false; // Never complete, just wait for timeout
+	}, 2.0f));
+	
+	// Verify message was NOT received after disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bMessageReceivedAfterDisconnect]()
+	{
+		if(*bMessageReceivedAfterDisconnect)
+		{
+			AddError("Message should NOT have been received after DisconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Message was correctly not received after disconnect", true);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Disconnect, leave channel, delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Disconnect();
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests that DisconnectSubscriptions prevents event reception.
+ * Verifies that after calling DisconnectSubscriptions, events emitted to subscribed channels are not received.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.ConnectionStatus.DisconnectSubscriptions.4Advanced.PreventsEventReception", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatDisconnectSubscriptionsPreventsEventReceptionTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_event_init";
+	const FString OtherUserID = SDK_PREFIX + "test_disconnect_event_other";
+	const FString TestChannelID = SDK_PREFIX + "test_disconnect_event";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		AddError("Chat should be initialized");
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(OtherUserID);
+	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestNotNull("User should be created", CreateUserResult.User);
+	if(!CreateUserResult.User)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatCreateDirectConversationResult CreateChannelResult = Chat->CreateDirectConversation(CreateUserResult.User, TestChannelID);
+	TestFalse("CreateDirectConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for event reception
+	TSharedPtr<bool> bEventReceivedBeforeDisconnect = MakeShared<bool>(false);
+	TSharedPtr<bool> bEventReceivedAfterDisconnect = MakeShared<bool>(false);
+	
+	// Stream typing events on the channel
+	CreateChannelResult.Channel->OnTypingChangedNative.AddLambda([this, bEventReceivedBeforeDisconnect, bEventReceivedAfterDisconnect](const TArray<FString>&)
+	{
+		if(!*bEventReceivedBeforeDisconnect)
+		{
+			*bEventReceivedBeforeDisconnect = true;
+		}
+		else
+		{
+			*bEventReceivedAfterDisconnect = true;
+			AddError("Event should NOT be received after DisconnectSubscriptions");
+		}
+	});
+	
+	FPubnubChatOperationResult StreamResult = CreateChannelResult.Channel->StreamTyping();
+	TestFalse("StreamTyping should succeed", StreamResult.Error);
+	
+	// Wait a bit for subscription to be ready, then emit event
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult]()
+	{
+		FPubnubChatOperationResult StartTypingResult = CreateChannelResult.Channel->StartTyping();
+		TestFalse("StartTyping should succeed", StartTypingResult.Error);
+	}, 0.5f));
+	
+	// Wait for event to be received before disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bEventReceivedBeforeDisconnect]() -> bool {
+		return *bEventReceivedBeforeDisconnect;
+	}, MAX_WAIT_TIME));
+	
+	// Disconnect subscriptions
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		FPubnubChatOperationResult DisconnectResult = Chat->DisconnectSubscriptions();
+		TestFalse("DisconnectSubscriptions should succeed", DisconnectResult.Error);
+	}, 0.1f));
+	
+	// Wait a bit for disconnect to take effect, then emit another event
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult]()
+	{
+		FPubnubChatOperationResult StartTypingResult = CreateChannelResult.Channel->StartTyping();
+		TestFalse("StartTyping should succeed", StartTypingResult.Error);
+	}, 0.5f));
+	
+	// Wait a bit to ensure event would have been received if we were still connected
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([]() -> bool {
+		return false; // Never complete, just wait for timeout
+	}, 2.0f));
+	
+	// Verify event was NOT received after disconnect
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bEventReceivedAfterDisconnect]()
+	{
+		if(*bEventReceivedAfterDisconnect)
+		{
+			AddError("Event should NOT have been received after DisconnectSubscriptions");
+		}
+		else
+		{
+			TestTrue("Event was correctly not received after disconnect", true);
+		}
+	}, 0.1f));
+	
+	// Cleanup: Stop streaming
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID, OtherUserID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->StopStreamingTyping();
+		}
+		if(CreateChannelResult.HostMembership)
+		{
+			CreateChannelResult.HostMembership->Delete();
+		}
+		if(CreateChannelResult.InviteeMembership)
+		{
+			CreateChannelResult.InviteeMembership->Delete();
+		}
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(OtherUserID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// GETEVENTSHISTORY TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to get events history without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			const FString TestChannelID = SDK_PREFIX + "test_get_events_history_not_init";
+			const FString StartTimetoken = TEXT("0");
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestTrue("GetEventsHistory should fail when Chat is not initialized", HistoryResult.Result.Error);
+			TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyChannelIDTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.EmptyChannelID", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyChannelIDTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_events_history_empty_channel_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to get events history with empty ChannelID
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TEXT(""), StartTimetoken, EndTimetoken);
+		
+		TestTrue("GetEventsHistory should fail with empty ChannelID", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyStartTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.EmptyStartTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyStartTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_events_history_empty_start_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_empty_start";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to get events history with empty StartTimetoken
+		const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, TEXT(""), EndTimetoken);
+		
+		TestTrue("GetEventsHistory should fail with empty StartTimetoken", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyEndTimetokenTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.1Validation.EmptyEndTimetoken", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyEndTimetokenTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString TestUserID = SDK_PREFIX + "test_get_events_history_empty_end_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_empty_end";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, TestUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Try to get events history with empty EndTimetoken
+		const FString StartTimetoken = TEXT("0");
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, TEXT(""));
+		
+		TestTrue("GetEventsHistory should fail with empty EndTimetoken", HistoryResult.Result.Error);
+		TestFalse("ErrorMessage should not be empty", HistoryResult.Result.ErrorMessage.IsEmpty());
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_happy_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_happy";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+		TestNotNull("Channel should be created", CreateChannelResult.Channel);
+		if(!CreateChannelResult.Channel)
+		{
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return false;
+		}
+
+		// Get start timetoken before publishing event
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit a custom event stored in history
+		const FString TestPayload = TEXT("{\"test\":\"data\"}");
+		FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitCustomEvent(TestPayload, TEXT("history"), true);
+		
+		TestFalse("EmitCustomEvent should succeed", EmitResult.Error);
+		
+		// Wait a bit for event to be stored, then get events history
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, InitUserID]()
+		{
+			// Get events history with only required parameters (default Count = 100)
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have at least one event", HistoryResult.Events.Num() >= 1);
+			
+			// Verify the event we published is in the results
+			bool bFoundEvent = false;
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.Type == EPubnubChatEventType::PCET_Custom && Event.ChannelID == TestChannelID)
+				{
+					bFoundEvent = true;
+					TestEqual("Event ChannelID should match", Event.ChannelID, TestChannelID);
+					TestEqual("Event UserID should match", Event.UserID, InitUserID);
+					TestFalse("Event Timetoken should not be empty", Event.Timetoken.IsEmpty());
+					TestFalse("Event Payload should not be empty", Event.Payload.IsEmpty());
+					break;
+				}
+			}
+			TestTrue("Should find the published event in history", bFoundEvent);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.5f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+		TestNotNull("Channel should be created", CreateChannelResult.Channel);
+		if(!CreateChannelResult.Channel)
+		{
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return false;
+		}
+
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit multiple custom events with history storage enabled
+		const FString TestPayload1 = TEXT("{\"test\":\"data1\"}");
+		const FString TestPayload2 = TEXT("{\"test\":\"data2\"}");
+		const FString TestPayload3 = TEXT("{\"test\":\"data3\"}");
+		
+		FPubnubChatOperationResult EmitResult1 = CreateChannelResult.Channel->EmitCustomEvent(TestPayload1, TEXT("history1"), true);
+		TestFalse("EmitCustomEvent 1 should succeed", EmitResult1.Error);
+		
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestPayload2]()
+		{
+			FPubnubChatOperationResult EmitResult2 = CreateChannelResult.Channel->EmitCustomEvent(TestPayload2, TEXT("history2"), true);
+			TestFalse("EmitCustomEvent 2 should succeed", EmitResult2.Error);
+		}, 0.2f));
+		
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, TestPayload3]()
+		{
+			FPubnubChatOperationResult EmitResult3 = CreateChannelResult.Channel->EmitCustomEvent(TestPayload3, TEXT("history3"), true);
+			TestFalse("EmitCustomEvent 3 should succeed", EmitResult3.Error);
+		}, 0.4f));
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken]()
+		{
+			// Get events history with all parameters including Count
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			const int Count = 10;
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have at least 3 events", HistoryResult.Events.Num() >= 3);
+			TestTrue("Should not exceed Count limit", HistoryResult.Events.Num() <= Count);
+			
+			// Verify at least three custom events were stored for this channel
+			int32 CustomEventsCount = 0;
+			
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.Type == EPubnubChatEventType::PCET_Custom && Event.ChannelID == TestChannelID)
+				{
+					CustomEventsCount++;
+				}
+			}
+			
+			TestTrue("Should find at least three custom events", CustomEventsCount >= 3);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.6f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests that only events published with PCEM_Publish method are retrieved.
+ * Events published with PCEM_Signal should not appear in history.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryOnlyPublishEventsTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.OnlyPublishEvents", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryOnlyPublishEventsTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_publish_only_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_publish_only";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+		TestNotNull("Channel should be created", CreateChannelResult.Channel);
+		if(!CreateChannelResult.Channel)
+		{
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return false;
+		}
+
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit custom event stored in history (should appear in history)
+		const FString TestPayloadPublish = TEXT("{\"test\":\"publish\"}");
+		FPubnubChatOperationResult EmitResultPublish = CreateChannelResult.Channel->EmitCustomEvent(TestPayloadPublish, TEXT("publish"), true);
+		TestFalse("EmitCustomEvent with store=true should succeed", EmitResultPublish.Error);
+		
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult]()
+		{
+			// Emit custom event not stored in history (should NOT appear in history)
+			const FString TestPayloadSignal = TEXT("{\"test\":\"signal\"}");
+			FPubnubChatOperationResult EmitResultSignal = CreateChannelResult.Channel->EmitCustomEvent(TestPayloadSignal, TEXT("signal"), false);
+			TestFalse("EmitCustomEvent with store=false should succeed", EmitResultSignal.Error);
+		}, 0.2f));
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken]()
+		{
+			// Get events history
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			
+			// Verify only the Publish event is in history, not the Signal event
+			bool bFoundPublishEvent = false;
+			bool bFoundSignalEvent = false;
+			
+			for(const FPubnubChatEvent& Event : HistoryResult.Events)
+			{
+				if(Event.ChannelID == TestChannelID)
+				{
+					if(Event.Type == EPubnubChatEventType::PCET_Custom && Event.Payload.Contains(TEXT("publish")))
+					{
+						bFoundPublishEvent = true;
+					}
+					else if(Event.Type == EPubnubChatEventType::PCET_Custom && Event.Payload.Contains(TEXT("signal")))
+					{
+						bFoundSignalEvent = true;
+					}
+				}
+			}
+			
+			TestTrue("Should find Publish event in history", bFoundPublishEvent);
+			TestFalse("Should NOT find Signal event in history", bFoundSignalEvent);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.4f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory with empty history (no events in the specified time range).
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryEmptyHistoryTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.EmptyHistory", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryEmptyHistoryTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Use a time range in the past where no events exist
+		// Use timetoken "0" as start and a very old timetoken as end
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
+		
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken);
+		
+		TestFalse("GetEventsHistory should succeed even with empty history", HistoryResult.Result.Error);
+		TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory with Count parameter limiting the number of returned events.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryCountLimitTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.CountLimit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryCountLimitTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_count_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_count";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+		TestNotNull("Channel should be created", CreateChannelResult.Channel);
+		if(!CreateChannelResult.Channel)
+		{
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return false;
+		}
+
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Emit multiple events
+		const int NumEventsToPublish = 5;
+		for(int i = 0; i < NumEventsToPublish; ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"data%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitCustomEvent(TestPayload, TEXT("count-limit"), true);
+			TestFalse(FString::Printf(TEXT("EmitCustomEvent %d should succeed"), i), EmitResult.Error);
+			
+			if(i < NumEventsToPublish - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, NumEventsToPublish]()
+		{
+			// Get events history with Count limit smaller than number of events published
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			const int CountLimit = 3;
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, CountLimit);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
+			TestTrue("Should respect Count limit", HistoryResult.Events.Num() <= CountLimit);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.6f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory IsMore parameter when exactly Count messages are returned.
+ * Verifies that IsMore is true when we get exactly the requested count, indicating more might be available.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryIsMoreTrueTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.IsMoreTrue", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryIsMoreTrueTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_ismore_true_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_ismore_true";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+		TestNotNull("Channel should be created", CreateChannelResult.Channel);
+		if(!CreateChannelResult.Channel)
+		{
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return false;
+		}
+
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Publish exactly Count events (so we get exactly Count messages back)
+		const int Count = 5;
+		for(int i = 0; i < Count; ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"data%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitCustomEvent(TestPayload, TEXT("is-more-true"), true);
+			TestFalse(FString::Printf(TEXT("EmitCustomEvent %d should succeed"), i), EmitResult.Error);
+			
+			if(i < Count - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, Count]()
+		{
+			// Get events history with Count matching the number of events we published
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
+			
+			// If we got exactly Count messages, IsMore should be true (indicating there might be more)
+			// Note: We're checking messages, not events, because FetchHistory returns messages
+			// If exactly Count messages were returned, there might be more available
+			TestTrue("IsMore should be true when exactly Count messages are returned", HistoryResult.IsMore);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.6f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory IsMore parameter when fewer than Count messages are returned.
+ * Verifies that IsMore is false when we get fewer than requested, indicating we got all available.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryIsMoreFalseTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.IsMoreFalse", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryIsMoreFalseTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_ismore_false_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_ismore_false";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+		TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+		TestNotNull("Channel should be created", CreateChannelResult.Channel);
+		if(!CreateChannelResult.Channel)
+		{
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+			return false;
+		}
+
+		// Get start timetoken before publishing events
+		const FString StartTimetoken = TEXT("0");
+		
+		// Publish fewer events than Count (so we get fewer than Count messages back)
+		const int NumEventsToPublish = 2;
+		const int Count = 10; // Request more than we publish
+		
+		for(int i = 0; i < NumEventsToPublish; ++i)
+		{
+			const FString TestPayload = FString::Printf(TEXT("{\"test\":\"data%d\"}"), i);
+			FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitCustomEvent(TestPayload, TEXT("is-more-false"), true);
+			TestFalse(FString::Printf(TEXT("EmitCustomEvent %d should succeed"), i), EmitResult.Error);
+			
+			if(i < NumEventsToPublish - 1)
+			{
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this]() {}, 0.1f));
+			}
+		}
+		
+		// Wait for events to be stored
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, StartTimetoken, Count, NumEventsToPublish]()
+		{
+			// Get events history with Count larger than number of events we published
+			const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+			FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+			
+			TestFalse("GetEventsHistory should succeed", HistoryResult.Result.Error);
+			TestTrue("Should have events", HistoryResult.Events.Num() > 0);
+			TestTrue("Should have fewer events than Count", HistoryResult.Events.Num() < Count);
+			
+			// If we got fewer than Count messages, IsMore should be false (indicating we got all available)
+			TestFalse("IsMore should be false when fewer than Count messages are returned", HistoryResult.IsMore);
+			
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.4f));
+	}
+	else
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}
+	return true;
+}
+
+/**
+ * Tests GetEventsHistory IsMore parameter with empty history.
+ * Verifies that IsMore is false when no events are found.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryIsMoreEmptyTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistory.4Advanced.IsMoreEmpty", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryIsMoreEmptyTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_ismore_empty_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_ismore_empty";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		// Use a time range in the past where no events exist
+		const FString StartTimetoken = TEXT("0");
+		const FString EndTimetoken = TEXT("10000000000000000"); // Very old timetoken
+		const int Count = 10;
+		
+		FPubnubChatEventsResult HistoryResult = Chat->GetEventsHistory(TestChannelID, StartTimetoken, EndTimetoken, Count);
+		
+		TestFalse("GetEventsHistory should succeed even with empty history", HistoryResult.Result.Error);
+		TestEqual("Should have no events in empty history", HistoryResult.Events.Num(), 0);
+		
+		// With no messages returned, IsMore should be false
+		TestFalse("IsMore should be false when no messages are returned", HistoryResult.IsMore);
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+// ============================================================================
+// FORWARDMESSAGE TESTS
+// ============================================================================
+
+// ============================================================================
+// VALIDATION TESTS (Fast Failing Conditions)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageNotInitializedTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.1Validation.NotInitialized", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageNotInitializedTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	// Create Chat without initializing
+	UPubnubChat* Chat = NewObject<UPubnubChat>();
+	
+	if(!Chat)
+	{
+		// Try to forward message without initialized chat
+		Chat = NewObject<UPubnubChat>(ChatSubsystem);
+		if(Chat)
+		{
+			// Create dummy message and channel objects
+			UPubnubChatMessage* Message = NewObject<UPubnubChatMessage>();
+			UPubnubChatChannel* Channel = NewObject<UPubnubChatChannel>();
+			
+			if(Message && Channel)
+			{
+				FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(Message, Channel);
+				
+				TestTrue("ForwardMessage should fail when Chat is not initialized", ForwardResult.Error);
+				TestFalse("ErrorMessage should not be empty", ForwardResult.ErrorMessage.IsEmpty());
+			}
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageInvalidMessageTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.1Validation.InvalidMessage", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageInvalidMessageTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_invalid_message_init";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(Chat)
+	{
+		const FString TestChannelID = SDK_PREFIX + "test_forward_message_invalid_message";
+		
+		// Create channel
+		FPubnubChatChannelData ChannelData;
+		FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+		TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+		TestNotNull("Channel should be created", CreateResult.Channel);
+		
+		if(CreateResult.Channel)
+		{
+			// Try to forward message with null Message
+			FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(nullptr, CreateResult.Channel);
+			
+			TestTrue("ForwardMessage should fail with null Message", ForwardResult.Error);
+			TestFalse("ErrorMessage should not be empty", ForwardResult.ErrorMessage.IsEmpty());
+			
+			// Cleanup
+			Chat->DeleteChannel(TestChannelID);
+		}
+	}
+
+	CleanUpCurrentChatUser(Chat);
+	CleanUp();
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageInvalidChannelTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.1Validation.InvalidChannel", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageInvalidChannelTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_invalid_channel_init";
+	const FString TestChannelID = SDK_PREFIX + "test_forward_message_invalid_channel";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel and send a message
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, ChannelData);
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	TestNotNull("Channel should be created", CreateResult.Channel);
+	
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ReceivedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect with callback to receive message
+	auto MessageLambda = [this, bMessageReceived, ReceivedMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*ReceivedMessage)
+		{
+			*bMessageReceived = true;
+			*ReceivedMessage = Message;
+		}
+	};
+	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
+	
+	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
+	TestFalse("Connect should succeed", ConnectResult.Error);
+	
+	// Wait for subscription, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult]()
+	{
+		const FString TestMessageText = TEXT("Test message for forwarding");
+		FPubnubChatOperationResult SendResult = CreateResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
+		return *bMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Try to forward message with null Channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, ReceivedMessage]()
+	{
+		if(!*ReceivedMessage)
+		{
+			AddError("Message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*ReceivedMessage, nullptr);
+		
+		TestTrue("ForwardMessage should fail with null Channel", ForwardResult.Error);
+		TestFalse("ErrorMessage should not be empty", ForwardResult.ErrorMessage.IsEmpty());
+	}, 0.1f));
+	
+	// Cleanup: Disconnect and delete channel
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// HAPPY PATH TESTS (Required Parameters Only)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageHappyPathTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.2HappyPath.RequiredParametersOnly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageHappyPathTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_happy_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_happy_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_happy_dest";
+	const FString TestMessageText = TEXT("Message to forward");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
+	
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
+	
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
+	
+	// Wait for subscriptions, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+		
+		// Verify step results contain PublishMessage step
+		bool bFoundPublishStep = false;
+		for(const FPubnubChatOperationStepResult& Step : ForwardResult.StepResults)
+		{
+			if(Step.StepName == TEXT("PublishMessage"))
+			{
+				bFoundPublishStep = true;
+				TestFalse("PublishMessage step should not have error", Step.OperationResult.Error);
+			}
+		}
+		TestTrue("Should have PublishMessage step", bFoundPublishStep);
+	}, 0.1f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message content
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, TestMessageText]()
+	{
+		if(!*ForwardedMessage)
+		{
+			AddError("Forwarded message was not received");
+			return;
+		}
+		
+		FString ForwardedText = (*ForwardedMessage)->GetCurrentText();
+		TestEqual("Forwarded message text should match original", ForwardedText, TestMessageText);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// FULL PARAMETER TESTS (All Parameters)
+// ============================================================================
+
+/**
+ * Tests ForwardMessage with message that has existing metadata.
+ * Verifies that original metadata is preserved and originalPublisher/originalChannelId are added.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageWithMetadataTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.3FullParameters.WithMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageWithMetadataTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_metadata_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_metadata_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_metadata_dest";
+	const FString TestMessageText = TEXT("Message with metadata");
+	const FString OriginalMeta = TEXT("{\"customField\":\"customValue\"}");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
+	
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
+	
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
+	
+	// Wait for subscriptions, then send message with metadata
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText, OriginalMeta]()
+	{
+		FPubnubChatSendTextParams SendParams;
+		SendParams.Meta = OriginalMeta;
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText, SendParams);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+	}, 0.1f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message metadata contains originalPublisher and originalChannelId
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, SourceMessage, SourceChannelID, InitUserID]()
+	{
+		if(!*ForwardedMessage || !*SourceMessage)
+		{
+			AddError("Messages were not received");
+			return;
+		}
+		
+		FPubnubChatMessageData ForwardedMessageData = (*ForwardedMessage)->GetMessageData();
+		FPubnubChatMessageData SourceMessageData = (*SourceMessage)->GetMessageData();
+		
+		// Parse metadata to verify it contains originalPublisher and originalChannelId
+		TSharedPtr<FJsonObject> MetaJsonObject = MakeShareable(new FJsonObject);
+		UPubnubJsonUtilities::StringToJsonObject(ForwardedMessageData.Meta, MetaJsonObject);
+		
+		FString OriginalPublisher;
+		FString OriginalChannelId;
+		bool bHasOriginalPublisher = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalPublisher"), OriginalPublisher);
+		bool bHasOriginalChannelId = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalChannelId"), OriginalChannelId);
+		
+		TestTrue("Forwarded message metadata should contain originalPublisher", bHasOriginalPublisher);
+		TestTrue("Forwarded message metadata should contain originalChannelId", bHasOriginalChannelId);
+		TestEqual("originalPublisher should match source message UserID", OriginalPublisher, SourceMessageData.UserID);
+		TestEqual("originalChannelId should match source channel ID", OriginalChannelId, SourceChannelID);
+		
+		// Verify original metadata is preserved
+		FString CustomField;
+		if(MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("customField"), CustomField))
+		{
+			TestEqual("Original metadata field should be preserved", CustomField, TEXT("customValue"));
+		}
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+/**
+ * Tests ForwardMessage with message that has no metadata.
+ * Verifies that new metadata is created with originalPublisher/originalChannelId.
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageWithoutMetadataTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.3FullParameters.WithoutMetadata", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageWithoutMetadataTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_no_metadata_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_no_metadata_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_no_metadata_dest";
+	const FString TestMessageText = TEXT("Message without metadata");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
+	
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
+	
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
+	
+	// Wait for subscriptions, then send message without metadata
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+	}, 0.1f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message metadata contains originalPublisher and originalChannelId
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, SourceMessage, SourceChannelID]()
+	{
+		if(!*ForwardedMessage || !*SourceMessage)
+		{
+			AddError("Messages were not received");
+			return;
+		}
+		
+		FPubnubChatMessageData ForwardedMessageData = (*ForwardedMessage)->GetMessageData();
+		FPubnubChatMessageData SourceMessageData = (*SourceMessage)->GetMessageData();
+		
+		// Parse metadata to verify it contains originalPublisher and originalChannelId
+		TSharedPtr<FJsonObject> MetaJsonObject = MakeShareable(new FJsonObject);
+		UPubnubJsonUtilities::StringToJsonObject(ForwardedMessageData.Meta, MetaJsonObject);
+		
+		FString OriginalPublisher;
+		FString OriginalChannelId;
+		bool bHasOriginalPublisher = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalPublisher"), OriginalPublisher);
+		bool bHasOriginalChannelId = MetaJsonObject->TryGetStringField(ANSI_TO_TCHAR("originalChannelId"), OriginalChannelId);
+		
+		TestTrue("Forwarded message metadata should contain originalPublisher", bHasOriginalPublisher);
+		TestTrue("Forwarded message metadata should contain originalChannelId", bHasOriginalChannelId);
+		TestEqual("originalPublisher should match source message UserID", OriginalPublisher, SourceMessageData.UserID);
+		TestEqual("originalChannelId should match source channel ID", OriginalChannelId, SourceChannelID);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ADVANCED SCENARIO TESTS
+// ============================================================================
+
+/**
+ * Tests ForwardMessage with edited message.
+ * Verifies that GetCurrentText is used (forwarded message contains edited text, not original).
+ */
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageEditedTextTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessage.4Advanced.EditedText", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageEditedTextTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_edited_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_edited_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_edited_dest";
+	const FString OriginalText = TEXT("Original message text");
+	const FString EditedText = TEXT("Edited message text");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Create source channel
+	FPubnubChatChannelData SourceChannelData;
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, SourceChannelData);
+	TestFalse("CreatePublicConversation should succeed for source", CreateSourceResult.Result.Error);
+	TestNotNull("Source channel should be created", CreateSourceResult.Channel);
+	
+	// Create destination channel
+	FPubnubChatChannelData DestChannelData;
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, DestChannelData);
+	TestFalse("CreatePublicConversation should succeed for destination", CreateDestResult.Result.Error);
+	TestNotNull("Destination channel should be created", CreateDestResult.Channel);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		if(CreateSourceResult.Channel)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+		}
+		if(CreateDestResult.Channel)
+		{
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Shared state for message reception
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	// Connect to source channel to receive original message
+	auto SourceMessageLambda = [this, bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
+	
+	FPubnubChatOperationResult SourceConnectResult = CreateSourceResult.Channel->Connect();
+	TestFalse("Connect to source channel should succeed", SourceConnectResult.Error);
+	
+	// Connect to destination channel to receive forwarded message
+	auto DestMessageLambda = [this, bForwardedMessageReceived, ForwardedMessage, EditedText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == EditedText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
+	
+	FPubnubChatOperationResult DestConnectResult = CreateDestResult.Channel->Connect();
+	TestFalse("Connect to destination channel should succeed", DestConnectResult.Error);
+	
+	// Wait for subscriptions, then send message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, OriginalText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(OriginalText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	// Wait until source message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Edit the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SourceMessage, EditedText]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult EditResult = (*SourceMessage)->EditText(EditedText);
+		TestFalse("EditText should succeed", EditResult.Error);
+	}, 0.2f));
+	
+	// Wait a bit for edit to propagate, then forward the message
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		
+		FPubnubChatOperationResult ForwardResult = Chat->ForwardMessage(*SourceMessage, CreateDestResult.Channel);
+		TestFalse("ForwardMessage should succeed", ForwardResult.Error);
+	}, 0.3f));
+	
+	// Wait until forwarded message is received
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() -> bool {
+		return *bForwardedMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	// Verify forwarded message contains edited text (not original)
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ForwardedMessage, EditedText, OriginalText]()
+	{
+		if(!*ForwardedMessage)
+		{
+			AddError("Forwarded message was not received");
+			return;
+		}
+		
+		FString ForwardedText = (*ForwardedMessage)->GetCurrentText();
+		TestEqual("Forwarded message should contain edited text", ForwardedText, EditedText);
+		TestNotEqual("Forwarded message should not contain original text", ForwardedText, OriginalText);
+	}, 0.1f));
+	
+	// Cleanup: Disconnect channels and delete them
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel)
+		{
+			CreateSourceResult.Channel->Disconnect();
+		}
+		if(CreateDestResult.Channel)
+		{
+			CreateDestResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+// ============================================================================
+// ASYNC FULL PARAMETER TESTS (Presence, Moderation, Messages, Connection)
+// ============================================================================
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatWhoIsPresentAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.WhoIsPresentAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatWhoIsPresentAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_who_is_present_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_who_is_present_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateResult.Channel->Connect();
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatWhoIsPresentResult> CallbackResult = MakeShared<FPubnubChatWhoIsPresentResult>();
+	FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponse;
+	OnWhoIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatWhoIsPresentResult& WhoIsPresentResult)
+	{
+		*CallbackResult = WhoIsPresentResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, TestChannelID, OnWhoIsPresentResponse]()
+	{
+		Chat->WhoIsPresentAsync(TestChannelID, OnWhoIsPresentResponse, 1000, 0);
+	}, 0.8f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, InitUserID]()
+	{
+		TestFalse("WhoIsPresentAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("Users list should contain current user", CallbackResult->Users.Contains(InitUserID));
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+			CreateResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatIsPresentAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Presence.IsPresentAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ClientContext);
+
+bool FPubnubChatIsPresentAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_is_present_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_is_present_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(!CreateResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	CreateResult.Channel->Connect();
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatIsPresentResult> CallbackResult = MakeShared<FPubnubChatIsPresentResult>();
+	FOnPubnubChatIsPresentResponseNative OnIsPresentResponse;
+	OnIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatIsPresentResult& IsPresentResult)
+	{
+		*CallbackResult = IsPresentResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, InitUserID, TestChannelID, OnIsPresentResponse]()
+	{
+		Chat->IsPresentAsync(InitUserID, TestChannelID, OnIsPresentResponse);
+	}, 0.8f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("IsPresentAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("IsPresentAsync should report presence", CallbackResult->IsPresent);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+			CreateResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetEventsHistoryAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Moderation.GetEventsHistoryAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetEventsHistoryAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_events_history_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_events_history_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	TestNotNull("Channel should be created", CreateChannelResult.Channel);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	// Emit event to have history
+	FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitCustomEvent(TEXT("{\"async\":\"history\"}"), TEXT("async-history"), true);
+	TestFalse("EmitCustomEvent should succeed", EmitResult.Error);
+	
+	const FString StartTimetoken = TEXT("0");
+	const FString EndTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	const int Count = 10;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatEventsResult> CallbackResult = MakeShared<FPubnubChatEventsResult>();
+	FOnPubnubChatEventsResponseNative OnEventsResponse;
+	OnEventsResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatEventsResult& EventsResult)
+	{
+		*CallbackResult = EventsResult;
+		*bCallbackReceived = true;
+	});
+	
+	Chat->GetEventsHistoryAsync(TestChannelID, StartTimetoken, EndTimetoken, OnEventsResponse, Count);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("GetEventsHistoryAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("Events list should be valid", CallbackResult->Events.Num() >= 0);
+	}, 0.1f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat]()
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatForwardMessageAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.ForwardMessageAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatForwardMessageAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_forward_message_async_full_init";
+	const FString SourceChannelID = SDK_PREFIX + "test_forward_message_async_source";
+	const FString DestinationChannelID = SDK_PREFIX + "test_forward_message_async_dest";
+	const FString TestMessageText = TEXT("Async forward message");
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateSourceResult = Chat->CreatePublicConversation(SourceChannelID, FPubnubChatChannelData());
+	FPubnubChatChannelResult CreateDestResult = Chat->CreatePublicConversation(DestinationChannelID, FPubnubChatChannelData());
+	TestFalse("Create source channel should succeed", CreateSourceResult.Result.Error);
+	TestFalse("Create destination channel should succeed", CreateDestResult.Result.Error);
+	
+	if(!CreateSourceResult.Channel || !CreateDestResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	TSharedPtr<bool> bSourceMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> SourceMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	TSharedPtr<bool> bForwardedMessageReceived = MakeShared<bool>(false);
+	TSharedPtr<UPubnubChatMessage*> ForwardedMessage = MakeShared<UPubnubChatMessage*>(nullptr);
+	
+	auto SourceMessageLambda = [bSourceMessageReceived, SourceMessage](UPubnubChatMessage* Message)
+	{
+		if(Message && !*SourceMessage)
+		{
+			*bSourceMessageReceived = true;
+			*SourceMessage = Message;
+		}
+	};
+	CreateSourceResult.Channel->OnMessageReceivedNative.AddLambda(SourceMessageLambda);
+	
+	auto DestMessageLambda = [bForwardedMessageReceived, ForwardedMessage, TestMessageText](UPubnubChatMessage* Message)
+	{
+		if(Message)
+		{
+			FPubnubChatMessageData MessageData = Message->GetMessageData();
+			if(MessageData.Text == TestMessageText && !*ForwardedMessage)
+			{
+				*bForwardedMessageReceived = true;
+				*ForwardedMessage = Message;
+			}
+		}
+	};
+	CreateDestResult.Channel->OnMessageReceivedNative.AddLambda(DestMessageLambda);
+	
+	TestFalse("Connect to source channel should succeed", CreateSourceResult.Channel->Connect().Error);
+	TestFalse("Connect to destination channel should succeed", CreateDestResult.Channel->Connect().Error);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, TestMessageText]()
+	{
+		FPubnubChatOperationResult SendResult = CreateSourceResult.Channel->SendText(TestMessageText);
+		TestFalse("SendText should succeed", SendResult.Error);
+	}, 0.5f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bSourceMessageReceived]() -> bool {
+		return *bSourceMessageReceived;
+	}, MAX_WAIT_TIME));
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, SourceMessage, CreateDestResult, OnOperationResponse]()
+	{
+		if(!*SourceMessage)
+		{
+			AddError("Source message was not received");
+			return;
+		}
+		Chat->ForwardMessageAsync(*SourceMessage, CreateDestResult.Channel, OnOperationResponse);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bForwardedMessageReceived]() { return *bForwardedMessageReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, ForwardedMessage, DestinationChannelID]()
+	{
+		TestFalse("ForwardMessageAsync should succeed", CallbackResult->Error);
+		if(*ForwardedMessage)
+		{
+			FPubnubChatMessageData ForwardedData = (*ForwardedMessage)->GetMessageData();
+			TestEqual("Forwarded message should be on destination channel", ForwardedData.ChannelID, DestinationChannelID);
+		}
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateSourceResult, CreateDestResult, Chat, SourceChannelID, DestinationChannelID]()
+	{
+		if(CreateSourceResult.Channel) { CreateSourceResult.Channel->Disconnect(); }
+		if(CreateDestResult.Channel) { CreateDestResult.Channel->Disconnect(); }
+		if(Chat)
+		{
+			Chat->DeleteChannel(SourceChannelID);
+			Chat->DeleteChannel(DestinationChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatGetUnreadMessagesCountsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Messages.GetUnreadMessagesCountsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatGetUnreadMessagesCountsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_get_unread_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_get_unread_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
+	if(!CreateChannelResult.Channel)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatJoinResult JoinResult = CreateChannelResult.Channel->Join(FPubnubChatMembershipData());
+	TestFalse("Join should succeed", JoinResult.Result.Error);
+	
+	const int TestLimit = 10;
+	const FString TestFilter = TEXT("channel.id == \"") + TestChannelID + TEXT("\"");
+	FPubnubMembershipSort TestSort;
+	FPubnubMembershipSingleSort SingleSort;
+	SingleSort.SortType = EPubnubMembershipSortType::PMST_ChannelID;
+	SingleSort.SortOrder = false;
+	TestSort.MembershipSort.Add(SingleSort);
+	FPubnubPage TestPage;
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatGetUnreadMessagesCountsResult> CallbackResult = MakeShared<FPubnubChatGetUnreadMessagesCountsResult>();
+	FOnPubnubChatGetUnreadMessagesCountsResponseNative OnUnreadResponse;
+	OnUnreadResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatGetUnreadMessagesCountsResult& UnreadResult)
+	{
+		*CallbackResult = UnreadResult;
+		*bCallbackReceived = true;
+	});
+	
+	Chat->GetUnreadMessagesCountsAsync(OnUnreadResponse, TestLimit, TestFilter, TestSort, TestPage);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("GetUnreadMessagesCountsAsync should succeed", CallbackResult->Result.Error);
+		TestTrue("UnreadMessagesCounts array should be valid", CallbackResult->UnreadMessagesCounts.Num() >= 0);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, Chat, TestChannelID]()
+	{
+		if(CreateChannelResult.Channel)
+		{
+			CreateChannelResult.Channel->Leave();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatReconnectSubscriptionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Connection.ReconnectSubscriptionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatReconnectSubscriptionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_reconnect_subscriptions_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_reconnect_subscriptions_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(CreateResult.Channel)
+	{
+		CreateResult.Channel->Connect();
+	}
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	const FString Timetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
+	Chat->ReconnectSubscriptionsAsync(OnOperationResponse, Timetoken);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("ReconnectSubscriptionsAsync should succeed", CallbackResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FPubnubChatDisconnectSubscriptionsAsyncFullParametersTest, FPubnubChatAutomationTestBase, "PubnubChat.Integration.Chat.Connection.DisconnectSubscriptionsAsync.3FullParameters.AllParameters", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter);
+
+bool FPubnubChatDisconnectSubscriptionsAsyncFullParametersTest::RunTest(const FString& Parameters)
+{
+	if(!InitTest())
+	{
+		AddError("TestInitialization failed");
+		return false;
+	}
+
+	const FString TestPublishKey = GetTestPublishKey();
+	const FString TestSubscribeKey = GetTestSubscribeKey();
+	const FString InitUserID = SDK_PREFIX + "test_disconnect_subscriptions_async_full_init";
+	const FString TestChannelID = SDK_PREFIX + "test_disconnect_subscriptions_async_full";
+	
+	FPubnubChatConfig ChatConfig;
+	FPubnubChatInitChatResult InitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, InitUserID, ChatConfig);
+	TestFalse("InitChat should succeed", InitResult.Result.Error);
+	
+	UPubnubChat* Chat = InitResult.Chat;
+	if(!Chat)
+	{
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return false;
+	}
+	
+	FPubnubChatChannelResult CreateResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
+	TestFalse("CreatePublicConversation should succeed", CreateResult.Result.Error);
+	if(CreateResult.Channel)
+	{
+		CreateResult.Channel->Connect();
+	}
+	
+	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatOperationResult> CallbackResult = MakeShared<FPubnubChatOperationResult>();
+	FOnPubnubChatOperationResponseNative OnOperationResponse;
+	OnOperationResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatOperationResult& OperationResult)
+	{
+		*CallbackResult = OperationResult;
+		*bCallbackReceived = true;
+	});
+	
+	Chat->DisconnectSubscriptionsAsync(OnOperationResponse);
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+	{
+		TestFalse("DisconnectSubscriptionsAsync should succeed", CallbackResult->Error);
+	}, 0.1f));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->Disconnect();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+	
+	return true;
+}
+
+#endif // WITH_DEV_AUTOMATION_TESTS

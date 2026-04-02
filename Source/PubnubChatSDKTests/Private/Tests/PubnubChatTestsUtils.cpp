@@ -1,0 +1,89 @@
+// Copyright 2026 PubNub Inc. All Rights Reserved.
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+#include "Tests/PubnubChatTestsUtils.h"
+#include "PubnubChatSubsystem.h"
+#include "PubnubChat.h"
+#include "Engine/Engine.h"
+#include "PubnubChatUser.h"
+#include "Engine/GameInstance.h"
+
+
+FString PubnubChatTests::GetTestPublishKey()
+{
+	FString PublishKey = FPlatformMisc::GetEnvironmentVariable(TEXT("PN_PUB_KEY"));
+	if(!PublishKey.IsEmpty())
+	{
+		return PublishKey;
+	}
+	// Fallback to demo key if environment variable is not set
+	return TEXT("demo");
+}
+
+FString PubnubChatTests::GetTestSubscribeKey()
+{
+	FString SubscribeKey = FPlatformMisc::GetEnvironmentVariable(TEXT("PN_SUB_KEY"));
+	if(!SubscribeKey.IsEmpty())
+	{
+		return SubscribeKey;
+	}
+	// Fallback to demo key if environment variable is not set
+	return TEXT("demo");
+}
+
+
+bool FPubnubChatAutomationTestBase::InitTest()
+{
+	//Initialize GameInstance and PubnubChatSubsystem
+	GameInstance = NewObject<UGameInstance>(GEngine);
+	GameInstance->InitializeStandalone();
+	
+	if (!TestNotNull("GameInstance exists", GameInstance))
+	{return false;}
+
+	ChatSubsystem = GameInstance->GetSubsystem<UPubnubChatSubsystem>();
+	if (!TestNotNull("PubnubChat Subsystem exists", ChatSubsystem))
+	{return false;}
+
+	//Until we have advanced logger, we need to disable logs, because they would make tests fail
+	bSuppressLogErrors = true;
+	bSuppressLogWarnings = true;
+
+	return true;
+}
+
+void FPubnubChatAutomationTestBase::CleanUp()
+{
+	//Final clean up
+	if(ChatSubsystem)
+	{
+		ChatSubsystem->DestroyAllChats();
+	}
+	
+	if(GameInstance)
+	{
+		GameInstance->Shutdown();
+	}
+
+	ChatSubsystem = nullptr;
+	GameInstance = nullptr;
+}
+
+void FPubnubChatAutomationTestBase::CleanUpCurrentChatUser(UPubnubChat* Chat)
+{
+	if (!Chat)
+	{return;}
+	
+	if (!Chat->GetCurrentUser())
+	{return;}
+	
+	if (Chat->GetCurrentUser()->GetUserID().IsEmpty())
+	{return;}
+	
+	Chat->DeleteUser(Chat->GetCurrentUser()->GetUserID());
+}
+
+
+#endif // WITH_DEV_AUTOMATION_TESTS
+
