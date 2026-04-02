@@ -11,6 +11,7 @@
 #include "Engine/GameInstance.h"
 #include "PubnubChatInternalMacros.h"
 #include "PubnubSubsystem.h"
+#include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubUtilities.h"
 #include "Kismet/GameplayStatics.h"
@@ -56,6 +57,7 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatWithPubnubClient(FString
 	
 	//Make sure PubnubClient has correct UserID
 	PubnubClient->SetUserID(UserID);
+	PubnubClient->SetRuntimeSdkVersionSuffix(UPubnubChatInternalUtilities::GetChatSdkVersionSuffix());
 
 	return InitChatInternal(UserID, Config, PubnubClient, false);
 }
@@ -267,6 +269,8 @@ UPubnubClient* UPubnubChatSubsystem::CreatePubnubClient(FString PublishKey, FStr
 		UE_LOG(PubnubChatLog, Error, TEXT("CreatePubnubClient Error - Created PubnubClient is invalid"));
 		return nullptr;
 	}
+
+	PubnubClient->SetRuntimeSdkVersionSuffix(UPubnubChatInternalUtilities::GetChatSdkVersionSuffix());
 
 	return PubnubClient;
 }

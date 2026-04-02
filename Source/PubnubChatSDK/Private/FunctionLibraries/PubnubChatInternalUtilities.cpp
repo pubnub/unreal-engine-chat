@@ -5,10 +5,12 @@
 #include "Dom/JsonObject.h"
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "Internationalization/Regex.h"
+#include "PubnubChatVersion.h"
 #include "PubnubChatConst.h"
 #include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
+#include "PubnubLibraryVersion.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
 #include "Algo/Sort.h"
@@ -43,6 +45,19 @@ FString UPubnubChatInternalUtilities::GetFilterForChannelID(const FString& Chann
 FString UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions()
 {
 	return FString::Printf(TEXT("channel.id LIKE \"%s*\""), *Pubnub_Chat_Moderation_Channel_Prefix);
+}
+
+FString UPubnubChatInternalUtilities::GetChatSdkVersionSuffix()
+{
+	return FString::Printf(
+		TEXT("-PubNub-Unreal/%d.%d.%d/CA-Unreal/%d.%d.%d"),
+		PUBNUB_LIBRARY_VERSION_MAJOR,
+		PUBNUB_LIBRARY_VERSION_MINOR,
+		PUBNUB_LIBRARY_VERSION_PATCH,
+		PUBNUB_CHAT_VERSION_MAJOR,
+		PUBNUB_CHAT_VERSION_MINOR,
+		PUBNUB_CHAT_VERSION_PATCH
+	);
 }
 
 FString UPubnubChatInternalUtilities::ChatMessageToPublishString(const FString ChatMessage)

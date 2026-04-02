@@ -30,6 +30,7 @@ public:
 	static FString GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users);
 	static FString GetFilterForChannelID(const FString& ChannelID);
 	static FString GetFilterForChannelsRestrictions();
+	static FString GetChatSdkVersionSuffix();
 
 	
 	/* PUBLISH MESSAGE */
