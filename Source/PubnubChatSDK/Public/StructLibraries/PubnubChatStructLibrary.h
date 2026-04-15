@@ -579,9 +579,9 @@ struct FPubnubChatUnreadMessagesCountsWrapper
 	GENERATED_BODY()
 	
 	/** The channel with unread messages. */
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatChannel* Channel;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatChannel* Channel = nullptr;
 	/** The user's membership for this channel (contains last read position). */
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatMembership* Membership;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatMembership* Membership = nullptr;
 	/** Number of unread messages in the channel. */
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") int Count = 0;
 };

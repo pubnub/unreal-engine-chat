@@ -39,7 +39,10 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::InsertText(int Position, con
 		
 		TriggerTypingIndicator();
 		
-		FPubnubChatMessageElement NewElement = FPubnubChatMessageElement({.Text = Text, .Start = 0, .Length = Text.Len()});
+		FPubnubChatMessageElement NewElement;
+		NewElement.Text = Text;
+		NewElement.Start = 0;
+		NewElement.Length = Text.Len();
 		MessageElements.Add(NewElement);
 		FireMessageDraftChangedDelegate();
 		return FinalResult;
@@ -122,7 +125,10 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::InsertText(int Position, con
 		
 		//Neither of those are text ones, so create new text MessageElement - reorder existing ones first
 		MoveMessageElementsAfterPosition(Position, Text.Len(), true);
-		FPubnubChatMessageElement NewElement = FPubnubChatMessageElement({.Text = Text, .Start = Position, .Length = Text.Len()});
+		FPubnubChatMessageElement NewElement;
+		NewElement.Text = Text;
+		NewElement.Start = Position;
+		NewElement.Length = Text.Len();
 		MessageElements.Insert(NewElement, MessageElementIndex);
 		FireMessageDraftChangedDelegate();
 		return FinalResult;
@@ -140,7 +146,10 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::InsertText(int Position, con
 	}
 	
 	// Or if last MessageElement is not a text one, just create new one and add it at the end
-	FPubnubChatMessageElement NewElement = FPubnubChatMessageElement({.Text = Text, .Start = Position, .Length = Text.Len()});
+	FPubnubChatMessageElement NewElement;
+	NewElement.Text = Text;
+	NewElement.Start = Position;
+	NewElement.Length = Text.Len();
 	MessageElements.Add(NewElement);
 	FireMessageDraftChangedDelegate();
 	return FinalResult;
@@ -247,7 +256,11 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::AddMention(int Position, int
 			if (Position == ElementStart)
 			{
 				//Create new Mention element at the start
-				FPubnubChatMessageElement MentionElement = FPubnubChatMessageElement({.MentionTarget = MentionTarget, .Text = MentionText, .Start = Position, .Length = Length});
+				FPubnubChatMessageElement MentionElement;
+				MentionElement.MentionTarget = MentionTarget;
+				MentionElement.Text = MentionText;
+				MentionElement.Start = Position;
+				MentionElement.Length = Length;
 				
 				//Remove the mention part from original element
 				Element.RemoveText(0, Length);
@@ -268,9 +281,21 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::AddMention(int Position, int
 				FString TextAfter = Element.Text.Mid(PositionInElement + Length);
 				
 				//Create three elements: text before, mention, text after
-				FPubnubChatMessageElement TextBeforeElement = FPubnubChatMessageElement({.MentionTarget = FPubnubChatMentionTarget(), .Text = TextBefore, .Start = ElementStart, .Length = PositionInElement});
-				FPubnubChatMessageElement MentionElement = FPubnubChatMessageElement({.MentionTarget = MentionTarget, .Text = MentionText, .Start = Position, .Length = Length});
-				FPubnubChatMessageElement TextAfterElement = FPubnubChatMessageElement({.MentionTarget = FPubnubChatMentionTarget(), .Text = TextAfter, .Start = Position + Length, .Length = ElementEnd - MentionEnd});
+				FPubnubChatMessageElement TextBeforeElement;
+				TextBeforeElement.MentionTarget = FPubnubChatMentionTarget();
+				TextBeforeElement.Text = TextBefore;
+				TextBeforeElement.Start = ElementStart;
+				TextBeforeElement.Length = PositionInElement;
+				FPubnubChatMessageElement MentionElement;
+				MentionElement.MentionTarget = MentionTarget;
+				MentionElement.Text = MentionText;
+				MentionElement.Start = Position;
+				MentionElement.Length = Length;
+				FPubnubChatMessageElement TextAfterElement;
+				TextAfterElement.MentionTarget = FPubnubChatMentionTarget();
+				TextAfterElement.Text = TextAfter;
+				TextAfterElement.Start = Position + Length;
+				TextAfterElement.Length = ElementEnd - MentionEnd;
 				
 				//Remove original element and insert the three new elements
 				MessageElements.RemoveAt(i);
@@ -289,7 +314,11 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::AddMention(int Position, int
 				Element.RemoveText(PositionInElement, Length);
 				
 				//Create new Mention element at the end
-				FPubnubChatMessageElement MentionElement = FPubnubChatMessageElement({.MentionTarget = MentionTarget, .Text = MentionText, .Start = Position, .Length = Length});
+				FPubnubChatMessageElement MentionElement;
+				MentionElement.MentionTarget = MentionTarget;
+				MentionElement.Text = MentionText;
+				MentionElement.Start = Position;
+				MentionElement.Length = Length;
 				
 				//Insert the mention element after the updated original element
 				MessageElements.Insert(MentionElement, i + 1);
@@ -1137,7 +1166,10 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::Update(const FString& NewTex
 		//Use internal insertion without delegate firing
 		if (MessageElements.IsEmpty())
 		{
-			FPubnubChatMessageElement NewElement = FPubnubChatMessageElement({.Text = TextToInsert, .Start = 0, .Length = TextToInsert.Len()});
+			FPubnubChatMessageElement NewElement;
+			NewElement.Text = TextToInsert;
+			NewElement.Start = 0;
+			NewElement.Length = TextToInsert.Len();
 			MessageElements.Add(NewElement);
 		}
 		else
@@ -1179,7 +1211,10 @@ FPubnubChatOperationResult UPubnubChatMessageDraft::Update(const FString& NewTex
 			}
 			
 			//Create new element
-			FPubnubChatMessageElement NewElement = FPubnubChatMessageElement({.Text = TextToInsert, .Start = ChangeStart, .Length = TextToInsert.Len()});
+			FPubnubChatMessageElement NewElement;
+			NewElement.Text = TextToInsert;
+			NewElement.Start = ChangeStart;
+			NewElement.Length = TextToInsert.Len();
 			MessageElements.Insert(NewElement, InsertIndex);
 			MoveMessageElementsAfterPosition(ChangeStart, TextToInsert.Len(), false);
 		}

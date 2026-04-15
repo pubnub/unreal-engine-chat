@@ -222,7 +222,7 @@ struct FPubnubChatCreateDirectConversationResult
 	/** The membership of the user who initiated the conversation. */
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatMembership* HostMembership = nullptr;
 	/** The membership of the other user in the direct conversation. */
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatMembership* InviteeMembership;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PubnubChat") UPubnubChatMembership* InviteeMembership = nullptr;
 };
 
 /**

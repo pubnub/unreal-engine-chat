@@ -320,7 +320,10 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 
 	//GetChannelMembers from PubnubClient to check if the user is not already member of that channel
 	FString Filter = UPubnubChatInternalUtilities::GetFilterForUserID(User->GetUserID());
-	FPubnubMemberInclude Include = FPubnubMemberInclude({.IncludeCustom=true, .IncludeStatus=true, .IncludeType=true});
+	FPubnubMemberInclude Include;
+	Include.IncludeCustom = true;
+	Include.IncludeStatus = true;
+	Include.IncludeType = true;
 	FPubnubChannelMembersResult GetChannelMembersResult = PubnubClient->GetChannelMembers(ChannelID, Include, 1, Filter);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetChannelMembersResult.Result, "GetChannelMembers");
 	
@@ -332,7 +335,8 @@ FPubnubChatInviteResult UPubnubChatChannel::Invite(UPubnubChatUser* User)
 	}
 
 	//Create Membership with "pending" status
-	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = Pubnub_Chat_Invited_User_Membership_status};
+	FPubnubChatMembershipData MembershipData;
+	MembershipData.Status = Pubnub_Chat_Invited_User_Membership_status;
 	
 	//SetMemberships by PubnubClient
 	FPubnubMembershipsResult SetMembershipResult = PubnubClient->SetMemberships(User->GetUserID(), {MembershipData.ToPubnubMembershipInputData(ChannelID)}, FPubnubMembershipInclude::FromValue(false), 1);
@@ -390,7 +394,8 @@ FPubnubChatInviteMultipleResult UPubnubChatChannel::InviteMultiple(TArray<UPubnu
 	FString Filter = UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(ValidUsers);
 	TArray<FPubnubChannelMemberInputData> MembersInput;
 	//Create Membership with "pending" status
-	FPubnubChatMembershipData MembershipData = FPubnubChatMembershipData{.Status = Pubnub_Chat_Invited_User_Membership_status};
+	FPubnubChatMembershipData MembershipData;
+	MembershipData.Status = Pubnub_Chat_Invited_User_Membership_status;
 
 	for(auto& User : ValidUsers)
 	{
@@ -1007,7 +1012,10 @@ FPubnubChatGetRestrictionResult UPubnubChatChannel::GetUserRestrictions(UPubnubC
 	}
 	else
 	{
-		FinalResult.Restriction = FPubnubChatRestriction({.UserID = User->GetUserID(), .ChannelID = ChannelID});
+		FPubnubChatRestriction Restriction;
+		Restriction.UserID = User->GetUserID();
+		Restriction.ChannelID = ChannelID;
+		FinalResult.Restriction = Restriction;
 	}
 	
 	return FinalResult;
@@ -2338,7 +2346,9 @@ FPubnubChatGetRestrictionsResult UPubnubChatChannel::GetRestrictions(const int L
 	
 	//Getting restrictions is actually getting members from moderation channel
 	FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(ChannelID);
-	FPubnubMemberInclude Include = FPubnubMemberInclude({.IncludeCustom = true, .IncludeTotalCount = true}); 
+	FPubnubMemberInclude Include;
+	Include.IncludeCustom = true;
+	Include.IncludeTotalCount = true;
 	FPubnubChannelMembersResult GetMembersResult = PubnubClient->GetChannelMembers(ModerationChannelID, Include, Limit, Filter, Sort, Page);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembersResult.Result, "GetChannelMembers");
 	
