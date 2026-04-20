@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 21,
+	"Version": 22,
 	"VersionName": "1.0.0",
 	"FriendlyName": "Pubnub Chat SDK",
 	"Description": "Quickly and easily integrate a real-time text chat solution that is reliable, flexible, and scalable.",
@@ -8,7 +8,7 @@
 	"CreatedBy": "PubNub Inc.",
 	"CreatedByURL": "https://www.pubnub.com/",
 	"DocsURL": "https://www.pubnub.com/docs/chat/unreal-chat-sdk/build/configuration",
-	"FabURL": "com.epicgames.launcher://ue/Fab/product/69e7b3b4-6ef4-4c1c-b84a-0029c8ae63ae",
+	"FabURL": "com.epicgames.launcher://ue/Fab/product/6ec392de-0ef9-4645-9ca9-2c5a928edadb",
 	"SupportURL": "",
 	"CanContainContent": true,
 	"IsBetaVersion": false,

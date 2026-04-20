@@ -1,5 +1,5 @@
 name: unreal-engine-chat
-version: 1.0.0
+version: 1.0.1
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
