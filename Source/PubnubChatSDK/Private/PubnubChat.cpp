@@ -900,7 +900,10 @@ FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID,
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
 	
 	//Use PubnubClient ListUserSubscribedChannels (WhereNow) to get all subscribed channels
-	FPubnubListUsersFromChannelSettings HereNowSettings = FPubnubListUsersFromChannelSettings{.DisableUserID = false, .Limit = Limit, .Offset = Offset};
+	FPubnubListUsersFromChannelSettings HereNowSettings;
+	HereNowSettings.DisableUserID = false;
+	HereNowSettings.Limit = Limit;
+	HereNowSettings.Offset = Offset;
 	FPubnubListUsersFromChannelResult HereNowResult = PubnubClient->ListUsersFromChannel(ChannelID, HereNowSettings);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUserSubscribedChannels");
 	

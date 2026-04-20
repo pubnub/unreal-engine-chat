@@ -422,7 +422,10 @@ FPubnubChatGetRestrictionResult UPubnubChatUser::GetChannelRestrictions(UPubnubC
 	}
 	else
 	{
-		FinalResult.Restriction = FPubnubChatRestriction({.UserID = UserID, .ChannelID = Channel->GetChannelID()});
+		FPubnubChatRestriction Restriction;
+		Restriction.UserID = UserID;
+		Restriction.ChannelID = Channel->GetChannelID();
+		FinalResult.Restriction = Restriction;
 	}
 	
 	return FinalResult;
@@ -1020,7 +1023,9 @@ FPubnubChatGetRestrictionsResult UPubnubChatUser::GetRestrictions(const int Limi
 {
 	FPubnubChatGetRestrictionsResult FinalResult;
 	
-	FPubnubMembershipInclude Include = FPubnubMembershipInclude({.IncludeCustom = true, .IncludeTotalCount = true}); 
+	FPubnubMembershipInclude Include;
+	Include.IncludeCustom = true;
+	Include.IncludeTotalCount = true;
 	FPubnubMembershipsResult GetMembershipsResult = PubnubClient->GetMemberships(UserID, Include, Limit, Filter, Sort, Page);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result, "GetMemberships");
 	
