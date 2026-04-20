@@ -3,6 +3,13 @@ version: 1.0.1
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2026-04-20
+    version: 1.0.1
+    changes:
+      - type: bug
+        text: "Fix compilation errors when C++ 20 support is not enabled by replace designated initializers."
+      - type: bug
+        text: "Fix not initialized properly errors printed for some UStruct properties."
   - date: 2026-04-02
     version: 1.0.0
     changes:
