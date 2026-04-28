@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 22,
+	"Version": 23,
 	"VersionName": "1.0.1",
 	"FriendlyName": "Pubnub Chat SDK",
 	"Description": "Quickly and easily integrate a real-time text chat solution that is reliable, flexible, and scalable.",
