@@ -28,6 +28,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
 #include "FunctionLibraries/PubnubUtilities.h"
+#include "FunctionLibraries/PubnubInternalUtilities.h"
 #include "Misc/DateTime.h"
 #include "Threads/PubnubFunctionThread.h"
 
@@ -1580,16 +1581,12 @@ void UPubnubChat::OnPubnubSubscriptionStatusChanged(EPubnubSubscriptionStatus St
 	{
 		return;
 	}
-	
-	TWeakObjectPtr<UPubnubChat> WeakThis(this);
-	AsyncTask(ENamedThreads::GameThread, [WeakThis, Status, StatusData]()
-	{
-		if(!WeakThis.IsValid())
-		{return;}
-		
-		WeakThis.Get()->OnConnectionStatusChanged.Broadcast(UPubnubChatInternalConverters::SubscriptionStatusToChatConnectionStatus(Status), UPubnubChatInternalConverters::SubscriptionStatusDataToChatConnectionStatusData(StatusData));
-		WeakThis.Get()->OnConnectionStatusChangedNative.Broadcast(UPubnubChatInternalConverters::SubscriptionStatusToChatConnectionStatus(Status), UPubnubChatInternalConverters::SubscriptionStatusDataToChatConnectionStatusData(StatusData));
-	});
+
+	//UPubnubClient::OnCCoreSubscriptionStatusReceived is called on the GameThread so no additional redirection is needed
+	const EPubnubChatConnectionStatus ChatStatus = UPubnubChatInternalConverters::SubscriptionStatusToChatConnectionStatus(Status);
+	const FPubnubChatConnectionStatusData ChatStatusData = UPubnubChatInternalConverters::SubscriptionStatusDataToChatConnectionStatusData(StatusData);
+	OnConnectionStatusChanged.Broadcast(ChatStatus, ChatStatusData);
+	OnConnectionStatusChangedNative.Broadcast(ChatStatus, ChatStatusData);
 }
 
 FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FPubnubChatConfig& InChatConfig, UPubnubClient* InPubnubClient, bool bInOwnsPubnubClient)
@@ -1610,10 +1607,10 @@ FPubnubChatInitChatResult UPubnubChat::InitChat(const FString InUserID, const FP
 	CurrentUserID = InUserID;
 	
 	//Create repository for managing shared User and Channel data
-	ObjectsRepository = NewObject<UPubnubChatObjectsRepository>(this);
+	ObjectsRepository = UPubnubInternalUtilities::SafeNewObject<UPubnubChatObjectsRepository>(this);
 
 	//Create Access Manager
-	AccessManager = NewObject<UPubnubChatAccessManager>(this);
+	AccessManager = UPubnubInternalUtilities::SafeNewObject<UPubnubChatAccessManager>(this);
 	AccessManager->InitAccessManager(PubnubClient);
 	
 	//SetAuthToken if any token was provided in config
@@ -1682,7 +1679,7 @@ UPubnubChatUser* UPubnubChat::CreateUserObject(const FString UserID, const FPubn
 	ObjectsRepository->UpdateUserData(UserID, ChatUserData);
 
 	//Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	UPubnubChatUser* NewUser = UPubnubInternalUtilities::SafeNewObject<UPubnubChatUser>(this);
 	NewUser->InitUser(PubnubClient, this, UserID);
 	return NewUser;
 }
@@ -1694,7 +1691,7 @@ UPubnubChatUser* UPubnubChat::CreateUserObject(const FString UserID, const FPubn
 
 
 	//Create and return the user object
-	UPubnubChatUser* NewUser = NewObject<UPubnubChatUser>(this);
+	UPubnubChatUser* NewUser = UPubnubInternalUtilities::SafeNewObject<UPubnubChatUser>(this);
 	NewUser->InitUser(PubnubClient, this, UserID);
 	return NewUser;
 }
@@ -1705,7 +1702,7 @@ UPubnubChatChannel* UPubnubChat::CreateChannelObject(const FString ChannelID, co
 	ObjectsRepository->UpdateChannelData(ChannelID, ChatChannelData);
 
 	//Create and return the channel object
-	UPubnubChatChannel* NewChannel = NewObject<UPubnubChatChannel>(this);
+	UPubnubChatChannel* NewChannel = UPubnubInternalUtilities::SafeNewObject<UPubnubChatChannel>(this);
 	NewChannel->InitChannel(PubnubClient, this, ChannelID);
 	return NewChannel;
 }
@@ -1716,7 +1713,7 @@ UPubnubChatChannel* UPubnubChat::CreateChannelObject(const FString ChannelID, co
 	ObjectsRepository->UpdateChannelData(ChannelID, FPubnubChatChannelData::FromPubnubChannelData(ChannelData));
 
 	//Create and return the channel object
-	UPubnubChatChannel* NewChannel = NewObject<UPubnubChatChannel>(this);
+	UPubnubChatChannel* NewChannel = UPubnubInternalUtilities::SafeNewObject<UPubnubChatChannel>(this);
 	NewChannel->InitChannel(PubnubClient, this, ChannelID);
 	return NewChannel;
 }
@@ -1724,7 +1721,7 @@ UPubnubChatChannel* UPubnubChat::CreateChannelObject(const FString ChannelID, co
 UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData)
 {
 	//Create and init the message object
-	UPubnubChatMessage* NewMessage = NewObject<UPubnubChatMessage>(this);
+	UPubnubChatMessage* NewMessage = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMessage>(this);
 	NewMessage->InitMessage(PubnubClient, this, ChatMessageData.ChannelID, Timetoken);
 	
 	//Update repository with updated message data
@@ -1736,7 +1733,7 @@ UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, co
 UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData)
 {
 	//Create and init the message object
-	UPubnubChatMessage* NewMessage = NewObject<UPubnubChatMessage>(this);
+	UPubnubChatMessage* NewMessage = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMessage>(this);
 	NewMessage->InitMessage(PubnubClient, this, MessageData.Channel, Timetoken);
 	
 	//Update repository with updated message data
@@ -1748,7 +1745,7 @@ UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, co
 UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData)
 {
 	//Create and init the message object
-	UPubnubChatMessage* NewMessage = NewObject<UPubnubChatMessage>(this);
+	UPubnubChatMessage* NewMessage = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMessage>(this);
 	NewMessage->InitMessage(PubnubClient, this, HistoryMessageData.Channel, Timetoken);
 	
 	//Update repository with updated message data
@@ -1760,7 +1757,7 @@ UPubnubChatMessage* UPubnubChat::CreateMessageObject(const FString Timetoken, co
 UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChatMembershipData& ChatMembershipData)
 {
 	//Create and init the membership object
-	UPubnubChatMembership* NewMembership = NewObject<UPubnubChatMembership>(this);
+	UPubnubChatMembership* NewMembership = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMembership>(this);
 	NewMembership->InitMembership(PubnubClient, this, User, Channel);
 	
 	//Update repository with updated membership data
@@ -1772,7 +1769,7 @@ UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User
 UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubMembershipData& MembershipData)
 {
 	//Create and init the membership object
-	UPubnubChatMembership* NewMembership = NewObject<UPubnubChatMembership>(this);
+	UPubnubChatMembership* NewMembership = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMembership>(this);
 	NewMembership->InitMembership(PubnubClient, this, User, Channel);
 	
 	//Update repository with updated membership data
@@ -1784,7 +1781,7 @@ UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User
 UPubnubChatMembership* UPubnubChat::CreateMembershipObject(UPubnubChatUser* User, UPubnubChatChannel* Channel, const FPubnubChannelMemberData& ChannelMemberData)
 {
 	//Create and init the membership object
-	UPubnubChatMembership* NewMembership = NewObject<UPubnubChatMembership>(this);
+	UPubnubChatMembership* NewMembership = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMembership>(this);
 	NewMembership->InitMembership(PubnubClient, this, User, Channel);
 	
 	//Update repository with updated membership data
@@ -1799,7 +1796,7 @@ UPubnubChatThreadChannel* UPubnubChat::CreateThreadChannelObject(const FString T
 	ObjectsRepository->UpdateChannelData(ThreadChannelID, ThreadChannelData);
 
 	//Create and return the thread channel object
-	UPubnubChatThreadChannel* NewThreadChannel = NewObject<UPubnubChatThreadChannel>(this);
+	UPubnubChatThreadChannel* NewThreadChannel = UPubnubInternalUtilities::SafeNewObject<UPubnubChatThreadChannel>(this);
 	NewThreadChannel->InitThreadChannel(PubnubClient, this, ThreadChannelID, Message, IsThreadAlreadyConfirmed);
 	
 	return NewThreadChannel;
@@ -1811,7 +1808,7 @@ UPubnubChatThreadChannel* UPubnubChat::CreateThreadChannelObject(const FString T
 	ObjectsRepository->UpdateChannelData(ThreadChannelID, FPubnubChatChannelData::FromPubnubChannelData(ChannelData));
 
 	//Create and return the thread channel object
-	UPubnubChatThreadChannel* NewThreadChannel = NewObject<UPubnubChatThreadChannel>(this);
+	UPubnubChatThreadChannel* NewThreadChannel = UPubnubInternalUtilities::SafeNewObject<UPubnubChatThreadChannel>(this);
 	NewThreadChannel->InitThreadChannel(PubnubClient, this, ThreadChannelID, Message, IsThreadAlreadyConfirmed);
 	
 	return NewThreadChannel;
@@ -1820,7 +1817,7 @@ UPubnubChatThreadChannel* UPubnubChat::CreateThreadChannelObject(const FString T
 UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString Timetoken, const FPubnubChatMessageData& ChatMessageData, const FString ParentChannelID)
 {
 	//Create and init the message object (for ObjectsRepository we treat ThreadMessages as regular Messages)
-	UPubnubChatThreadMessage* NewThreadMessage = NewObject<UPubnubChatThreadMessage>(this);
+	UPubnubChatThreadMessage* NewThreadMessage = UPubnubInternalUtilities::SafeNewObject<UPubnubChatThreadMessage>(this);
 	NewThreadMessage->InitThreadMessage(PubnubClient, this, ChatMessageData.ChannelID, Timetoken, ParentChannelID);
 	
 	//Update repository with updated message data
@@ -1832,7 +1829,7 @@ UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString T
 UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString Timetoken, const FPubnubMessageData& MessageData, const FString ParentChannelID)
 {
 	//Create and init the message object (for ObjectsRepository we treat ThreadMessages as regular Messages)
-	UPubnubChatThreadMessage* NewThreadMessage = NewObject<UPubnubChatThreadMessage>(this);
+	UPubnubChatThreadMessage* NewThreadMessage = UPubnubInternalUtilities::SafeNewObject<UPubnubChatThreadMessage>(this);
 	NewThreadMessage->InitThreadMessage(PubnubClient, this, MessageData.Channel, Timetoken, ParentChannelID);
 	
 	//Update repository with updated message data
@@ -1844,7 +1841,7 @@ UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString T
 UPubnubChatThreadMessage* UPubnubChat::CreateThreadMessageObject(const FString Timetoken, const FPubnubHistoryMessageData& HistoryMessageData, const FString ParentChannelID)
 {
 	//Create and init the message object (for ObjectsRepository we treat ThreadMessages as regular Messages)
-	UPubnubChatThreadMessage* NewThreadMessage = NewObject<UPubnubChatThreadMessage>(this);
+	UPubnubChatThreadMessage* NewThreadMessage = UPubnubInternalUtilities::SafeNewObject<UPubnubChatThreadMessage>(this);
 	NewThreadMessage->InitThreadMessage(PubnubClient, this, HistoryMessageData.Channel, Timetoken, ParentChannelID);
 	
 	//Update repository with updated message data
@@ -2057,7 +2054,7 @@ FPubnubChatListenForEventsResult UPubnubChat::ListenForEvents(const FString Chan
 	FinalResult.Result.AddStep("Subscribe", SubscribeResult);
 
 	//Create CallbackStop with function to unsubscribe (stop listening for events)
-	UPubnubChatCallbackStop* CallbackStop = NewObject<UPubnubChatCallbackStop>(this);
+	UPubnubChatCallbackStop* CallbackStop = UPubnubInternalUtilities::SafeNewObject<UPubnubChatCallbackStop>(this);
 	auto DisconnectLambda = [ThisWeak, Subscription]()->FPubnubChatOperationResult
 	{
 		if(!ThisWeak.IsValid())
