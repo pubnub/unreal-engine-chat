@@ -21,6 +21,7 @@
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "FunctionLibraries/PubnubTimetokenUtilities.h"
 #include "FunctionLibraries/PubnubUtilities.h"
+#include "FunctionLibraries/PubnubInternalUtilities.h"
 #include "HAL/CriticalSection.h"
 #include "HAL/PlatformProcess.h"
 #include <cmath> 
@@ -2295,7 +2296,7 @@ UPubnubChatMessageDraft* UPubnubChatChannel::CreateMessageDraft(FPubnubChatMessa
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(nullptr);
 	
-	UPubnubChatMessageDraft* MessageDraft = NewObject<UPubnubChatMessageDraft>(this);
+	UPubnubChatMessageDraft* MessageDraft = UPubnubInternalUtilities::SafeNewObject<UPubnubChatMessageDraft>(this);
 	MessageDraft->InitMessageDraft(this, MessageDraftConfig);
 	
 	return MessageDraft;

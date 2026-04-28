@@ -14,6 +14,7 @@
 #include "FunctionLibraries/PubnubChatInternalUtilities.h"
 #include "FunctionLibraries/PubnubChatLogUtilities.h"
 #include "FunctionLibraries/PubnubUtilities.h"
+#include "FunctionLibraries/PubnubInternalUtilities.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeLock.h"
 
@@ -307,7 +308,7 @@ FPubnubChatInitChatResult UPubnubChatSubsystem::InitChatInternal(FString UserID,
 	//Adjust some Config values that might be not in range
 	Config.ValidateConfig();
 
-	UPubnubChat* NewChat = NewObject<UPubnubChat>(this);
+	UPubnubChat* NewChat = UPubnubInternalUtilities::SafeNewObject<UPubnubChat>(this);
 	NewChat->OnChatDestroyed.AddDynamic(this, &UPubnubChatSubsystem::OnChatDestroyed);
 	FPubnubChatInitChatResult InitChatResult = NewChat->InitChat(UserID, Config, PubnubClient, bChatOwnsPubnubClient);
 
