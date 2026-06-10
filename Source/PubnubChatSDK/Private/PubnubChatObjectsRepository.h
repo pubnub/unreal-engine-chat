@@ -59,11 +59,12 @@ public:
 	void UnregisterChannel(const FString& ChannelID);
 
 	/**
-	 * Gets user data from the repository. Returns nullptr if not found.
+	 * Copies user data from the repository under lock.
 	 * @param UserID The unique identifier of the user
-	 * @return Pointer to the internal user data, or nullptr if not found
+	 * @param OutUserData Receives a copy of the stored user data when found
+	 * @return True if the user exists in the repository, false otherwise
 	 */
-	FPubnubChatInternalUser* GetUserData(const FString& UserID);
+	bool TryGetUserData(const FString& UserID, FPubnubChatUserData& OutUserData) const;
 
 	/**
 	 * Updates user data in the repository. Creates entry if it doesn't exist.
@@ -80,11 +81,12 @@ public:
 	bool RemoveUserData(const FString& UserID);
 	
 	/**
-	 * Gets channel data from the repository. Returns nullptr if not found.
+	 * Copies channel data from the repository under lock.
 	 * @param ChannelID The unique identifier of the channel
-	 * @return Pointer to the internal channel data, or nullptr if not found
+	 * @param OutChannelData Receives a copy of the stored channel data when found
+	 * @return True if the channel exists in the repository, false otherwise
 	 */
-	FPubnubChatInternalChannel* GetChannelData(const FString& ChannelID);
+	bool TryGetChannelData(const FString& ChannelID, FPubnubChatChannelData& OutChannelData) const;
 
 	/**
 	 * Updates channel data in the repository. Creates entry if it doesn't exist.
@@ -115,11 +117,12 @@ public:
 	void UnregisterMessage(const FString& MessageID);
 	
 	/**
-	 * Gets message data from the repository. Returns nullptr if not found.
+	 * Copies message data from the repository under lock.
 	 * @param MessageID The composite unique identifier of the message in format "[ChannelID].[Timetoken]"
-	 * @return Pointer to the internal message data, or nullptr if not found
+	 * @param OutMessageData Receives a copy of the stored message data when found
+	 * @return True if the message exists in the repository, false otherwise
 	 */
-	FPubnubChatInternalMessage* GetMessageData(const FString& MessageID);
+	bool TryGetMessageData(const FString& MessageID, FPubnubChatMessageData& OutMessageData) const;
 
 	/**
 	 * Updates message data in the repository. Creates entry if it doesn't exist.
@@ -150,11 +153,12 @@ public:
 	void UnregisterMembership(const FString& MembershipID);
 
 	/**
-	 * Gets membership data from the repository. Returns nullptr if not found.
+	 * Copies membership data from the repository under lock.
 	 * @param MembershipID The composite unique identifier of the membership in format "[UserID].[ChannelID]"
-	 * @return Pointer to the internal membership data, or nullptr if not found
+	 * @param OutMembershipData Receives a copy of the stored membership data when found
+	 * @return True if the membership exists in the repository, false otherwise
 	 */
-	FPubnubChatInternalMembership* GetMembershipData(const FString& MembershipID);
+	bool TryGetMembershipData(const FString& MembershipID, FPubnubChatMembershipData& OutMembershipData) const;
 
 	/**
 	 * Updates membership data in the repository. Creates entry if it doesn't exist.

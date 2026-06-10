@@ -106,10 +106,15 @@ void UPubnubChatObjectsRepository::UnregisterChannel(const FString& ChannelID)
 	}
 }
 
-FPubnubChatInternalUser* UPubnubChatObjectsRepository::GetUserData(const FString& UserID)
+bool UPubnubChatObjectsRepository::TryGetUserData(const FString& UserID, FPubnubChatUserData& OutUserData) const
 {
 	FScopeLock Lock(&UsersCriticalSection);
-	return Users.Find(UserID);
+	if (const FPubnubChatInternalUser* InternalUser = Users.Find(UserID))
+	{
+		OutUserData = InternalUser->UserData;
+		return true;
+	}
+	return false;
 }
 
 void UPubnubChatObjectsRepository::UpdateUserData(const FString& UserID, const FPubnubChatUserData& UserData)
@@ -134,10 +139,15 @@ bool UPubnubChatObjectsRepository::RemoveUserData(const FString& UserID)
 	return Users.Remove(UserID) > 0;
 }
 
-FPubnubChatInternalChannel* UPubnubChatObjectsRepository::GetChannelData(const FString& ChannelID)
+bool UPubnubChatObjectsRepository::TryGetChannelData(const FString& ChannelID, FPubnubChatChannelData& OutChannelData) const
 {
 	FScopeLock Lock(&ChannelsCriticalSection);
-	return Channels.Find(ChannelID);
+	if (const FPubnubChatInternalChannel* InternalChannel = Channels.Find(ChannelID))
+	{
+		OutChannelData = InternalChannel->ChannelData;
+		return true;
+	}
+	return false;
 }
 
 void UPubnubChatObjectsRepository::UpdateChannelData(const FString& ChannelID, const FPubnubChatChannelData& ChannelData)
@@ -213,10 +223,15 @@ void UPubnubChatObjectsRepository::UnregisterMessage(const FString& MessageID)
 	}
 }
 
-FPubnubChatInternalMessage* UPubnubChatObjectsRepository::GetMessageData(const FString& MessageID)
+bool UPubnubChatObjectsRepository::TryGetMessageData(const FString& MessageID, FPubnubChatMessageData& OutMessageData) const
 {
 	FScopeLock Lock(&MessagesCriticalSection);
-	return Messages.Find(MessageID);
+	if (const FPubnubChatInternalMessage* InternalMessage = Messages.Find(MessageID))
+	{
+		OutMessageData = InternalMessage->MessageData;
+		return true;
+	}
+	return false;
 }
 
 void UPubnubChatObjectsRepository::UpdateMessageData(const FString& MessageID, const FPubnubChatMessageData& MessageData)
@@ -292,10 +307,15 @@ void UPubnubChatObjectsRepository::UnregisterMembership(const FString& Membershi
 	}
 }
 
-FPubnubChatInternalMembership* UPubnubChatObjectsRepository::GetMembershipData(const FString& MembershipID)
+bool UPubnubChatObjectsRepository::TryGetMembershipData(const FString& MembershipID, FPubnubChatMembershipData& OutMembershipData) const
 {
 	FScopeLock Lock(&MembershipsCriticalSection);
-	return Memberships.Find(MembershipID);
+	if (const FPubnubChatInternalMembership* InternalMembership = Memberships.Find(MembershipID))
+	{
+		OutMembershipData = InternalMembership->MembershipData;
+		return true;
+	}
+	return false;
 }
 
 void UPubnubChatObjectsRepository::UpdateMembershipData(const FString& MembershipID, const FPubnubChatMembershipData& MembershipData)

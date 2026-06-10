@@ -40,10 +40,10 @@ FPubnubChatMembershipData UPubnubChatMembership::GetMembershipData() const
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatMembershipData());
 
-	// Get membership data from repository
-	if (FPubnubChatInternalMembership* InternalMembership = Chat->ObjectsRepository->GetMembershipData(GetInternalMembershipID()))
+	FPubnubChatMembershipData MembershipData;
+	if (Chat->ObjectsRepository->TryGetMembershipData(GetInternalMembershipID(), MembershipData))
 	{
-		return InternalMembership->MembershipData;
+		return MembershipData;
 	}
 
 	FString UserIDStr = User ? User->GetUserID() : TEXT("");

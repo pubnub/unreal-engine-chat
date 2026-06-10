@@ -31,10 +31,10 @@ FPubnubChatUserData UPubnubChatUser::GetUserData() const
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatUserData());
 
-	// Get user data from repository
-	if (FPubnubChatInternalUser* InternalUser = Chat->ObjectsRepository->GetUserData(UserID))
+	FPubnubChatUserData UserData;
+	if (Chat->ObjectsRepository->TryGetUserData(UserID, UserData))
 	{
-		return InternalUser->UserData;
+		return UserData;
 	}
 
 	UE_LOG(PubnubChatLog, Error, TEXT("User data not found in repository for UserID: %s"), *UserID);

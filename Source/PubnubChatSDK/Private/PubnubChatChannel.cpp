@@ -41,10 +41,10 @@ FPubnubChatChannelData UPubnubChatChannel::GetChannelData() const
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatChannelData());
 
-	//Get channel data from repository
-	if (FPubnubChatInternalChannel* InternalChannel = Chat->ObjectsRepository->GetChannelData(ChannelID))
+	FPubnubChatChannelData ChannelData;
+	if (Chat->ObjectsRepository->TryGetChannelData(ChannelID, ChannelData))
 	{
-		return InternalChannel->ChannelData;
+		return ChannelData;
 	}
 
 	UE_LOG(PubnubChatLog, Error, TEXT("Channel data not found in repository for ChannelID: %s"), *ChannelID);
