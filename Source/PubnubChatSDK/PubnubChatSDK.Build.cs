@@ -8,8 +8,6 @@ public class PubnubChatSDK : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
-		bEnableExceptions = true;
-		
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
