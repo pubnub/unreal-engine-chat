@@ -18,7 +18,7 @@
 
 FString UPubnubChatInternalUtilities::GetFilterForUserID(const FString& UserID)
 {
-	return FString::Printf(TEXT("uuid.id == \"%s\""), *UserID);
+	return FString::Printf(TEXT("uuid.id == %s"), *UPubnubJsonUtilities::SerializeString(UserID));
 }
 
 FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<UPubnubChatUser*>& Users)
@@ -32,19 +32,21 @@ FString UPubnubChatInternalUtilities::GetFilterForMultipleUsersID(const TArray<U
 		{
 			FinalFilter.Append(" || ");
 		}
-		FinalFilter.Append(FString::Printf(TEXT(R"(uuid.id == "%s")"), *User->GetUserID()));
+		FinalFilter.Append(FString::Printf(TEXT("uuid.id == %s"), *UPubnubJsonUtilities::SerializeString(User->GetUserID())));
 	}
 	return FinalFilter;
 }
 
 FString UPubnubChatInternalUtilities::GetFilterForChannelID(const FString& ChannelID)
 {
-	return FString::Printf(TEXT("channel.id == \"%s\""), *ChannelID);
+	return FString::Printf(TEXT("channel.id == %s"), *UPubnubJsonUtilities::SerializeString(ChannelID));
 }
 
 FString UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions()
 {
-	return FString::Printf(TEXT("channel.id LIKE \"%s*\""), *Pubnub_Chat_Moderation_Channel_Prefix);
+	return FString::Printf(
+		TEXT("channel.id LIKE %s"),
+		*UPubnubJsonUtilities::SerializeString(Pubnub_Chat_Moderation_Channel_Prefix + TEXT("*")));
 }
 
 FString UPubnubChatInternalUtilities::GetChatSdkVersionSuffix()
@@ -392,17 +394,26 @@ FPubnubChatCustomEvent UPubnubChatInternalUtilities::GetCustomEventFromPubnubMes
 
 FString UPubnubChatInternalUtilities::GetReceiptEventPayload(const FString& Timetoken)
 {
-	return FString::Printf(TEXT(R"({"messageTimetoken": "%s"})"), *Timetoken);
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("messageTimetoken"), Timetoken);
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
 FString UPubnubChatInternalUtilities::GetInviteEventPayload(const FString ChannelID, const FString ChannelType)
 {
-	return FString::Printf(TEXT(R"({"channelType": "%s", "channelId": "%s"})"), *ChannelType, *ChannelID);
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("channelType"), ChannelType);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("channelId"), ChannelID);
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
 FString UPubnubChatInternalUtilities::GetModerationEventPayload(const FString ModerationChannel, const FString RestrictionType, const FString Reason)
 {
-	return FString::Printf(TEXT(R"({"channelId": "%s", "restriction": "%s", "reason": "%s"})"), *ModerationChannel, *RestrictionType, *Reason);
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("channelId"), ModerationChannel);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("restriction"), RestrictionType);
+	JsonObject->SetStringField(ANSI_TO_TCHAR("reason"), Reason);
+	return UPubnubJsonUtilities::JsonObjectToString(JsonObject);
 }
 
 bool UPubnubChatInternalUtilities::IsThisEventMessage(const FString& MessageContent)

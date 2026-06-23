@@ -35,7 +35,7 @@ void ASample_ChatSubsystem::InitChatWithConfigSample()
 	// Create config with  AuthKey and enable Chat to store user activity
 	FPubnubChatConfig Config;
 	Config.AuthKey = TEXT("p0F2AkF0GmheUpNDdHRsGDxDcmVzpURjaGFuoWtnbG9iYWxfY2hhdANDZ3JwoENzcGOgQ3VzcqBEdXVpZKBDcGF0pURjaGFuoENncnCgQ3NwY6BDdXNyoER1dWlkoERtZXRhoENzaWdYILa9OLrP_dhe31sW_seO2r9KhD6mp9Yi9vZxcX9QY04R");
-	Config.StoreUserActivityInterval = true;
+	Config.StoreUserActivityTimestamps = true;
 	
 	// Initialize Chat - InitChat may fail under some conditions so make sure to check the Result for errors before using the Chat
 	FPubnubChatInitChatResult InitChatResult = PubnubChatSubsystem->InitChat(TEXT("demo"), TEXT("demo"), TEXT("Player_001"), Config);

@@ -34,13 +34,8 @@ bool FPubnubChatRepositoryUserRegistrationTest::RunTest(const FString& Parameter
 	Repository->RegisterUser(TestUserID);
 	
 	// Verify data exists after registration
-	FPubnubChatInternalUser* UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should exist after registration", UserData);
-	
-	if(UserData)
-	{
-		TestEqual("UserID should match", UserData->UserID, TestUserID);
-	}
+	FPubnubChatUserData UserData;
+	TestTrue("User data should exist after registration", Repository->TryGetUserData(TestUserID, UserData));
 	
 	return true;
 }
@@ -65,23 +60,20 @@ bool FPubnubChatRepositoryUserMultipleRegistrationTest::RunTest(const FString& P
 	Repository->RegisterUser(TestUserID);
 	
 	// Data should still exist (not cleaned up)
-	FPubnubChatInternalUser* UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should exist after multiple registrations", UserData);
+	FPubnubChatUserData UserData;
+	TestTrue("User data should exist after multiple registrations", Repository->TryGetUserData(TestUserID, UserData));
 	
 	// Unregister once - data should still exist
 	Repository->UnregisterUser(TestUserID);
-	UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should still exist after one unregistration", UserData);
+	TestTrue("User data should still exist after one unregistration", Repository->TryGetUserData(TestUserID, UserData));
 	
 	// Unregister second time - data should still exist
 	Repository->UnregisterUser(TestUserID);
-	UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should still exist after two unregistrations", UserData);
+	TestTrue("User data should still exist after two unregistrations", Repository->TryGetUserData(TestUserID, UserData));
 	
 	// Unregister third time - data should be cleaned up
 	Repository->UnregisterUser(TestUserID);
-	UserData = Repository->GetUserData(TestUserID);
-	TestNull("User data should be cleaned up when reference count reaches 0", UserData);
+	TestFalse("User data should be cleaned up when reference count reaches 0", Repository->TryGetUserData(TestUserID, UserData));
 	
 	return true;
 }
@@ -111,28 +103,19 @@ bool FPubnubChatRepositoryUserDataPersistenceTest::RunTest(const FString& Parame
 	Repository->UpdateUserData(TestUserID, TestData);
 	
 	// Verify data is stored
-	FPubnubChatInternalUser* UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should exist", UserData);
-	
-	if(UserData)
-	{
-		TestEqual("UserName should match", UserData->UserData.UserName, TestData.UserName);
-		TestEqual("Email should match", UserData->UserData.Email, TestData.Email);
-		TestEqual("ProfileUrl should match", UserData->UserData.ProfileUrl, TestData.ProfileUrl);
-	}
+	FPubnubChatUserData UserData;
+	TestTrue("User data should exist", Repository->TryGetUserData(TestUserID, UserData));
+	TestEqual("UserName should match", UserData.UserName, TestData.UserName);
+	TestEqual("Email should match", UserData.Email, TestData.Email);
+	TestEqual("ProfileUrl should match", UserData.ProfileUrl, TestData.ProfileUrl);
 	
 	// Register again (simulating second object with same ID)
 	Repository->RegisterUser(TestUserID);
 	
 	// Data should still be there and unchanged
-	UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should still exist after second registration", UserData);
-	
-	if(UserData)
-	{
-		TestEqual("UserName should still match after second registration", UserData->UserData.UserName, TestData.UserName);
-		TestEqual("Email should still match after second registration", UserData->UserData.Email, TestData.Email);
-	}
+	TestTrue("User data should still exist after second registration", Repository->TryGetUserData(TestUserID, UserData));
+	TestEqual("UserName should still match after second registration", UserData.UserName, TestData.UserName);
+	TestEqual("Email should still match after second registration", UserData.Email, TestData.Email);
 	
 	return true;
 }
@@ -158,12 +141,10 @@ bool FPubnubChatRepositoryUserDataSharingTest::RunTest(const FString& Parameters
 	InitialData.UserName = TEXT("InitialUser");
 	Repository->UpdateUserData(TestUserID, InitialData);
 	
-	// Get data reference
-	FPubnubChatInternalUser* DataRef1 = Repository->GetUserData(TestUserID);
-	TestNotNull("User data has to be valid", DataRef1);
-	if (!DataRef1)
-	{ return false;}
-	TestEqual("First reference should see initial data", DataRef1->UserData.UserName, InitialData.UserName);
+	// Get data copy
+	FPubnubChatUserData DataRef1;
+	TestTrue("User data has to be valid", Repository->TryGetUserData(TestUserID, DataRef1));
+	TestEqual("First reference should see initial data", DataRef1.UserName, InitialData.UserName);
 	
 	// Register again (simulating second object)
 	Repository->RegisterUser(TestUserID);
@@ -174,23 +155,16 @@ bool FPubnubChatRepositoryUserDataSharingTest::RunTest(const FString& Parameters
 	UpdatedData.Email = TEXT("updated@example.com");
 	Repository->UpdateUserData(TestUserID, UpdatedData);
 	
-	// Both references should see updated data
-	FPubnubChatInternalUser* DataPtr1 = Repository->GetUserData(TestUserID);
-	FPubnubChatInternalUser* DataPtr2 = Repository->GetUserData(TestUserID);
-	
-	TestNotNull("DataPtr1 should exist", DataPtr1);
-	TestNotNull("DataPtr2 should exist", DataPtr2);
-	
-	if(DataPtr1 && DataPtr2)
-	{
-		TestEqual("DataPtr1 should see updated UserName", DataPtr1->UserData.UserName, UpdatedData.UserName);
-		TestEqual("DataPtr2 should see updated UserName", DataPtr2->UserData.UserName, UpdatedData.UserName);
-		TestEqual("DataPtr1 should see updated Email", DataPtr1->UserData.Email, UpdatedData.Email);
-		TestEqual("DataPtr2 should see updated Email", DataPtr2->UserData.Email, UpdatedData.Email);
-		
-		// Verify they point to the same data (same memory address)
-		TestEqual("Both pointers should point to same data", DataPtr1, DataPtr2);
-	}
+	// Both reads should see updated data
+	FPubnubChatUserData DataPtr1;
+	FPubnubChatUserData DataPtr2;
+	TestTrue("DataPtr1 should exist", Repository->TryGetUserData(TestUserID, DataPtr1));
+	TestTrue("DataPtr2 should exist", Repository->TryGetUserData(TestUserID, DataPtr2));
+	TestEqual("DataPtr1 should see updated UserName", DataPtr1.UserName, UpdatedData.UserName);
+	TestEqual("DataPtr2 should see updated UserName", DataPtr2.UserName, UpdatedData.UserName);
+	TestEqual("DataPtr1 should see updated Email", DataPtr1.Email, UpdatedData.Email);
+	TestEqual("DataPtr2 should see updated Email", DataPtr2.Email, UpdatedData.Email);
+	TestEqual("Both reads should return same UserName", DataPtr1.UserName, DataPtr2.UserName);
 	
 	return true;
 }
@@ -216,15 +190,14 @@ bool FPubnubChatRepositoryUserCleanupTest::RunTest(const FString& Parameters)
 	Repository->UpdateUserData(TestUserID, TestData);
 	
 	// Verify data exists
-	FPubnubChatInternalUser* UserData = Repository->GetUserData(TestUserID);
-	TestNotNull("User data should exist before cleanup", UserData);
+	FPubnubChatUserData UserData;
+	TestTrue("User data should exist before cleanup", Repository->TryGetUserData(TestUserID, UserData));
 	
 	// Unregister - should clean up data
 	Repository->UnregisterUser(TestUserID);
 	
 	// Verify data is cleaned up
-	UserData = Repository->GetUserData(TestUserID);
-	TestNull("User data should be cleaned up after unregistration", UserData);
+	TestFalse("User data should be cleaned up after unregistration", Repository->TryGetUserData(TestUserID, UserData));
 	
 	return true;
 }
@@ -241,10 +214,11 @@ bool FPubnubChatRepositoryUserEdgeCasesTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	
+	FPubnubChatUserData UserData;
+	
 	// Test 1: Register with empty ID - should handle gracefully
 	Repository->RegisterUser(TEXT(""));
-	FPubnubChatInternalUser* EmptyData = Repository->GetUserData(TEXT(""));
-	TestNull("Empty UserID should not create data", EmptyData);
+	TestFalse("Empty UserID should not create data", Repository->TryGetUserData(TEXT(""), UserData));
 	
 	// Test 2: Unregister non-existent user - should handle gracefully
 	Repository->UnregisterUser(TEXT("non_existent_user"));
@@ -262,8 +236,7 @@ bool FPubnubChatRepositoryUserEdgeCasesTest::RunTest(const FString& Parameters)
 	// Should not crash
 	
 	// Test 5: Get data for non-existent user
-	FPubnubChatInternalUser* NonExistentData = Repository->GetUserData(TEXT("non_existent"));
-	TestNull("Non-existent user should return nullptr", NonExistentData);
+	TestFalse("Non-existent user should not be found", Repository->TryGetUserData(TEXT("non_existent"), UserData));
 	
 	return true;
 }
@@ -286,13 +259,8 @@ bool FPubnubChatRepositoryChannelRegistrationTest::RunTest(const FString& Parame
 	Repository->RegisterChannel(TestChannelID);
 	
 	// Verify data exists after registration
-	FPubnubChatInternalChannel* ChannelData = Repository->GetChannelData(TestChannelID);
-	TestNotNull("Channel data should exist after registration", ChannelData);
-	
-	if(ChannelData)
-	{
-		TestEqual("ChannelID should match", ChannelData->ChannelID, TestChannelID);
-	}
+	FPubnubChatChannelData ChannelData;
+	TestTrue("Channel data should exist after registration", Repository->TryGetChannelData(TestChannelID, ChannelData));
 	
 	return true;
 }
@@ -317,19 +285,17 @@ bool FPubnubChatRepositoryChannelMultipleRegistrationTest::RunTest(const FString
 	Repository->RegisterChannel(TestChannelID);
 	
 	// Data should still exist
-	FPubnubChatInternalChannel* ChannelData = Repository->GetChannelData(TestChannelID);
-	TestNotNull("Channel data should exist after multiple registrations", ChannelData);
+	FPubnubChatChannelData ChannelData;
+	TestTrue("Channel data should exist after multiple registrations", Repository->TryGetChannelData(TestChannelID, ChannelData));
 	
 	// Unregister twice - data should still exist
 	Repository->UnregisterChannel(TestChannelID);
 	Repository->UnregisterChannel(TestChannelID);
-	ChannelData = Repository->GetChannelData(TestChannelID);
-	TestNotNull("Channel data should still exist after two unregistrations", ChannelData);
+	TestTrue("Channel data should still exist after two unregistrations", Repository->TryGetChannelData(TestChannelID, ChannelData));
 	
 	// Unregister third time - data should be cleaned up
 	Repository->UnregisterChannel(TestChannelID);
-	ChannelData = Repository->GetChannelData(TestChannelID);
-	TestNull("Channel data should be cleaned up when reference count reaches 0", ChannelData);
+	TestFalse("Channel data should be cleaned up when reference count reaches 0", Repository->TryGetChannelData(TestChannelID, ChannelData));
 	
 	return true;
 }
@@ -355,13 +321,8 @@ bool FPubnubChatRepositoryMessageRegistrationTest::RunTest(const FString& Parame
 	Repository->RegisterMessage(CompositeMessageID);
 	
 	// Verify data exists after registration
-	FPubnubChatInternalMessage* MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should exist after registration", MessageData);
-	
-	if(MessageData)
-	{
-		TestEqual("MessageID should match", MessageData->MessageID, CompositeMessageID);
-	}
+	FPubnubChatMessageData MessageData;
+	TestTrue("Message data should exist after registration", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	return true;
 }
@@ -388,23 +349,20 @@ bool FPubnubChatRepositoryMessageMultipleRegistrationTest::RunTest(const FString
 	Repository->RegisterMessage(CompositeMessageID);
 	
 	// Data should still exist (not cleaned up)
-	FPubnubChatInternalMessage* MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should exist after multiple registrations", MessageData);
+	FPubnubChatMessageData MessageData;
+	TestTrue("Message data should exist after multiple registrations", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	// Unregister once - data should still exist
 	Repository->UnregisterMessage(CompositeMessageID);
-	MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should still exist after one unregistration", MessageData);
+	TestTrue("Message data should still exist after one unregistration", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	// Unregister second time - data should still exist
 	Repository->UnregisterMessage(CompositeMessageID);
-	MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should still exist after two unregistrations", MessageData);
+	TestTrue("Message data should still exist after two unregistrations", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	// Unregister third time - data should be cleaned up
 	Repository->UnregisterMessage(CompositeMessageID);
-	MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNull("Message data should be cleaned up when reference count reaches 0", MessageData);
+	TestFalse("Message data should be cleaned up when reference count reaches 0", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	return true;
 }
@@ -437,29 +395,20 @@ bool FPubnubChatRepositoryMessageDataPersistenceTest::RunTest(const FString& Par
 	Repository->UpdateMessageData(CompositeMessageID, TestData);
 	
 	// Verify data is stored
-	FPubnubChatInternalMessage* MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should exist", MessageData);
-	
-	if(MessageData)
-	{
-		TestEqual("Text should match", MessageData->MessageData.Text, TestData.Text);
-		TestEqual("ChannelID should match", MessageData->MessageData.ChannelID, TestData.ChannelID);
-		TestEqual("UserID should match", MessageData->MessageData.UserID, TestData.UserID);
-		TestEqual("Meta should match", MessageData->MessageData.Meta, TestData.Meta);
-	}
+	FPubnubChatMessageData MessageData;
+	TestTrue("Message data should exist", Repository->TryGetMessageData(CompositeMessageID, MessageData));
+	TestEqual("Text should match", MessageData.Text, TestData.Text);
+	TestEqual("ChannelID should match", MessageData.ChannelID, TestData.ChannelID);
+	TestEqual("UserID should match", MessageData.UserID, TestData.UserID);
+	TestEqual("Meta should match", MessageData.Meta, TestData.Meta);
 	
 	// Register again (simulating second object with same composite ID)
 	Repository->RegisterMessage(CompositeMessageID);
 	
 	// Data should still be there and unchanged
-	MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should still exist after second registration", MessageData);
-	
-	if(MessageData)
-	{
-		TestEqual("Text should still match after second registration", MessageData->MessageData.Text, TestData.Text);
-		TestEqual("ChannelID should still match after second registration", MessageData->MessageData.ChannelID, TestData.ChannelID);
-	}
+	TestTrue("Message data should still exist after second registration", Repository->TryGetMessageData(CompositeMessageID, MessageData));
+	TestEqual("Text should still match after second registration", MessageData.Text, TestData.Text);
+	TestEqual("ChannelID should still match after second registration", MessageData.ChannelID, TestData.ChannelID);
 	
 	return true;
 }
@@ -488,12 +437,10 @@ bool FPubnubChatRepositoryMessageDataSharingTest::RunTest(const FString& Paramet
 	InitialData.ChannelID = TestChannelID;
 	Repository->UpdateMessageData(CompositeMessageID, InitialData);
 	
-	// Get data reference
-	FPubnubChatInternalMessage* DataRef1 = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data has to be valid", DataRef1);
-	if (!DataRef1)
-	{ return false;}
-	TestEqual("First reference should see initial data", DataRef1->MessageData.Text, InitialData.Text);
+	// Get data copy
+	FPubnubChatMessageData DataRef1;
+	TestTrue("Message data has to be valid", Repository->TryGetMessageData(CompositeMessageID, DataRef1));
+	TestEqual("First reference should see initial data", DataRef1.Text, InitialData.Text);
 	
 	// Register again (simulating second object)
 	Repository->RegisterMessage(CompositeMessageID);
@@ -505,23 +452,16 @@ bool FPubnubChatRepositoryMessageDataSharingTest::RunTest(const FString& Paramet
 	UpdatedData.UserID = TEXT("test_user_updated");
 	Repository->UpdateMessageData(CompositeMessageID, UpdatedData);
 	
-	// Both references should see updated data
-	FPubnubChatInternalMessage* DataPtr1 = Repository->GetMessageData(CompositeMessageID);
-	FPubnubChatInternalMessage* DataPtr2 = Repository->GetMessageData(CompositeMessageID);
-	
-	TestNotNull("DataPtr1 should exist", DataPtr1);
-	TestNotNull("DataPtr2 should exist", DataPtr2);
-	
-	if(DataPtr1 && DataPtr2)
-	{
-		TestEqual("DataPtr1 should see updated Text", DataPtr1->MessageData.Text, UpdatedData.Text);
-		TestEqual("DataPtr2 should see updated Text", DataPtr2->MessageData.Text, UpdatedData.Text);
-		TestEqual("DataPtr1 should see updated UserID", DataPtr1->MessageData.UserID, UpdatedData.UserID);
-		TestEqual("DataPtr2 should see updated UserID", DataPtr2->MessageData.UserID, UpdatedData.UserID);
-		
-		// Verify they point to the same data (same memory address)
-		TestEqual("Both pointers should point to same data", DataPtr1, DataPtr2);
-	}
+	// Both reads should see updated data
+	FPubnubChatMessageData DataPtr1;
+	FPubnubChatMessageData DataPtr2;
+	TestTrue("DataPtr1 should exist", Repository->TryGetMessageData(CompositeMessageID, DataPtr1));
+	TestTrue("DataPtr2 should exist", Repository->TryGetMessageData(CompositeMessageID, DataPtr2));
+	TestEqual("DataPtr1 should see updated Text", DataPtr1.Text, UpdatedData.Text);
+	TestEqual("DataPtr2 should see updated Text", DataPtr2.Text, UpdatedData.Text);
+	TestEqual("DataPtr1 should see updated UserID", DataPtr1.UserID, UpdatedData.UserID);
+	TestEqual("DataPtr2 should see updated UserID", DataPtr2.UserID, UpdatedData.UserID);
+	TestEqual("Both reads should return same Text", DataPtr1.Text, DataPtr2.Text);
 	
 	return true;
 }
@@ -550,15 +490,14 @@ bool FPubnubChatRepositoryMessageCleanupTest::RunTest(const FString& Parameters)
 	Repository->UpdateMessageData(CompositeMessageID, TestData);
 	
 	// Verify data exists
-	FPubnubChatInternalMessage* MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should exist before cleanup", MessageData);
+	FPubnubChatMessageData MessageData;
+	TestTrue("Message data should exist before cleanup", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	// Unregister - should clean up data
 	Repository->UnregisterMessage(CompositeMessageID);
 	
 	// Verify data is cleaned up
-	MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNull("Message data should be cleaned up after unregistration", MessageData);
+	TestFalse("Message data should be cleaned up after unregistration", Repository->TryGetMessageData(CompositeMessageID, MessageData));
 	
 	return true;
 }
@@ -575,10 +514,11 @@ bool FPubnubChatRepositoryMessageEdgeCasesTest::RunTest(const FString& Parameter
 		return false;
 	}
 	
+	FPubnubChatMessageData MessageData;
+	
 	// Test 1: Register with empty composite ID - should handle gracefully
 	Repository->RegisterMessage(TEXT(""));
-	FPubnubChatInternalMessage* EmptyData = Repository->GetMessageData(TEXT(""));
-	TestNull("Empty composite MessageID should not create data", EmptyData);
+	TestFalse("Empty composite MessageID should not create data", Repository->TryGetMessageData(TEXT(""), MessageData));
 	
 	// Test 2: Unregister non-existent message - should handle gracefully
 	const FString NonExistentChannelID = TEXT("non_existent_channel");
@@ -601,20 +541,14 @@ bool FPubnubChatRepositoryMessageEdgeCasesTest::RunTest(const FString& Parameter
 	// Should not crash
 	
 	// Test 5: Get data for non-existent message
-	FPubnubChatInternalMessage* NonExistentData = Repository->GetMessageData(NonExistentCompositeID);
-	TestNull("Non-existent message should return nullptr", NonExistentData);
+	TestFalse("Non-existent message should not be found", Repository->TryGetMessageData(NonExistentCompositeID, MessageData));
 	
 	// Test 6: Test composite ID format with different separators (should use dot)
 	const FString ChannelWithDot = TEXT("channel.with.dots");
 	const FString Timetoken = TEXT("12345678901234567");
 	const FString CompositeIDWithDots = FString::Printf(TEXT("%s.%s"), *ChannelWithDot, *Timetoken);
 	Repository->RegisterMessage(CompositeIDWithDots);
-	FPubnubChatInternalMessage* DataWithDots = Repository->GetMessageData(CompositeIDWithDots);
-	TestNotNull("Message with dots in channel ID should work", DataWithDots);
-	if(DataWithDots)
-	{
-		TestEqual("Composite ID should preserve channel with dots", DataWithDots->MessageID, CompositeIDWithDots);
-	}
+	TestTrue("Message with dots in channel ID should work", Repository->TryGetMessageData(CompositeIDWithDots, MessageData));
 	Repository->UnregisterMessage(CompositeIDWithDots);
 	
 	return true;
@@ -664,23 +598,19 @@ bool FPubnubChatRepositoryMessageActionsTest::RunTest(const FString& Parameters)
 	Repository->UpdateMessageData(CompositeMessageID, TestData);
 	
 	// Verify actions are stored
-	FPubnubChatInternalMessage* MessageData = Repository->GetMessageData(CompositeMessageID);
-	TestNotNull("Message data should exist", MessageData);
+	FPubnubChatMessageData MessageData;
+	TestTrue("Message data should exist", Repository->TryGetMessageData(CompositeMessageID, MessageData));
+	TestEqual("MessageActions count should match", MessageData.MessageActions.Num(), 2);
 	
-	if(MessageData)
+	if(MessageData.MessageActions.Num() >= 2)
 	{
-		TestEqual("MessageActions count should match", MessageData->MessageData.MessageActions.Num(), 2);
+		TestEqual("First action Type should match", MessageData.MessageActions[0].Type, Action1.Type);
+		TestEqual("First action Value should match", MessageData.MessageActions[0].Value, Action1.Value);
+		TestEqual("First action UserID should match", MessageData.MessageActions[0].UserID, Action1.UserID);
 		
-		if(MessageData->MessageData.MessageActions.Num() >= 2)
-		{
-			TestEqual("First action Type should match", MessageData->MessageData.MessageActions[0].Type, Action1.Type);
-			TestEqual("First action Value should match", MessageData->MessageData.MessageActions[0].Value, Action1.Value);
-			TestEqual("First action UserID should match", MessageData->MessageData.MessageActions[0].UserID, Action1.UserID);
-			
-			TestEqual("Second action Type should match", MessageData->MessageData.MessageActions[1].Type, Action2.Type);
-			TestEqual("Second action Value should match", MessageData->MessageData.MessageActions[1].Value, Action2.Value);
-			TestEqual("Second action UserID should match", MessageData->MessageData.MessageActions[1].UserID, Action2.UserID);
-		}
+		TestEqual("Second action Type should match", MessageData.MessageActions[1].Type, Action2.Type);
+		TestEqual("Second action Value should match", MessageData.MessageActions[1].Value, Action2.Value);
+		TestEqual("Second action UserID should match", MessageData.MessageActions[1].UserID, Action2.UserID);
 	}
 	
 	return true;
@@ -717,26 +647,28 @@ bool FPubnubChatRepositoryClearAllTest::RunTest(const FString& Parameters)
 	Repository->RegisterMessage(CompositeMessageID2);
 	
 	// Verify data exists
-	TestNotNull("User1 data should exist", Repository->GetUserData(TestUserID));
-	TestNotNull("User2 data should exist", Repository->GetUserData(TEXT("test_user_2")));
-	TestNotNull("Channel1 data should exist", Repository->GetChannelData(TestChannelID));
-	TestNotNull("Channel2 data should exist", Repository->GetChannelData(TEXT("test_channel_2")));
-	TestNotNull("Message1 data should exist", Repository->GetMessageData(CompositeMessageID1));
-	TestNotNull("Message2 data should exist", Repository->GetMessageData(CompositeMessageID2));
+	FPubnubChatUserData UserData;
+	FPubnubChatChannelData ChannelData;
+	FPubnubChatMessageData MessageData;
+	TestTrue("User1 data should exist", Repository->TryGetUserData(TestUserID, UserData));
+	TestTrue("User2 data should exist", Repository->TryGetUserData(TEXT("test_user_2"), UserData));
+	TestTrue("Channel1 data should exist", Repository->TryGetChannelData(TestChannelID, ChannelData));
+	TestTrue("Channel2 data should exist", Repository->TryGetChannelData(TEXT("test_channel_2"), ChannelData));
+	TestTrue("Message1 data should exist", Repository->TryGetMessageData(CompositeMessageID1, MessageData));
+	TestTrue("Message2 data should exist", Repository->TryGetMessageData(CompositeMessageID2, MessageData));
 	
 	// Clear all
 	Repository->ClearAll();
 	
 	// Verify all data is cleared
-	TestNull("User1 data should be cleared", Repository->GetUserData(TestUserID));
-	TestNull("User2 data should be cleared", Repository->GetUserData(TEXT("test_user_2")));
-	TestNull("Channel1 data should be cleared", Repository->GetChannelData(TestChannelID));
-	TestNull("Channel2 data should be cleared", Repository->GetChannelData(TEXT("test_channel_2")));
-	TestNull("Message1 data should be cleared", Repository->GetMessageData(CompositeMessageID1));
-	TestNull("Message2 data should be cleared", Repository->GetMessageData(CompositeMessageID2));
+	TestFalse("User1 data should be cleared", Repository->TryGetUserData(TestUserID, UserData));
+	TestFalse("User2 data should be cleared", Repository->TryGetUserData(TEXT("test_user_2"), UserData));
+	TestFalse("Channel1 data should be cleared", Repository->TryGetChannelData(TestChannelID, ChannelData));
+	TestFalse("Channel2 data should be cleared", Repository->TryGetChannelData(TEXT("test_channel_2"), ChannelData));
+	TestFalse("Message1 data should be cleared", Repository->TryGetMessageData(CompositeMessageID1, MessageData));
+	TestFalse("Message2 data should be cleared", Repository->TryGetMessageData(CompositeMessageID2, MessageData));
 	
 	return true;
 }
 
 #endif // WITH_DEV_AUTOMATION_TESTS
-

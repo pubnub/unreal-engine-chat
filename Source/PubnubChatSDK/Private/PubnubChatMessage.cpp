@@ -37,11 +37,10 @@ FPubnubChatMessageData UPubnubChatMessage::GetMessageData() const
 {
 	PUBNUB_CHAT_OBJECT_RETURN_IF_NOT_INITIALIZED(FPubnubChatMessageData());
 
-	// Get message data from repository
-	FPubnubChatInternalMessage* InternalMessage = Chat->ObjectsRepository->GetMessageData(GetInternalMessageID());
-	if (InternalMessage)
+	FPubnubChatMessageData MessageData;
+	if (Chat->ObjectsRepository->TryGetMessageData(GetInternalMessageID(), MessageData))
 	{
-		return InternalMessage->MessageData;
+		return MessageData;
 	}
 
 	UE_LOG(PubnubChatLog, Error, TEXT("Message data not found in repository for ChannelID: %s, Timetoken: %s"), *ChannelID, *Timetoken);

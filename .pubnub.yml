@@ -1,8 +1,17 @@
 name: unreal-engine-chat
-version: 1.0.2
+version: 1.0.3
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2026-06-23
+    version: 1.0.3
+    changes:
+      - type: bug
+        text: "Fix dangling pointer race in `PubnubChatObjectsRepository` getters."
+      - type: improvement
+        text: "Remove leftover `bEnableExceptions`."
+      - type: improvement
+        text: "Add proper JSON serialization in places where unescaped `FString::Printf` was used."
   - date: 2026-04-28
     version: 1.0.2
     changes:
