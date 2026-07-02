@@ -146,6 +146,11 @@ sdks:
                       - Windows 11 Pro
                     target-architecture:
                       - x86-64
+                supported-unreal-engine-versions:
+                    minimum-ue-version:
+                      - 5.0
+                    maximum-ue-version:
+                      - 5.7
 
 
 supported-platforms:
