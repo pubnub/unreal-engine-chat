@@ -900,16 +900,29 @@ FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID,
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
 	
-	//Use PubnubClient ListUserSubscribedChannels (WhereNow) to get all subscribed channels
+	//Use PubnubClient ListUsersFromChannel (HereNow) to get users present on this channel
 	FPubnubListUsersFromChannelSettings HereNowSettings;
 	HereNowSettings.DisableUserID = false;
 	HereNowSettings.Limit = Limit;
 	HereNowSettings.Offset = Offset;
 	FPubnubListUsersFromChannelResult HereNowResult = PubnubClient->ListUsersFromChannel(ChannelID, HereNowSettings);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUserSubscribedChannels");
-	
-	//Add all Users into the FinalResult
-	HereNowResult.Data.UsersState.GetKeys(FinalResult.Users);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUsersFromChannel");
+
+	for (const FPubnubUsersFromChannel& ChannelPresence : HereNowResult.Channels)
+	{
+		if (!ChannelPresence.Channel.IsEmpty() && !ChannelPresence.Channel.Equals(ChannelID))
+		{
+			continue;
+		}
+
+		for (const FPubnubUserFromChannel& User : ChannelPresence.Users)
+		{
+			if (!User.UserID.IsEmpty())
+			{
+				FinalResult.Users.Add(User.UserID);
+			}
+		}
+	}
 	
 	return FinalResult;
 }
