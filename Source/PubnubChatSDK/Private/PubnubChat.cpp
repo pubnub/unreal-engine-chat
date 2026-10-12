@@ -1266,6 +1266,14 @@ FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const 
 	
 	FPubnubChatMembershipsResult GetMembershipsResult = CurrentUser->GetMemberships(Limit, Filter, Sort, Page);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result);
+
+	// If list is empty there is no anything to set so we return here
+	if (GetMembershipsResult.Memberships.IsEmpty())
+	{
+		FinalResult.Page = GetMembershipsResult.Page;
+		FinalResult.Total = GetMembershipsResult.Total;
+		return FinalResult;
+	}
 	
 	FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
 	TArray<FPubnubMembershipInputData> SetMembershipsChannels;

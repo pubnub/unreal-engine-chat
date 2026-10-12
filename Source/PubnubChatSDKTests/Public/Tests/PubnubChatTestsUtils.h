@@ -8,6 +8,9 @@
 #include "Misc/AutomationTest.h"
 #include "Templates/Function.h"
 #include "PubnubChatSubsystem.h"
+#include "PubnubClient.h"
+#include "PubnubEnumLibrary.h"
+#include "PubnubStructLibrary.h"
 
 
 class UPubnubChatSubsystem;
@@ -30,6 +33,27 @@ namespace PubnubChatTests
 	 * Falls back to "demo" if not set
 	 */
 	FString GetTestSubscribeKey();
+
+	/**
+	 * Subscribe returns when the subscription is registered locally. The handshake
+	 * finishes later on UPubnubClient::OnSubscriptionStatusChangedNative.
+	 * PSS_Connected and PSS_SubscriptionChanged both count. Chat does not forward
+	 * PSS_SubscriptionChanged, so tests must listen on the client directly.
+	 * The SDK copies the active channel and group lists from that callback.
+	 */
+	struct FChatHandshakeTracker
+	{
+		TSharedPtr<int32> Epoch = MakeShared<int32>(0);
+		TSharedPtr<TArray<FString>> Channels = MakeShared<TArray<FString>>();
+		TSharedPtr<TArray<FString>> Groups = MakeShared<TArray<FString>>();
+		TSharedPtr<bool> bFailed = MakeShared<bool>(false);
+		TSharedPtr<FString> FailureReason = MakeShared<FString>();
+	};
+
+	bool HandshakeListContainsAll(const TArray<FString>& Have, const TArray<FString>& Need);
+	bool IsHandshakeReady(const FChatHandshakeTracker& Tracker, const TSharedPtr<int32>& Baseline, const TArray<FString>& ExpectedChannels, const TArray<FString>& ExpectedGroups);
+	void TrackHandshake(UPubnubClient* Client, const FChatHandshakeTracker& Tracker);
+	TSharedPtr<int32> SnapshotHandshakeEpoch(const FChatHandshakeTracker& Tracker);
 }
 
 
@@ -54,6 +78,37 @@ public:
 
 private:
 	TFunction<bool()> Condition;
+	float TimeoutSeconds;
+	float ElapsedTime;
+};
+
+class FWaitForChatHandshakeCommand : public IAutomationLatentCommand
+{
+public:
+	FWaitForChatHandshakeCommand(PubnubChatTests::FChatHandshakeTracker InTracker, TSharedPtr<int32> InBaseline, TArray<FString> InChannels, TArray<FString> InGroups, float InTimeoutSeconds)
+		: Tracker(MoveTemp(InTracker))
+		, Baseline(MoveTemp(InBaseline))
+		, ExpectedChannels(MoveTemp(InChannels))
+		, ExpectedGroups(MoveTemp(InGroups))
+		, TimeoutSeconds(InTimeoutSeconds)
+		, ElapsedTime(0.0f)
+	{}
+
+	virtual bool Update() override
+	{
+		ElapsedTime += FApp::GetDeltaTime();
+		if (*Tracker.bFailed || PubnubChatTests::IsHandshakeReady(Tracker, Baseline, ExpectedChannels, ExpectedGroups))
+		{
+			return true;
+		}
+		return ElapsedTime >= TimeoutSeconds;
+	}
+
+private:
+	PubnubChatTests::FChatHandshakeTracker Tracker;
+	TSharedPtr<int32> Baseline;
+	TArray<FString> ExpectedChannels;
+	TArray<FString> ExpectedGroups;
 	float TimeoutSeconds;
 	float ElapsedTime;
 };

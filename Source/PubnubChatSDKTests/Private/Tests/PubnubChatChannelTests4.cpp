@@ -1182,48 +1182,74 @@ bool FPubnubChatChannelStreamTypingMultipleUsersTest::RunTest(const FString& Par
 		*LastReceivedTypingUsers = TypingUserIDs;
 	};
 	CreateResult.Channel->OnTypingChangedNative.AddLambda(TypingLambda);
-	
-	// Stream typing
+
+	// StreamTyping returns when subscribe is registered. Typing signals are not
+	// replayed, so both StartTyping calls wait until that handshake is ready.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 	FPubnubChatOperationResult StreamTypingResult = CreateResult.Channel->StreamTyping();
 	TestFalse("StreamTyping should succeed", StreamTypingResult.Error);
-		
-	// Create separate Chat instance for first other user
-	FPubnubChatConfig ChatConfig1;
-	FPubnubChatInitChatResult InitResult1 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, OtherUserID1, ChatConfig1);
-	TestFalse("Other user1 InitChat should succeed", InitResult1.Result.Error);
-	
-	if(InitResult1.Chat)
+
+	UPubnubChatSubsystem* CapturedChatSubsystem = ChatSubsystem;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CapturedChatSubsystem, OtherUserID1, OtherUserID2, TestPublishKey, TestSubscribeKey]()
 	{
-		FPubnubChatChannelResult OtherChannelResult1 = InitResult1.Chat->GetChannel(TestChannelID);
-		TestFalse("Other user1 GetChannel should succeed", OtherChannelResult1.Result.Error);
-		if(OtherChannelResult1.Channel)
+		TestFalse(FString::Printf(TEXT("Typing handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Typing handshake should include the channel", bChannelReady);
+		if (*Handshake.bFailed || !bChannelReady || !CapturedChatSubsystem || !IsValid(CapturedChatSubsystem))
 		{
-			FPubnubChatOperationResult StartTypingResult1 = OtherChannelResult1.Channel->StartTyping();
+			return;
+		}
+
+		// Initialize both senders before either signal. A typing indicator expires
+		// after TypingTimeout, so a slow InitChat between the two signals drops the first user.
+		FPubnubChatConfig ChatConfig1;
+		FPubnubChatInitChatResult InitResult1 = CapturedChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, OtherUserID1, ChatConfig1);
+		TestFalse("Other user1 InitChat should succeed", InitResult1.Result.Error);
+
+		FPubnubChatConfig ChatConfig2;
+		FPubnubChatInitChatResult InitResult2 = CapturedChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, OtherUserID2, ChatConfig2);
+		TestFalse("Other user2 InitChat should succeed", InitResult2.Result.Error);
+
+		UPubnubChatChannel* Channel1 = nullptr;
+		if (InitResult1.Chat)
+		{
+			FPubnubChatChannelResult OtherChannelResult1 = InitResult1.Chat->GetChannel(TestChannelID);
+			TestFalse("Other user1 GetChannel should succeed", OtherChannelResult1.Result.Error);
+			Channel1 = OtherChannelResult1.Channel;
+		}
+
+		UPubnubChatChannel* Channel2 = nullptr;
+		if (InitResult2.Chat)
+		{
+			FPubnubChatChannelResult OtherChannelResult2 = InitResult2.Chat->GetChannel(TestChannelID);
+			TestFalse("Other user2 GetChannel should succeed", OtherChannelResult2.Result.Error);
+			Channel2 = OtherChannelResult2.Channel;
+		}
+
+		if (Channel1)
+		{
+			FPubnubChatOperationResult StartTypingResult1 = Channel1->StartTyping();
 			TestFalse("StartTyping1 should succeed", StartTypingResult1.Error);
 		}
-		
-		// Cleanup first other user's Chat
-		CleanUpCurrentChatUser(InitResult1.Chat);
-	}
-
-	// Create separate Chat instance for second other user
-	FPubnubChatConfig ChatConfig2;
-	FPubnubChatInitChatResult InitResult2 = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, OtherUserID2, ChatConfig2);
-	TestFalse("Other user2 InitChat should succeed", InitResult2.Result.Error);
-	
-	if(InitResult2.Chat)
-	{
-		FPubnubChatChannelResult OtherChannelResult2 = InitResult2.Chat->GetChannel(TestChannelID);
-		TestFalse("Other user2 GetChannel should succeed", OtherChannelResult2.Result.Error);
-		if(OtherChannelResult2.Channel)
+		if (Channel2)
 		{
-			FPubnubChatOperationResult StartTypingResult2 = OtherChannelResult2.Channel->StartTyping();
+			FPubnubChatOperationResult StartTypingResult2 = Channel2->StartTyping();
 			TestFalse("StartTyping2 should succeed", StartTypingResult2.Error);
 		}
-		
-		// Cleanup second other user's Chat
-		CleanUpCurrentChatUser(InitResult2.Chat);
-	}
+
+		if (InitResult1.Chat)
+		{
+			CleanUpCurrentChatUser(InitResult1.Chat);
+		}
+		if (InitResult2.Chat)
+		{
+			CleanUpCurrentChatUser(InitResult2.Chat);
+		}
+	}, 0.0f));
 	
 	// Wait for typing events to be received
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([TypingEventCount]() -> bool {
