@@ -1203,7 +1203,17 @@ bool FPubnubChatChannelGetInviteesAsyncFullParametersTest::RunTest(const FString
 		return false;
 	}
 	
+	// CreateUser rejects an id left on the server by an earlier run. GetUser is the same setup.
 	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TargetUserID);
+	if (CreateUserResult.Result.Error)
+	{
+		const FString CreateError = CreateUserResult.Result.ErrorMessage;
+		CreateUserResult = Chat->GetUser(TargetUserID);
+		if (CreateUserResult.Result.Error)
+		{
+			AddError(FString::Printf(TEXT("CreateUser failed (%s) and GetUser failed (%s)"), *CreateError, *CreateUserResult.Result.ErrorMessage));
+		}
+	}
 	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
 	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
 	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);

@@ -19,6 +19,7 @@
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
 #include "Misc/AutomationTest.h"
+#include "HAL/PlatformProcess.h"
 
 using namespace PubnubChatTests;
 using namespace PubnubChatTestHelpers;

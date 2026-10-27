@@ -908,14 +908,9 @@ FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID,
 	FPubnubListUsersFromChannelResult HereNowResult = PubnubClient->ListUsersFromChannel(ChannelID, HereNowSettings);
 	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUsersFromChannel");
 
-	for (const FPubnubUsersFromChannel& ChannelPresence : HereNowResult.Channels)
+	if (const FPubnubUsersFromChannel* ChannelPresence = HereNowResult.Channels.Find(ChannelID))
 	{
-		if (!ChannelPresence.Channel.IsEmpty() && !ChannelPresence.Channel.Equals(ChannelID))
-		{
-			continue;
-		}
-
-		for (const FPubnubUserFromChannel& User : ChannelPresence.Users)
+		for (const FPubnubUserFromChannel& User : ChannelPresence->Users)
 		{
 			if (!User.UserID.IsEmpty())
 			{
