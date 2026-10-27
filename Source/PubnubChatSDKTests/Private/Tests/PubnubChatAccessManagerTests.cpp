@@ -1482,9 +1482,9 @@ bool FPubnubChatAccessManagerSetPubnubOriginNotInitializedTest::RunTest(const FS
 		UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
 		if(AccessManager)
 		{
-			// SetPubnubOrigin should return -1 when not initialized
-			int Result = AccessManager->SetPubnubOrigin(TEXT("test.origin.com"));
-			TestEqual("SetPubnubOrigin should return -1 when not initialized", Result, -1);
+			// SetPubnubOrigin should fail when not initialized
+			FPubnubChatOperationResult Result = AccessManager->SetPubnubOrigin(TEXT("test.origin.com"));
+			TestTrue("SetPubnubOrigin should fail when not initialized", Result.Error);
 		}
 	}
 
@@ -1525,9 +1525,9 @@ bool FPubnubChatAccessManagerSetPubnubOriginHappyPathTest::RunTest(const FString
 		
 		if(AccessManager)
 		{
-			// SetPubnubOrigin should return 0 or 1 (0 = set immediately, 1 = set on next connection)
-			int Result = AccessManager->SetPubnubOrigin(TEXT("ps.pndsn.com"));
-			TestTrue("SetPubnubOrigin should return 0 or 1", Result == 0 || Result == 1);
+			// SetPubnubOrigin reports success or failure through FPubnubChatOperationResult
+			FPubnubChatOperationResult Result = AccessManager->SetPubnubOrigin(TEXT("ps.pndsn.com"));
+			TestFalse("SetPubnubOrigin should succeed", Result.Error);
 		}
 	}
 

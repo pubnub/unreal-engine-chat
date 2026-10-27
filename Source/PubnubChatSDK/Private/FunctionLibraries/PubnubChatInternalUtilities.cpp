@@ -1001,7 +1001,11 @@ bool UPubnubChatInternalUtilities::CheckPatternPermission(const TSharedPtr<FJson
 
 	// Iterate through all patterns and check if any match the resource name
 	TArray<FString> PatternKeys;
-	ResourceTypeObject->Values.GetKeys(PatternKeys);
+	PatternKeys.Reserve(ResourceTypeObject->Values.Num());
+	for (const auto& Pair : ResourceTypeObject->Values)
+	{
+		PatternKeys.Add(PubnubCopyJsonKey(Pair.Key));
+	}
 
 	// Check all matching patterns - return true if ANY pattern grants the permission
 	for(const FString& PatternKey : PatternKeys)

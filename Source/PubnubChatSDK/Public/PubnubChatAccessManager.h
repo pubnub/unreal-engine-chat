@@ -3,6 +3,7 @@
 #pragma once
 
 #include "PubnubChatEnumLibrary.h"
+#include "StructLibraries/PubnubChatStructLibrary.h"
 #include "PubnubChatAccessManager.generated.h"
 
 class UPubnubClient;
@@ -52,14 +53,15 @@ public:
 	void SetAuthToken(const FString Token);
 
 	/**
-	 * Sets the PubNub origin (host) used by the underlying client. Use a custom origin only when required by your deployment.
-	 * Local: updates client configuration; a new connection may be required for the change to take effect.
+	 * Sets the origin hostname used by the underlying PubNub client.
+	 * An empty Origin resets the client to the compile-time default origin.
+	 * Local: updates client configuration and reports success or failure as FPubnubChatOperationResult.
 	 *
-	 * @param Origin The origin URL/host to use.
-	 * @return 0 if origin was set, +1 if it will be applied on next connection, -1 if setting origin is not enabled.
+	 * @param Origin The origin hostname to set. Empty resets to the default origin.
+	 * @return FPubnubChatOperationResult. Error is false on success.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pubnub Access Manager")
-	int SetPubnubOrigin(const FString Origin);
+	FPubnubChatOperationResult SetPubnubOrigin(const FString Origin);
 
 	/**
 	 * Returns the current PubNub origin (host) used by the underlying client.

@@ -1471,11 +1471,29 @@ bool FPubnubChatUserStreamMentionsHappyPathTest::RunTest(const FString& Paramete
 		*ReceivedMention = UserMention;
 	});
 
+	// StreamMentions subscribes and returns before the handshake. Publish only after
+	// the mentioned user's client reports that channel as connected.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake((*MentionedChat)->GetPubnubClient(), Handshake);
+
 	FPubnubChatOperationResult StreamResult = (*MentionedChat)->GetCurrentUser()->StreamMentions();
 	TestFalse("StreamMentions should succeed", StreamResult.Error);
 
-	FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText);
-	TestFalse("EmitUserMention should succeed", EmitResult.Error);
+	UPubnubChatChannel* MentionChannel = CreateChannelResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { MentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, MentionedUserID, MentionChannel, MentionedMessageTimetoken, MentionText]()
+	{
+		TestFalse(FString::Printf(TEXT("Mention handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		TestTrue("Mention handshake should include the user channel", Handshake.Channels->Contains(MentionedUserID));
+		if (*Handshake.bFailed || !Handshake.Channels->Contains(MentionedUserID) || !MentionChannel)
+		{
+			return;
+		}
+
+		FPubnubChatOperationResult EmitResult = MentionChannel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText);
+		TestFalse("EmitUserMention should succeed", EmitResult.Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMentionReceived]() -> bool {
 		return *bMentionReceived;
@@ -1579,12 +1597,31 @@ bool FPubnubChatUserStreamMentionsNoOptionalParametersTest::RunTest(const FStrin
 		*MentionCount = *MentionCount + 1;
 	});
 
+	// StreamMentions subscribes and returns before the handshake. Publish only after
+	// the mentioned user's client reports that channel as connected. The second call
+	// is a local no-op once streaming has started.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake((*MentionedChat)->GetPubnubClient(), Handshake);
+
 	FPubnubChatOperationResult FirstStreamResult = (*MentionedChat)->GetCurrentUser()->StreamMentions();
 	FPubnubChatOperationResult SecondStreamResult = (*MentionedChat)->GetCurrentUser()->StreamMentions();
 	TestFalse("First StreamMentions should succeed", FirstStreamResult.Error);
 	TestFalse("Second StreamMentions should also succeed (idempotent)", SecondStreamResult.Error);
 
-	TestFalse("EmitUserMention should succeed", CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText).Error);
+	UPubnubChatChannel* MentionChannel = CreateChannelResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { MentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, MentionedUserID, MentionChannel, MentionedMessageTimetoken, MentionText]()
+	{
+		TestFalse(FString::Printf(TEXT("Mention handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		TestTrue("Mention handshake should include the user channel", Handshake.Channels->Contains(MentionedUserID));
+		if (*Handshake.bFailed || !Handshake.Channels->Contains(MentionedUserID) || !MentionChannel)
+		{
+			return;
+		}
+
+		TestFalse("EmitUserMention should succeed", MentionChannel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText).Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([MentionCount]() -> bool {
 		return *MentionCount >= 1;
@@ -1924,8 +1961,27 @@ bool FPubnubChatUserStopStreamingMentionsPreventsEventsTest::RunTest(const FStri
 		*MentionCount = *MentionCount + 1;
 	});
 
+	// StreamMentions subscribes and returns before the handshake. The first mention
+	// is published only after the mentioned user's client reports that channel as connected.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake((*MentionedChat)->GetPubnubClient(), Handshake);
+
 	TestFalse("StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
-	TestFalse("First EmitUserMention should succeed", CreateChannelResult.Channel->EmitUserMention(MentionedUserID, FirstTimetoken, TEXT("first")).Error);
+
+	UPubnubChatChannel* MentionChannel = CreateChannelResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { MentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, MentionedUserID, MentionChannel, FirstTimetoken]()
+	{
+		TestFalse(FString::Printf(TEXT("Mention handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		TestTrue("Mention handshake should include the user channel", Handshake.Channels->Contains(MentionedUserID));
+		if (*Handshake.bFailed || !Handshake.Channels->Contains(MentionedUserID) || !MentionChannel)
+		{
+			return;
+		}
+
+		TestFalse("First EmitUserMention should succeed", MentionChannel->EmitUserMention(MentionedUserID, FirstTimetoken, TEXT("first")).Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([MentionCount]() -> bool {
 		return *MentionCount >= 1;

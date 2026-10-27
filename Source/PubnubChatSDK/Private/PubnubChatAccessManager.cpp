@@ -93,12 +93,12 @@ void UPubnubChatAccessManager::SetAuthToken(const FString Token)
 	PubnubClient->SetAuthToken(Token);
 }
 
-int UPubnubChatAccessManager::SetPubnubOrigin(const FString Origin)
+FPubnubChatOperationResult UPubnubChatAccessManager::SetPubnubOrigin(const FString Origin)
 {
-	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(IsInitialized, TEXT("This object was already destroyed or was not initialized correctly"), -1);
-	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(PubnubClient, TEXT("This object was already destroyed or was not initialized correctly"), -1);
-	
-	return PubnubClient->SetOrigin(Origin);
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(IsInitialized, TEXT("This object was already destroyed or was not initialized correctly"), FPubnubChatOperationResult::CreateError(TEXT("This object was already destroyed or was not initialized correctly")));
+	PUBNUB_CHAT_RETURN_IF_CONDITION_FAILED(PubnubClient, TEXT("This object was already destroyed or was not initialized correctly"), FPubnubChatOperationResult::CreateError(TEXT("This object was already destroyed or was not initialized correctly")));
+
+	return FPubnubChatOperationResult::FromSingleStep(TEXT("SetOrigin"), PubnubClient->SetOrigin(Origin));
 }
 
 FString UPubnubChatAccessManager::GetPubnubOrigin() const

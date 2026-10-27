@@ -900,16 +900,24 @@ FPubnubChatWhoIsPresentResult UPubnubChat::WhoIsPresent(const FString ChannelID,
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_NOT_INITIALIZED(FinalResult);
 	PUBNUB_CHAT_RETURN_WRAPPER_IF_FIELD_EMPTY(FinalResult, ChannelID);
 	
-	//Use PubnubClient ListUserSubscribedChannels (WhereNow) to get all subscribed channels
+	//Use PubnubClient ListUsersFromChannel (HereNow) to get users present on this channel
 	FPubnubListUsersFromChannelSettings HereNowSettings;
 	HereNowSettings.DisableUserID = false;
 	HereNowSettings.Limit = Limit;
 	HereNowSettings.Offset = Offset;
 	FPubnubListUsersFromChannelResult HereNowResult = PubnubClient->ListUsersFromChannel(ChannelID, HereNowSettings);
-	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUserSubscribedChannels");
-	
-	//Add all Users into the FinalResult
-	HereNowResult.Data.UsersState.GetKeys(FinalResult.Users);
+	PUBNUB_CHAT_ADD_PUBNUB_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, HereNowResult.Result, "ListUsersFromChannel");
+
+	if (const FPubnubUsersFromChannel* ChannelPresence = HereNowResult.Channels.Find(ChannelID))
+	{
+		for (const FPubnubUserFromChannel& User : ChannelPresence->Users)
+		{
+			if (!User.UserID.IsEmpty())
+			{
+				FinalResult.Users.Add(User.UserID);
+			}
+		}
+	}
 	
 	return FinalResult;
 }
@@ -1253,6 +1261,14 @@ FPubnubChatMarkAllMessagesAsReadResult UPubnubChat::MarkAllMessagesAsRead(const 
 	
 	FPubnubChatMembershipsResult GetMembershipsResult = CurrentUser->GetMemberships(Limit, Filter, Sort, Page);
 	PUBNUB_CHAT_MERGE_CHAT_RESULT_AND_RETURN_WRAPPER_IF_ERROR(FinalResult, GetMembershipsResult.Result);
+
+	// If list is empty there is no anything to set so we return here
+	if (GetMembershipsResult.Memberships.IsEmpty())
+	{
+		FinalResult.Page = GetMembershipsResult.Page;
+		FinalResult.Total = GetMembershipsResult.Total;
+		return FinalResult;
+	}
 	
 	FString CurrentTimetoken = UPubnubTimetokenUtilities::GetCurrentUnixTimetoken();
 	TArray<FPubnubMembershipInputData> SetMembershipsChannels;

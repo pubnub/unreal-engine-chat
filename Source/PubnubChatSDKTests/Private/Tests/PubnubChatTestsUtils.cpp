@@ -32,6 +32,65 @@ FString PubnubChatTests::GetTestSubscribeKey()
 	return TEXT("demo");
 }
 
+bool PubnubChatTests::HandshakeListContainsAll(const TArray<FString>& Have, const TArray<FString>& Need)
+{
+	for (const FString& Name : Need)
+	{
+		if (!Have.Contains(Name))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PubnubChatTests::IsHandshakeReady(const FChatHandshakeTracker& Tracker, const TSharedPtr<int32>& Baseline, const TArray<FString>& ExpectedChannels, const TArray<FString>& ExpectedGroups)
+{
+	return *Tracker.Epoch > *Baseline
+		&& HandshakeListContainsAll(*Tracker.Channels, ExpectedChannels)
+		&& HandshakeListContainsAll(*Tracker.Groups, ExpectedGroups);
+}
+
+void PubnubChatTests::TrackHandshake(UPubnubClient* Client, const FChatHandshakeTracker& Tracker)
+{
+	if (!Client)
+	{
+		return;
+	}
+
+	Client->OnSubscriptionStatusChangedNative.AddLambda([Tracker](EPubnubSubscriptionStatus Status, const FPubnubSubscriptionStatusData& Data)
+	{
+		if (Status == EPubnubSubscriptionStatus::PSS_ConnectionError || Status == EPubnubSubscriptionStatus::PSS_DisconnectedUnexpectedly)
+		{
+			*Tracker.bFailed = true;
+			*Tracker.FailureReason = Data.Reason;
+			++(*Tracker.Epoch);
+			return;
+		}
+
+		if (Status == EPubnubSubscriptionStatus::PSS_Connected || Status == EPubnubSubscriptionStatus::PSS_SubscriptionChanged)
+		{
+			*Tracker.Channels = Data.Channels;
+			*Tracker.Groups = Data.ChannelGroups;
+			*Tracker.bFailed = false;
+			++(*Tracker.Epoch);
+			return;
+		}
+
+		if (Status == EPubnubSubscriptionStatus::PSS_Disconnected)
+		{
+			Tracker.Channels->Reset();
+			Tracker.Groups->Reset();
+			++(*Tracker.Epoch);
+		}
+	});
+}
+
+TSharedPtr<int32> PubnubChatTests::SnapshotHandshakeEpoch(const FChatHandshakeTracker& Tracker)
+{
+	return MakeShared<int32>(*Tracker.Epoch);
+}
+
 
 bool FPubnubChatAutomationTestBase::InitTest()
 {
