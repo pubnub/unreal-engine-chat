@@ -10,6 +10,7 @@
 #include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
+#include "FunctionLibraries/PubnubInternalUtilities.h"
 #include "PubnubLibraryVersion.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
@@ -52,7 +53,8 @@ FString UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions()
 FString UPubnubChatInternalUtilities::GetChatSdkVersionSuffix()
 {
 	return FString::Printf(
-		TEXT("-PubNub-Unreal/%d.%d.%d/CA-Unreal/%d.%d.%d"),
+		TEXT("%s-PubNub-Unreal/%d.%d.%d/CA-Unreal/%d.%d.%d"),
+		*UPubnubInternalUtilities::GetOperatingSystemString(),
 		PUBNUB_LIBRARY_VERSION_MAJOR,
 		PUBNUB_LIBRARY_VERSION_MINOR,
 		PUBNUB_LIBRARY_VERSION_PATCH,

@@ -150,7 +150,7 @@ sdks:
                     minimum-ue-version:
                       - 5.0
                     maximum-ue-version:
-                      - 5.7
+                      - 5.8
 
 
 supported-platforms:
