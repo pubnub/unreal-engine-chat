@@ -5,7 +5,8 @@ Prepare the Pubnub Chat Unreal SDK for release.
 Updates:
   - PubnubChat.uplugin: increments Version (VersionName is unchanged)
   - PubnubChatVersion.h: sets PUBNUB_CHAT_VERSION_{MAJOR,MINOR,PATCH}
-    and optionally PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION
+    and optionally PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION plus the version
+    in PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG
 
 Run from any directory; paths are resolved from script location.
 
@@ -91,12 +92,28 @@ def _update_uplugin_version(uplugin_path: Path) -> int:
     return new_version
 
 
+def _update_requires_library_error_msg(content: str, version_str: str, header_path: Path) -> str:
+    """Replace the semver inside PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG."""
+    updated, count = re.subn(
+        r'(#define PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG "[^"\n]*?)\d+\.\d+\.\d+',
+        rf"\g<1>{version_str}",
+        content,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(
+            f"Could not update version in PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG in {header_path}"
+        )
+    return updated
+
+
 def _update_version_header(
     header_path: Path,
     major: int,
     minor: int,
     patch: int,
     required_library_version: int | None,
+    required_library_version_str: str | None = None,
 ) -> None:
     content = header_path.read_text(encoding="utf-8")
 
@@ -128,6 +145,9 @@ def _update_version_header(
         raise SystemExit(f"Could not update PUBNUB_CHAT_VERSION_PATCH in {header_path}")
 
     if required_library_version is not None:
+        if not required_library_version_str:
+            raise SystemExit("Required Pubnub SDK version string is missing.")
+
         content, count = re.subn(
             r"(#define PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION )\d+",
             rf"\g<1>{required_library_version}",
@@ -136,6 +156,10 @@ def _update_version_header(
         )
         if count != 1:
             raise SystemExit(f"Could not update PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION in {header_path}")
+
+        content = _update_requires_library_error_msg(
+            content, required_library_version_str, header_path
+        )
 
     header_path.write_text(content, encoding="utf-8", newline="\n")
 
@@ -179,7 +203,14 @@ def main(argv: list[str] | None = None) -> None:
     release_version_str = f"{major}.{minor}.{patch}"
 
     new_uplugin_version = _update_uplugin_version(uplugin_path)
-    _update_version_header(header_path, major, minor, patch, required_library_version)
+    _update_version_header(
+        header_path,
+        major,
+        minor,
+        patch,
+        required_library_version,
+        required_library_version_str,
+    )
 
     print("\nUpdated files:")
     print(f"  {uplugin_path}")
@@ -191,8 +222,13 @@ def main(argv: list[str] | None = None) -> None:
             f"    PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION -> {required_library_version}"
             f" ({required_library_version_str})"
         )
+        print(
+            "    PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG -> "
+            f"PubnubLibrary {required_library_version_str} or newer"
+        )
     else:
         print("    PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION -> unchanged")
+        print("    PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG -> unchanged")
 
 
 if __name__ == "__main__":

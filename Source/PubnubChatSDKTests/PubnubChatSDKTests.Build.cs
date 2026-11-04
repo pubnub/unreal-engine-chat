@@ -8,6 +8,7 @@ public class PubnubChatSDKTests : ModuleRules
 	public PubnubChatSDKTests(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		bDisableStaticAnalysis = true;
 		
 		PrivateIncludePaths.Add(Path.Combine(new string[] { ModuleDirectory, "..", "PubnubChatSDK" }));
 		

@@ -9,7 +9,7 @@
 
 /** Minimum PubnubLibrary version required. Bump when Chat needs API from a newer PubnubLibrary. Encoding: (major*10000)+(minor*100)+patch. */
 #define PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION 30000
-#define PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG "PubnubChat requires PubnubLibrary 2.0.4 or newer. Please update the PubnubLibrary (Pubnub Core UE SDK) plugin."
+#define PUBNUB_CHAT_REQUIRES_LIBRARY_ERROR_MSG "PubnubChat requires PubnubLibrary 3.0.0 or newer. Please update the PubnubLibrary (Pubnub Core UE SDK) plugin."
 
 #include "PubnubLibraryVersion.h"
 #if PUBNUB_LIBRARY_VERSION < PUBNUB_CHAT_REQUIRES_LIBRARY_VERSION
