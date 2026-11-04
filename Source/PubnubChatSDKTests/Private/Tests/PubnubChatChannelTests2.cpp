@@ -746,40 +746,59 @@ bool FPubnubChatChannelWhoIsPresentAsyncFullParametersTest::RunTest(const FStrin
 	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
 
-	// Connect returns when subscribe is registered locally. Presence is announced
-	// with the handshake, so WhoIsPresent is empty until that status arrives.
+	// Connect returns when subscribe is registered locally. HereNow can still
+	// omit the user after the handshake, so poll until the user is listed.
 	FChatHandshakeTracker Handshake;
 	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
 	TrackHandshake(Chat->GetPubnubClient(), Handshake);
 	CreateResult.Channel->Connect();
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatWhoIsPresentResult> CallbackResult = MakeShared<FPubnubChatWhoIsPresentResult>();
-	FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponse;
-	OnWhoIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatWhoIsPresentResult& Result)
-	{
-		*CallbackResult = Result;
-		*bCallbackReceived = true;
-	});
-	
+
+	TSharedPtr<bool> bCheckPresence = MakeShared<bool>(false);
+	TSharedPtr<bool> bRequestInFlight = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatWhoIsPresentResult> PresenceResult = MakeShared<FPubnubChatWhoIsPresentResult>();
+
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, OnWhoIsPresentResponse]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, bCheckPresence]()
 	{
 		TestFalse(FString::Printf(TEXT("Presence handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
 		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
 		TestTrue("Presence handshake should include the channel", bChannelReady);
-		if (*Handshake.bFailed || !bChannelReady || !CreateResult.Channel)
+		*bCheckPresence = !*Handshake.bFailed && bChannelReady && CreateResult.Channel != nullptr;
+	}, 0.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FPollUntilLatentCommand([bCheckPresence, bRequestInFlight, CreateResult, InitUserID, PresenceResult]()
+	{
+		if (!*bCheckPresence || !CreateResult.Channel)
+		{
+			return true;
+		}
+		if (!PresenceResult->Result.Error && PresenceResult->Users.Contains(InitUserID))
+		{
+			return true;
+		}
+		if (*bRequestInFlight)
+		{
+			return false;
+		}
+
+		*bRequestInFlight = true;
+		FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponse;
+		OnWhoIsPresentResponse.BindLambda([bRequestInFlight, PresenceResult](const FPubnubChatWhoIsPresentResult& Result)
+		{
+			*PresenceResult = Result;
+			*bRequestInFlight = false;
+		});
+		CreateResult.Channel->WhoIsPresentAsync(OnWhoIsPresentResponse, 1000, 0);
+		return false;
+	}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bCheckPresence, PresenceResult, InitUserID]()
+	{
+		if (!*bCheckPresence)
 		{
 			return;
 		}
-		CreateResult.Channel->WhoIsPresentAsync(OnWhoIsPresentResponse, 1000, 0);
+		TestFalse("WhoIsPresentAsync should succeed", PresenceResult->Result.Error);
+		TestTrue("Users should include current user", PresenceResult->Users.Contains(InitUserID));
 	}, 0.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, InitUserID]()
-	{
-		TestFalse("WhoIsPresentAsync should succeed", CallbackResult->Result.Error);
-		TestTrue("Users should include current user", CallbackResult->Users.Contains(InitUserID));
-	}, 0.1f));
 	
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
@@ -836,40 +855,59 @@ bool FPubnubChatChannelIsPresentAsyncFullParametersTest::RunTest(const FString& 
 	}
 	CreateResult.Channel->Join(FPubnubChatMembershipData());
 
-	// Connect returns when subscribe is registered locally. Presence is announced
-	// with the handshake, so WhereNow is empty until that status arrives.
+	// Connect returns when subscribe is registered locally. WhereNow can still
+	// omit the channel after the handshake, so poll until the user is present.
 	FChatHandshakeTracker Handshake;
 	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
 	TrackHandshake(Chat->GetPubnubClient(), Handshake);
 	CreateResult.Channel->Connect();
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatIsPresentResult> CallbackResult = MakeShared<FPubnubChatIsPresentResult>();
-	FOnPubnubChatIsPresentResponseNative OnIsPresentResponse;
-	OnIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatIsPresentResult& Result)
-	{
-		*CallbackResult = Result;
-		*bCallbackReceived = true;
-	});
-	
+
+	TSharedPtr<bool> bCheckPresence = MakeShared<bool>(false);
+	TSharedPtr<bool> bRequestInFlight = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatIsPresentResult> PresenceResult = MakeShared<FPubnubChatIsPresentResult>();
+
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, InitUserID, OnIsPresentResponse]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, bCheckPresence]()
 	{
 		TestFalse(FString::Printf(TEXT("Presence handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
 		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
 		TestTrue("Presence handshake should include the channel", bChannelReady);
-		if (*Handshake.bFailed || !bChannelReady || !CreateResult.Channel)
+		*bCheckPresence = !*Handshake.bFailed && bChannelReady && CreateResult.Channel != nullptr;
+	}, 0.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FPollUntilLatentCommand([bCheckPresence, bRequestInFlight, CreateResult, InitUserID, PresenceResult]()
+	{
+		if (!*bCheckPresence || !CreateResult.Channel)
+		{
+			return true;
+		}
+		if (!PresenceResult->Result.Error && PresenceResult->IsPresent)
+		{
+			return true;
+		}
+		if (*bRequestInFlight)
+		{
+			return false;
+		}
+
+		*bRequestInFlight = true;
+		FOnPubnubChatIsPresentResponseNative OnIsPresentResponse;
+		OnIsPresentResponse.BindLambda([bRequestInFlight, PresenceResult](const FPubnubChatIsPresentResult& Result)
+		{
+			*PresenceResult = Result;
+			*bRequestInFlight = false;
+		});
+		CreateResult.Channel->IsPresentAsync(InitUserID, OnIsPresentResponse);
+		return false;
+	}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bCheckPresence, PresenceResult]()
+	{
+		if (!*bCheckPresence)
 		{
 			return;
 		}
-		CreateResult.Channel->IsPresentAsync(InitUserID, OnIsPresentResponse);
+		TestFalse("IsPresentAsync should succeed", PresenceResult->Result.Error);
+		TestTrue("IsPresentAsync should return true", PresenceResult->IsPresent);
 	}, 0.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
-	{
-		TestFalse("IsPresentAsync should succeed", CallbackResult->Result.Error);
-		TestTrue("IsPresentAsync should return true", CallbackResult->IsPresent);
-	}, 0.1f));
 	
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{

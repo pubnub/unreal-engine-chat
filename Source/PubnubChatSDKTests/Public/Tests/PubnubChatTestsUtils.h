@@ -82,6 +82,46 @@ private:
 	float ElapsedTime;
 };
 
+/**
+ * Calls Condition immediately, then again every IntervalSeconds, until it returns true or the timeout elapses.
+ * Use this when the check hits the network. FWaitUntilLatentCommand would call it on every frame.
+ * A timeout still finishes the command. The following command asserts the outcome.
+ */
+class FPollUntilLatentCommand : public IAutomationLatentCommand
+{
+public:
+	FPollUntilLatentCommand(TFunction<bool()> InCondition, float InTimeoutSeconds, float InIntervalSeconds = 0.5f)
+		: Condition(MoveTemp(InCondition))
+		, TimeoutSeconds(InTimeoutSeconds)
+		, IntervalSeconds(InIntervalSeconds)
+		, ElapsedTime(0.0f)
+		, TimeSinceAttempt(InIntervalSeconds)
+	{}
+
+	virtual bool Update() override
+	{
+		const float Delta = FApp::GetDeltaTime();
+		ElapsedTime += Delta;
+		TimeSinceAttempt += Delta;
+		if (TimeSinceAttempt >= IntervalSeconds)
+		{
+			TimeSinceAttempt = 0.0f;
+			if (Condition())
+			{
+				return true;
+			}
+		}
+		return ElapsedTime >= TimeoutSeconds;
+	}
+
+private:
+	TFunction<bool()> Condition;
+	float TimeoutSeconds;
+	float IntervalSeconds;
+	float ElapsedTime;
+	float TimeSinceAttempt;
+};
+
 class FWaitForChatHandshakeCommand : public IAutomationLatentCommand
 {
 public:
