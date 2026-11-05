@@ -1,0 +1,48 @@
+name: Static code analyser
+
+on:
+  pull_request:
+    paths:
+      - "Source/PubnubChatSDK/**"
+      - "PubnubChat.uplugin"
+      - "Scripts/run_static_analysis_mac.sh"
+      - ".github/workflows/static-code-analyser.yml"
+  push:
+    branches: [master]
+    paths:
+      - "Source/PubnubChatSDK/**"
+      - "PubnubChat.uplugin"
+      - "Scripts/run_static_analysis_mac.sh"
+      - ".github/workflows/static-code-analyser.yml"
+
+jobs:
+  static-code-analyser:
+    name: Static code analyser
+    runs-on:
+      group: macos-gh
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Checkout PubnubLibrary
+        uses: actions/checkout@v4
+        with:
+          repository: pubnub/unreal-engine
+          ref: master
+          path: pubnub-library
+          token: ${{ secrets.GH_TOKEN }}
+      - name: Run static code analyser
+        env:
+          UE_ROOT: ${{ vars.UE_ROOT || '/Users/Shared/Epic Games/UE_5.5' }}
+          PUBNUB_LIBRARY_ROOT: ${{ github.workspace }}/pubnub-library
+        run: bash Scripts/run_static_analysis_mac.sh
+      - name: Upload analyzer reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-code-analyser-reports
+          path: clang-analysis-reports/**
+          if-no-files-found: ignore
