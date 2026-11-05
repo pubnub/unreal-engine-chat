@@ -3776,6 +3776,13 @@ bool FPubnubChatChannelStreamPresenceHappyPathTest::RunTest(const FString& Param
 		return false;
 	}
 
+	// StreamPresence subscribes with presence and returns when that subscription
+	// is registered locally. Occupancy is announced with the handshake, so
+	// WhoIsPresent is empty until that status arrives.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 	FPubnubChatOperationResult StreamResult = CreateResult.Channel->StreamPresence();
 	TestFalse("StreamPresence should succeed", StreamResult.Error);
 
@@ -3790,27 +3797,39 @@ bool FPubnubChatChannelStreamPresenceHappyPathTest::RunTest(const FString& Param
 	}
 	TestTrue("Should have Subscribe step", bFoundSubscribeStep);
 
-	// Verify that WhoIsPresent works while stream is active and includes at least current user.
-	FPubnubChatWhoIsPresentResult WhoIsPresentResult = CreateResult.Channel->WhoIsPresent();
-	TestFalse("WhoIsPresent should succeed", WhoIsPresentResult.Result.Error);
-	TestTrue("WhoIsPresent should contain at least one user", WhoIsPresentResult.Users.Num() >= 1);
-
-	bool bFoundInitUser = false;
-	for(const FString& UserID : WhoIsPresentResult.Users)
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, InitUserID, Chat]()
 	{
-		if(UserID == InitUserID)
+		TestFalse(FString::Printf(TEXT("Presence handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Presence handshake should include the channel", bChannelReady);
+		if (*Handshake.bFailed || !bChannelReady || !CreateResult.Channel)
 		{
-			bFoundInitUser = true;
-			break;
+			return;
 		}
-	}
-	TestTrue("Current user should be present", bFoundInitUser);
 
-	CreateResult.Channel->StopStreamingPresence();
-	Chat->DeleteChannel(TestChannelID);
-	Chat->DeleteUser(InitUserID);
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
+		// Verify that WhoIsPresent works while stream is active and includes at least current user.
+		FPubnubChatWhoIsPresentResult WhoIsPresentResult = CreateResult.Channel->WhoIsPresent();
+		TestFalse("WhoIsPresent should succeed", WhoIsPresentResult.Result.Error);
+		TestTrue("WhoIsPresent should contain at least one user", WhoIsPresentResult.Users.Num() >= 1);
+		TestTrue("Current user should be present", WhoIsPresentResult.Users.Contains(InitUserID));
+	}, 0.0f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID, InitUserID]()
+	{
+		if(CreateResult.Channel)
+		{
+			CreateResult.Channel->StopStreamingPresence();
+		}
+		if(Chat)
+		{
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(InitUserID);
+		}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.1f));
+
 	return true;
 }
 
@@ -5247,20 +5266,38 @@ bool FPubnubChatChannelEmitUserMentionHappyPathTest::RunTest(const FString& Para
 
 	(*MentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([bMentionReceived, LastMention](const FPubnubChatUserMention& UserMention)
 	{
-		*bMentionReceived = true;
 		*LastMention = UserMention;
+		*bMentionReceived = true;
 	});
+
+	// StreamMentions subscribes and returns before the handshake. Publish only after
+	// the mentioned user's client reports that channel as connected.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake((*MentionedChat)->GetPubnubClient(), Handshake);
 
 	FPubnubChatOperationResult StreamResult = (*MentionedChat)->GetCurrentUser()->StreamMentions();
 	TestFalse("StreamMentions should succeed", StreamResult.Error);
 
-	FPubnubChatOperationResult EmitResult = CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText);
-	TestFalse("EmitUserMention should succeed", EmitResult.Error);
-	TestTrue("EmitUserMention should contain at least one step", EmitResult.StepResults.Num() > 0);
-	if (EmitResult.StepResults.Num() > 0)
+	UPubnubChatChannel* MentionChannel = CreateChannelResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { MentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, MentionedUserID, MentionChannel, MentionedMessageTimetoken, MentionText]()
 	{
-		TestEqual("First step should be PublishMessage", EmitResult.StepResults[0].StepName, FString("PublishMessage"));
-	}
+		TestFalse(FString::Printf(TEXT("Mention handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		TestTrue("Mention handshake should include the user channel", Handshake.Channels->Contains(MentionedUserID));
+		if (*Handshake.bFailed || !Handshake.Channels->Contains(MentionedUserID) || !MentionChannel)
+		{
+			return;
+		}
+
+		FPubnubChatOperationResult EmitResult = MentionChannel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText);
+		TestFalse("EmitUserMention should succeed", EmitResult.Error);
+		TestTrue("EmitUserMention should contain at least one step", EmitResult.StepResults.Num() > 0);
+		if (EmitResult.StepResults.Num() > 0)
+		{
+			TestEqual("First step should be PublishMessage", EmitResult.StepResults[0].StepName, FString("PublishMessage"));
+		}
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMentionReceived]() -> bool {
 		return *bMentionReceived;
@@ -5445,8 +5482,7 @@ bool FPubnubChatChannelEmitUserMentionTargetsOnlyRecipientTest::RunTest(const FS
 		return false;
 	}
 
-	Chat->CreateUser(MentionedUserID, FPubnubChatUserData());
-	Chat->CreateUser(NonMentionedUserID, FPubnubChatUserData());
+	TestFalse("CreateUser for mentioned user should succeed", Chat->CreateUser(MentionedUserID, FPubnubChatUserData()).Result.Error);
 
 	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
 	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
@@ -5468,15 +5504,11 @@ bool FPubnubChatChannelEmitUserMentionTargetsOnlyRecipientTest::RunTest(const FS
 	FPubnubChatInitChatResult MentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, MentionedUserID, MentionedChatConfig);
 	TestFalse("Mentioned user InitChat should succeed", MentionedInitResult.Result.Error);
 	TSharedPtr<UPubnubChat*> MentionedChat = MakeShared<UPubnubChat*>(MentionedInitResult.Chat);
+	TSharedPtr<UPubnubChat*> NonMentionedChat = MakeShared<UPubnubChat*>(nullptr);
 
-	FPubnubChatConfig NonMentionedChatConfig;
-	FPubnubChatInitChatResult NonMentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, NonMentionedUserID, NonMentionedChatConfig);
-	TestFalse("Non-mentioned user InitChat should succeed", NonMentionedInitResult.Result.Error);
-	TSharedPtr<UPubnubChat*> NonMentionedChat = MakeShared<UPubnubChat*>(NonMentionedInitResult.Chat);
-
-	if(!*MentionedChat || !*NonMentionedChat)
+	if(!*MentionedChat)
 	{
-		AddError("Both additional chats should be initialized");
+		AddError("Mentioned chat should be initialized");
 		if(Chat)
 		{
 			Chat->DeleteChannel(TestChannelID);
@@ -5495,18 +5527,63 @@ bool FPubnubChatChannelEmitUserMentionTargetsOnlyRecipientTest::RunTest(const FS
 	{
 		*MentionedUserCount = *MentionedUserCount + 1;
 	});
-	(*NonMentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([NonMentionedUserCount](const FPubnubChatUserMention& UserMention)
-	{
-		*NonMentionedUserCount = *NonMentionedUserCount + 1;
-	});
 
+	// StreamMentions returns when the subscription is registered locally.
+	// Connect the mentioned user before creating the other user. A second
+	// App Context create immediately before this subscribe leaves the
+	// handshake status unreported, so the mention would be published too early.
+	FChatHandshakeTracker MentionedHandshake;
+	TSharedPtr<int32> MentionedHandshakeBaseline = SnapshotHandshakeEpoch(MentionedHandshake);
+	TrackHandshake((*MentionedChat)->GetPubnubClient(), MentionedHandshake);
 	TestFalse("Mentioned user StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
-	TestFalse("Non-mentioned user StreamMentions should succeed", (*NonMentionedChat)->GetCurrentUser()->StreamMentions().Error);
 
-	TestFalse(
-		"EmitUserMention should succeed",
-		CreateChannelResult.Channel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText).Error
-	);
+	FChatHandshakeTracker NonMentionedHandshake;
+	TSharedPtr<int32> NonMentionedHandshakeBaseline = MakeShared<int32>(0);
+
+	UPubnubChatChannel* MentionChannel = CreateChannelResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(MentionedHandshake, MentionedHandshakeBaseline, { MentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Chat, MentionedHandshake, MentionedUserID, TestPublishKey, TestSubscribeKey, NonMentionedUserID, NonMentionedChat, NonMentionedHandshake, NonMentionedHandshakeBaseline, NonMentionedUserCount]()
+	{
+		TestFalse(FString::Printf(TEXT("Mentioned handshake failed: %s"), **MentionedHandshake.FailureReason), *MentionedHandshake.bFailed);
+		TestTrue("Mentioned handshake should include the user channel", MentionedHandshake.Channels->Contains(MentionedUserID));
+		if (*MentionedHandshake.bFailed || !MentionedHandshake.Channels->Contains(MentionedUserID))
+		{
+			return;
+		}
+
+		FPubnubChatConfig NonMentionedChatConfig;
+		TestFalse("CreateUser for non-mentioned user should succeed", Chat->CreateUser(NonMentionedUserID, FPubnubChatUserData()).Result.Error);
+		FPubnubChatInitChatResult NonMentionedInitResult = ChatSubsystem->InitChat(TestPublishKey, TestSubscribeKey, NonMentionedUserID, NonMentionedChatConfig);
+		TestFalse("Non-mentioned user InitChat should succeed", NonMentionedInitResult.Result.Error);
+		*NonMentionedChat = NonMentionedInitResult.Chat;
+		if(!*NonMentionedChat)
+		{
+			return;
+		}
+
+		(*NonMentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([NonMentionedUserCount](const FPubnubChatUserMention& UserMention)
+		{
+			*NonMentionedUserCount = *NonMentionedUserCount + 1;
+		});
+		TrackHandshake((*NonMentionedChat)->GetPubnubClient(), NonMentionedHandshake);
+		*NonMentionedHandshakeBaseline = *NonMentionedHandshake.Epoch;
+		TestFalse("Non-mentioned user StreamMentions should succeed", (*NonMentionedChat)->GetCurrentUser()->StreamMentions().Error);
+	}, 0.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(NonMentionedHandshake, NonMentionedHandshakeBaseline, { NonMentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, NonMentionedHandshake, NonMentionedUserID, MentionChannel, MentionedUserID, MentionedMessageTimetoken, MentionText]()
+	{
+		TestFalse(FString::Printf(TEXT("Non-mentioned handshake failed: %s"), **NonMentionedHandshake.FailureReason), *NonMentionedHandshake.bFailed);
+		TestTrue("Non-mentioned handshake should include the user channel", NonMentionedHandshake.Channels->Contains(NonMentionedUserID));
+		if (*NonMentionedHandshake.bFailed || !NonMentionedHandshake.Channels->Contains(NonMentionedUserID) || !MentionChannel)
+		{
+			return;
+		}
+
+		TestFalse(
+			"EmitUserMention should succeed",
+			MentionChannel->EmitUserMention(MentionedUserID, MentionedMessageTimetoken, MentionText).Error
+		);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([MentionedUserCount]() -> bool {
 		return *MentionedUserCount >= 1;
@@ -5616,12 +5693,25 @@ bool FPubnubChatChannelEmitUserMentionFromThreadIncludesParentChannelTest::RunTe
 		}
 	});
 
+	// Connect returns when the subscription is registered locally. SendText before
+	// the handshake finishes is not delivered to this listener.
+	FChatHandshakeTracker ParentHandshake;
+	TSharedPtr<int32> ParentHandshakeBaseline = SnapshotHandshakeEpoch(ParentHandshake);
+	TrackHandshake(SenderChat->GetPubnubClient(), ParentHandshake);
 	TestFalse("Connect parent channel should succeed", CreateChannelResult.Channel->Connect().Error);
 
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateChannelResult, ParentMessageText]()
+	UPubnubChatChannel* ParentChannel = CreateChannelResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(ParentHandshake, ParentHandshakeBaseline, { ParentChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, ParentHandshake, ParentChannelID, ParentChannel, ParentMessageText]()
 	{
-		TestFalse("SendText to parent channel should succeed", CreateChannelResult.Channel->SendText(ParentMessageText).Error);
-	}, 0.5f));
+		TestFalse(FString::Printf(TEXT("Parent handshake failed: %s"), **ParentHandshake.FailureReason), *ParentHandshake.bFailed);
+		TestTrue("Parent handshake should include the channel", ParentHandshake.Channels->Contains(ParentChannelID));
+		if (*ParentHandshake.bFailed || !ParentHandshake.Channels->Contains(ParentChannelID) || !ParentChannel)
+		{
+			return;
+		}
+		TestFalse("SendText to parent channel should succeed", ParentChannel->SendText(ParentMessageText).Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bParentMessageReceived]() -> bool {
 		return *bParentMessageReceived;
@@ -5630,8 +5720,11 @@ bool FPubnubChatChannelEmitUserMentionFromThreadIncludesParentChannelTest::RunTe
 	TSharedPtr<UPubnubChatThreadChannel*> ThreadChannel = MakeShared<UPubnubChatThreadChannel*>(nullptr);
 	TSharedPtr<bool> bMentionReceived = MakeShared<bool>(false);
 	TSharedPtr<FPubnubChatUserMention> ReceivedMention = MakeShared<FPubnubChatUserMention>();
+	// Baseline is written inside the latent command immediately before StreamMentions.
+	FChatHandshakeTracker MentionHandshake;
+	TSharedPtr<int32> MentionHandshakeBaseline = MakeShared<int32>(0);
 
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, ParentMessage, ThreadChannel, bMentionReceived, ReceivedMention]()
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, SenderChat, MentionedChat, ParentMessage, ThreadChannel, bMentionReceived, ReceivedMention, MentionHandshake, MentionHandshakeBaseline]()
 	{
 		if(!*ParentMessage)
 		{
@@ -5648,17 +5741,33 @@ bool FPubnubChatChannelEmitUserMentionFromThreadIncludesParentChannelTest::RunTe
 		}
 		*ThreadChannel = CreateThreadResult.ThreadChannel;
 
-		TestFalse("StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
 		(*MentionedChat)->GetCurrentUser()->OnMentionedNative.AddLambda([bMentionReceived, ReceivedMention](const FPubnubChatUserMention& Mention)
 		{
 			*bMentionReceived = true;
 			*ReceivedMention = Mention;
 		});
 
+		// StreamMentions subscribes and returns before the handshake. Publish only after
+		// the mentioned user's client reports that channel as connected.
+		TrackHandshake((*MentionedChat)->GetPubnubClient(), MentionHandshake);
+		*MentionHandshakeBaseline = *MentionHandshake.Epoch;
+		TestFalse("StreamMentions should succeed", (*MentionedChat)->GetCurrentUser()->StreamMentions().Error);
+	}, 0.2f));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(MentionHandshake, MentionHandshakeBaseline, { MentionedUserID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, MentionHandshake, MentionedUserID, MentionedChat, ThreadChannel, ParentMessage]()
+	{
+		TestFalse(FString::Printf(TEXT("Mention handshake failed: %s"), **MentionHandshake.FailureReason), *MentionHandshake.bFailed);
+		TestTrue("Mention handshake should include the user channel", MentionHandshake.Channels->Contains(MentionedUserID));
+		if (*MentionHandshake.bFailed || !MentionHandshake.Channels->Contains(MentionedUserID) || !*ThreadChannel || !*ParentMessage)
+		{
+			return;
+		}
+
 		const FString ParentMessageTimetoken = (*ParentMessage)->GetMessageTimetoken();
 		TestFalse("Parent message timetoken should not be empty", ParentMessageTimetoken.IsEmpty());
 		TestFalse("EmitUserMention from thread channel should succeed", (*ThreadChannel)->EmitUserMention((*MentionedChat)->GetCurrentUser()->GetUserID(), ParentMessageTimetoken, TEXT("thread mention payload text")).Error);
-	}, 0.2f));
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMentionReceived]() -> bool {
 		return *bMentionReceived;

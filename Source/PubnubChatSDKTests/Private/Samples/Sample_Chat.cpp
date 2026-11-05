@@ -908,19 +908,15 @@ void ASample_Chat::AccessManagerSetOriginSample()
 	UPubnubChatAccessManager* AccessManager = Chat->GetAccessManager();
 
 	FString CustomOrigin = "abc.pubnubapi.com";
-	int Result = AccessManager->SetPubnubOrigin(CustomOrigin);
+	FPubnubChatOperationResult Result = AccessManager->SetPubnubOrigin(CustomOrigin);
 
-	if (Result == 0)
+	if (!Result.Error)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Custom origin set successfully."));
 	}
-	else if (Result == 1)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Custom origin will be applied on reconnect."));
-	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Setting custom origin is not enabled."));
+		UE_LOG(LogTemp, Warning, TEXT("Setting custom origin failed: %s"), *Result.ErrorMessage);
 	}
 }
 

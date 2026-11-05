@@ -745,25 +745,60 @@ bool FPubnubChatChannelWhoIsPresentAsyncFullParametersTest::RunTest(const FStrin
 	}
 	FPubnubChatJoinResult JoinResult = CreateResult.Channel->Join(FPubnubChatMembershipData());
 	TestFalse("Join should succeed", JoinResult.Result.Error);
+
+	// Connect returns when subscribe is registered locally. HereNow can still
+	// omit the user after the handshake, so poll until the user is listed.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
 	CreateResult.Channel->Connect();
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatWhoIsPresentResult> CallbackResult = MakeShared<FPubnubChatWhoIsPresentResult>();
-	FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponse;
-	OnWhoIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatWhoIsPresentResult& Result)
+
+	TSharedPtr<bool> bCheckPresence = MakeShared<bool>(false);
+	TSharedPtr<bool> bRequestInFlight = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatWhoIsPresentResult> PresenceResult = MakeShared<FPubnubChatWhoIsPresentResult>();
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, bCheckPresence]()
 	{
-		*CallbackResult = Result;
-		*bCallbackReceived = true;
-	});
-	
-	CreateResult.Channel->WhoIsPresentAsync(OnWhoIsPresentResponse, 1000, 0);
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult, InitUserID]()
+		TestFalse(FString::Printf(TEXT("Presence handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Presence handshake should include the channel", bChannelReady);
+		*bCheckPresence = !*Handshake.bFailed && bChannelReady && CreateResult.Channel != nullptr;
+	}, 0.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FPollUntilLatentCommand([bCheckPresence, bRequestInFlight, CreateResult, InitUserID, PresenceResult]()
 	{
-		TestFalse("WhoIsPresentAsync should succeed", CallbackResult->Result.Error);
-		TestTrue("Users should include current user", CallbackResult->Users.Contains(InitUserID));
-	}, 0.1f));
+		if (!*bCheckPresence || !CreateResult.Channel)
+		{
+			return true;
+		}
+		if (!PresenceResult->Result.Error && PresenceResult->Users.Contains(InitUserID))
+		{
+			return true;
+		}
+		if (*bRequestInFlight)
+		{
+			return false;
+		}
+
+		*bRequestInFlight = true;
+		FOnPubnubChatWhoIsPresentResponseNative OnWhoIsPresentResponse;
+		OnWhoIsPresentResponse.BindLambda([bRequestInFlight, PresenceResult](const FPubnubChatWhoIsPresentResult& Result)
+		{
+			*PresenceResult = Result;
+			*bRequestInFlight = false;
+		});
+		CreateResult.Channel->WhoIsPresentAsync(OnWhoIsPresentResponse, 1000, 0);
+		return false;
+	}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bCheckPresence, PresenceResult, InitUserID]()
+	{
+		if (!*bCheckPresence)
+		{
+			return;
+		}
+		TestFalse("WhoIsPresentAsync should succeed", PresenceResult->Result.Error);
+		TestTrue("Users should include current user", PresenceResult->Users.Contains(InitUserID));
+	}, 0.0f));
 	
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
@@ -819,25 +854,60 @@ bool FPubnubChatChannelIsPresentAsyncFullParametersTest::RunTest(const FString& 
 		return false;
 	}
 	CreateResult.Channel->Join(FPubnubChatMembershipData());
+
+	// Connect returns when subscribe is registered locally. WhereNow can still
+	// omit the channel after the handshake, so poll until the user is present.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
 	CreateResult.Channel->Connect();
-	
-	TSharedPtr<bool> bCallbackReceived = MakeShared<bool>(false);
-	TSharedPtr<FPubnubChatIsPresentResult> CallbackResult = MakeShared<FPubnubChatIsPresentResult>();
-	FOnPubnubChatIsPresentResponseNative OnIsPresentResponse;
-	OnIsPresentResponse.BindLambda([bCallbackReceived, CallbackResult](const FPubnubChatIsPresentResult& Result)
+
+	TSharedPtr<bool> bCheckPresence = MakeShared<bool>(false);
+	TSharedPtr<bool> bRequestInFlight = MakeShared<bool>(false);
+	TSharedPtr<FPubnubChatIsPresentResult> PresenceResult = MakeShared<FPubnubChatIsPresentResult>();
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, CreateResult, bCheckPresence]()
 	{
-		*CallbackResult = Result;
-		*bCallbackReceived = true;
-	});
-	
-	CreateResult.Channel->IsPresentAsync(InitUserID, OnIsPresentResponse);
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bCallbackReceived]() { return *bCallbackReceived; }, MAX_WAIT_TIME));
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CallbackResult]()
+		TestFalse(FString::Printf(TEXT("Presence handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Presence handshake should include the channel", bChannelReady);
+		*bCheckPresence = !*Handshake.bFailed && bChannelReady && CreateResult.Channel != nullptr;
+	}, 0.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FPollUntilLatentCommand([bCheckPresence, bRequestInFlight, CreateResult, InitUserID, PresenceResult]()
 	{
-		TestFalse("IsPresentAsync should succeed", CallbackResult->Result.Error);
-		TestTrue("IsPresentAsync should return true", CallbackResult->IsPresent);
-	}, 0.1f));
+		if (!*bCheckPresence || !CreateResult.Channel)
+		{
+			return true;
+		}
+		if (!PresenceResult->Result.Error && PresenceResult->IsPresent)
+		{
+			return true;
+		}
+		if (*bRequestInFlight)
+		{
+			return false;
+		}
+
+		*bRequestInFlight = true;
+		FOnPubnubChatIsPresentResponseNative OnIsPresentResponse;
+		OnIsPresentResponse.BindLambda([bRequestInFlight, PresenceResult](const FPubnubChatIsPresentResult& Result)
+		{
+			*PresenceResult = Result;
+			*bRequestInFlight = false;
+		});
+		CreateResult.Channel->IsPresentAsync(InitUserID, OnIsPresentResponse);
+		return false;
+	}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, bCheckPresence, PresenceResult]()
+	{
+		if (!*bCheckPresence)
+		{
+			return;
+		}
+		TestFalse("IsPresentAsync should succeed", PresenceResult->Result.Error);
+		TestTrue("IsPresentAsync should return true", PresenceResult->IsPresent);
+	}, 0.0f));
 	
 	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, Chat, TestChannelID]()
 	{
@@ -1171,7 +1241,17 @@ bool FPubnubChatChannelGetInviteesAsyncFullParametersTest::RunTest(const FString
 		return false;
 	}
 	
+	// CreateUser rejects an id left on the server by an earlier run. GetUser is the same setup.
 	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TargetUserID);
+	if (CreateUserResult.Result.Error)
+	{
+		const FString CreateError = CreateUserResult.Result.ErrorMessage;
+		CreateUserResult = Chat->GetUser(TargetUserID);
+		if (CreateUserResult.Result.Error)
+		{
+			AddError(FString::Printf(TEXT("CreateUser failed (%s) and GetUser failed (%s)"), *CreateError, *CreateUserResult.Result.ErrorMessage));
+		}
+	}
 	FPubnubChatChannelResult CreateChannelResult = Chat->CreatePublicConversation(TestChannelID, FPubnubChatChannelData());
 	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
 	TestFalse("CreatePublicConversation should succeed", CreateChannelResult.Result.Error);
@@ -2747,19 +2827,27 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 		return false;
 	}
 	
+	// Fixed IDs survive a run that created the users and returned before latent cleanup.
+	// CreateUser rejects an ID that already has metadata.
+	Chat->DeleteChannel(TestChannelID);
+	Chat->DeleteUser(TargetUserID1);
+	Chat->DeleteUser(TargetUserID2);
+
 	// Create target users
 	FPubnubChatUserResult CreateUser1Result = Chat->CreateUser(TargetUserID1, FPubnubChatUserData());
-	TestFalse("CreateUser1 should succeed", CreateUser1Result.Result.Error);
+	TestFalse(FString::Printf(TEXT("CreateUser1 should succeed: %s"), *CreateUser1Result.Result.ErrorMessage), CreateUser1Result.Result.Error);
 	TestNotNull("User1 should be created", CreateUser1Result.User);
 	
 	FPubnubChatUserResult CreateUser2Result = Chat->CreateUser(TargetUserID2, FPubnubChatUserData());
-	TestFalse("CreateUser2 should succeed", CreateUser2Result.Result.Error);
+	TestFalse(FString::Printf(TEXT("CreateUser2 should succeed: %s"), *CreateUser2Result.Result.ErrorMessage), CreateUser2Result.Result.Error);
 	TestNotNull("User2 should be created", CreateUser2Result.User);
 	
 	if(!CreateUser1Result.User || !CreateUser2Result.User)
 	{
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 		CleanUpCurrentChatUser(Chat);
-			CleanUp();
+		CleanUp();
 		return false;
 	}
 	
@@ -2768,11 +2856,14 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	FPubnubChatChannelData ChannelData;
 	FPubnubChatMembershipData HostMembershipData;
 	FPubnubChatCreateGroupConversationResult CreateResult = Chat->CreateGroupConversation(InitialUsers, TestChannelID, ChannelData, HostMembershipData);
-	TestFalse("CreateGroupConversation should succeed", CreateResult.Result.Error);
+	TestFalse(FString::Printf(TEXT("CreateGroupConversation should succeed: %s"), *CreateResult.Result.ErrorMessage), CreateResult.Result.Error);
 	TestNotNull("Channel should be created", CreateResult.Channel);
 	
 	if(!CreateResult.Channel)
 	{
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
 		CleanUpCurrentChatUser(Chat);
 		CleanUp();
 		return false;
@@ -2786,6 +2877,12 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	TSharedPtr<int32> EventsReceivedCount = MakeShared<int32>(0);
 	TSharedPtr<TArray<FPubnubChatInviteEvent>> ReceivedEvents = MakeShared<TArray<FPubnubChatInviteEvent>>();
 	
+	// StreamInvitations subscribes and returns before the handshake. Invite publishes
+	// onto each user's channel, so wait until both channels are in the status list.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 	// Stream invitations for first target user
 	CreateUser1Result.User->OnInvitedNative.AddLambda([this, EventsReceivedCount, ReceivedEvents, TestChannelID](const FPubnubChatInviteEvent& Event)
 	{
@@ -2796,7 +2893,7 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	});
 	
 	FPubnubChatOperationResult StreamResult1 = CreateUser1Result.User->StreamInvitations();
-	TestFalse("StreamInvitations1 should succeed", StreamResult1.Error);
+	TestFalse(FString::Printf(TEXT("StreamInvitations1 should succeed: %s"), *StreamResult1.ErrorMessage), StreamResult1.Error);
 	
 	// Stream invitations for second target user
 	CreateUser2Result.User->OnInvitedNative.AddLambda([this, EventsReceivedCount, ReceivedEvents, TestChannelID](const FPubnubChatInviteEvent& Event)
@@ -2808,20 +2905,27 @@ bool FPubnubChatChannelInviteMultipleNonPublicChannelEventTest::RunTest(const FS
 	});
 	
 	FPubnubChatOperationResult StreamResult2 = CreateUser2Result.User->StreamInvitations();
-	TestFalse("StreamInvitations2 should succeed", StreamResult2.Error);
+	TestFalse(FString::Printf(TEXT("StreamInvitations2 should succeed: %s"), *StreamResult2.ErrorMessage), StreamResult2.Error);
 	
 	// Shared state for invite result (needed for cleanup)
 	TSharedPtr<FPubnubChatInviteMultipleResult> InviteResult = MakeShared<FPubnubChatInviteMultipleResult>();
 	
-	// Wait a bit for subscriptions to be ready
-	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, CreateResult, CreateUser1Result, CreateUser2Result, InviteResult]()
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TargetUserID1, TargetUserID2 }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TargetUserID1, TargetUserID2, CreateResult, CreateUser1Result, CreateUser2Result, InviteResult]()
 	{
-		// Invite multiple users to the group conversation
+		TestFalse(FString::Printf(TEXT("Invite handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bUsersReady = Handshake.Channels->Contains(TargetUserID1) && Handshake.Channels->Contains(TargetUserID2);
+		TestTrue("Invite handshake should include both user channels", bUsersReady);
+		if (*Handshake.bFailed || !bUsersReady || !CreateResult.Channel)
+		{
+			return;
+		}
+
 		TArray<UPubnubChatUser*> UsersToInvite = {CreateUser1Result.User, CreateUser2Result.User};
 		*InviteResult = CreateResult.Channel->InviteMultiple(UsersToInvite);
-		TestFalse("InviteMultiple should succeed", InviteResult->Result.Error);
+		TestFalse(FString::Printf(TEXT("InviteMultiple should succeed: %s"), *InviteResult->Result.ErrorMessage), InviteResult->Result.Error);
 		TestEqual("Should have 2 memberships", InviteResult->Memberships.Num(), 2);
-	}, 0.5f));
+	}, 0.0f));
 	
 	// Wait until events are received
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([EventsReceivedCount]() -> bool {

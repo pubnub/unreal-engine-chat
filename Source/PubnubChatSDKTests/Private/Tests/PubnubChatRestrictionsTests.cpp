@@ -1148,33 +1148,45 @@ bool FPubnubChatChannelGetUsersRestrictionsHappyPathTest::RunTest(const FString&
 	
 	FPubnubChatOperationResult SetResult = Chat->SetRestrictions(Restriction);
 	TestFalse("SetRestrictions should succeed", SetResult.Error);
-	
-	// Get all users restrictions
+
+	// Member list reads can lag SetChannelMembers. Poll until this ban is visible.
 	UPubnubChatChannel* Channel = CreateChannelResult.Channel;
-	if(Channel)
+	if(SetResult.Error || !Channel)
 	{
-		FPubnubChatGetRestrictionsResult GetResult = Channel->GetUsersRestrictions();
-		
-		TestFalse("GetUsersRestrictions should succeed", GetResult.Result.Error);
-		TestTrue("Should have at least one restriction", GetResult.Restrictions.Num() >= 1);
-		
-		// Find the restriction for our target user
-		bool bFoundRestriction = false;
-		for(const FPubnubChatRestriction& RestrictionItem : GetResult.Restrictions)
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return true;
+	}
+
+	TSharedPtr<FPubnubChatGetRestrictionsResult> GetResult = MakeShared<FPubnubChatGetRestrictionsResult>();
+	TSharedPtr<bool> bFoundRestriction = MakeShared<bool>(false);
+	ADD_LATENT_AUTOMATION_COMMAND(FPollUntilLatentCommand([Channel, TargetUserID, TestChannelID, GetResult, bFoundRestriction]()
+	{
+		FPubnubChatGetRestrictionsResult Result = Channel->GetUsersRestrictions();
+		*GetResult = Result;
+		if(Result.Result.Error)
 		{
-			if(RestrictionItem.UserID == TargetUserID && RestrictionItem.ChannelID == TestChannelID)
+			return false;
+		}
+
+		for(const FPubnubChatRestriction& RestrictionItem : Result.Restrictions)
+		{
+			if(RestrictionItem.UserID == TargetUserID && RestrictionItem.ChannelID == TestChannelID && RestrictionItem.Ban)
 			{
-				bFoundRestriction = true;
-				TestTrue("Found restriction Ban should be true", RestrictionItem.Ban);
-				break;
+				*bFoundRestriction = true;
+				return true;
 			}
 		}
-		TestTrue("Should find restriction for target user", bFoundRestriction);
-	}
-	
-	// Cleanup
-	if(Chat)
+		return false;
+	}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, GetResult, bFoundRestriction, Chat, TestChannelID, TargetUserID]()
 	{
+		TestFalse("GetUsersRestrictions should succeed", GetResult->Result.Error);
+		TestTrue("Should have at least one restriction", GetResult->Restrictions.Num() >= 1);
+		TestTrue("Should find ban for target user", *bFoundRestriction);
+
 		UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
 		if(PubnubClient)
 		{
@@ -1187,10 +1199,10 @@ bool FPubnubChatChannelGetUsersRestrictionsHappyPathTest::RunTest(const FString&
 		}
 		Chat->DeleteChannel(TestChannelID);
 		Chat->DeleteUser(TargetUserID);
-	}
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+	}, 0.0f));
 
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
 	return true;
 }
 
@@ -1257,10 +1269,19 @@ bool FPubnubChatChannelGetUsersRestrictionsFullParametersTest::RunTest(const FSt
 	
 	FPubnubChatOperationResult SetResult2 = Chat->SetRestrictions(Restriction2);
 	TestFalse("SetRestrictions2 should succeed", SetResult2.Error);
-	
-	// Get all users restrictions with Limit, Sort, and Page parameters
+
 	UPubnubChatChannel* Channel = CreateChannelResult.Channel;
-	if(Channel)
+	if(SetResult1.Error || SetResult2.Error || !Channel)
+	{
+		Chat->DeleteChannel(TestChannelID);
+		Chat->DeleteUser(TargetUserID1);
+		Chat->DeleteUser(TargetUserID2);
+		CleanUpCurrentChatUser(Chat);
+		CleanUp();
+		return true;
+	}
+
+	// Get all users restrictions with Limit, Sort, and Page parameters
 	{
 		FPubnubMemberSort Sort;
 		FPubnubMemberSingleSort SingleSort;
@@ -1269,53 +1290,59 @@ bool FPubnubChatChannelGetUsersRestrictionsFullParametersTest::RunTest(const FSt
 		Sort.MemberSort.Add(SingleSort);
 		FPubnubPage Page;
 		
-		FPubnubChatGetRestrictionsResult GetResult = Channel->GetUsersRestrictions(10, Sort, Page);
-		
-		TestFalse("GetUsersRestrictions should succeed", GetResult.Result.Error);
-		TestTrue("Should have at least 2 restrictions", GetResult.Restrictions.Num() >= 2);
-		
-		// Verify both restrictions are present
-		bool bFoundRestriction1 = false;
-		bool bFoundRestriction2 = false;
-		for(const FPubnubChatRestriction& RestrictionItem : GetResult.Restrictions)
+		// Member list reads can lag SetChannelMembers. Poll until both restrictions are visible.
+		TSharedPtr<FPubnubChatGetRestrictionsResult> GetResult = MakeShared<FPubnubChatGetRestrictionsResult>();
+		TSharedPtr<bool> bFoundBoth = MakeShared<bool>(false);
+		ADD_LATENT_AUTOMATION_COMMAND(FPollUntilLatentCommand([Channel, TargetUserID1, TargetUserID2, Sort, Page, GetResult, bFoundBoth]()
 		{
-			if(RestrictionItem.UserID == TargetUserID1)
+			FPubnubChatGetRestrictionsResult Result = Channel->GetUsersRestrictions(10, Sort, Page);
+			*GetResult = Result;
+			if(Result.Result.Error)
 			{
-				bFoundRestriction1 = true;
-				TestTrue("Restriction1 Ban should be true", RestrictionItem.Ban);
+				return false;
 			}
-			if(RestrictionItem.UserID == TargetUserID2)
-			{
-				bFoundRestriction2 = true;
-				TestTrue("Restriction2 Mute should be true", RestrictionItem.Mute);
-			}
-		}
-		TestTrue("Should find restriction for user1", bFoundRestriction1);
-		TestTrue("Should find restriction for user2", bFoundRestriction2);
-	}
-	
-	// Cleanup
-	if(Chat)
-	{
-		UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
-		if(PubnubClient)
-		{
-			FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
-			TArray<FString> UserIDsToRemove = {TargetUserID1, TargetUserID2};
-			FPubnubChannelMembersResult RemoveResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, UserIDsToRemove, FPubnubMemberInclude::FromValue(false), 1);
-			if(RemoveResult.Result.Error)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Failed to remove restrictions during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
-			}
-		}
-		Chat->DeleteChannel(TestChannelID);
-		Chat->DeleteUser(TargetUserID1);
-		Chat->DeleteUser(TargetUserID2);
-	}
 
-	CleanUpCurrentChatUser(Chat);
-	CleanUp();
-	return true;
+			bool bFoundBan = false;
+			bool bFoundMute = false;
+			for(const FPubnubChatRestriction& RestrictionItem : Result.Restrictions)
+			{
+				if(RestrictionItem.UserID == TargetUserID1 && RestrictionItem.Ban)
+				{
+					bFoundBan = true;
+				}
+				if(RestrictionItem.UserID == TargetUserID2 && RestrictionItem.Mute)
+				{
+					bFoundMute = true;
+				}
+			}
+			*bFoundBoth = bFoundBan && bFoundMute;
+			return *bFoundBoth;
+		}, MAX_WAIT_TIME));
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, GetResult, bFoundBoth, Chat, TestChannelID, TargetUserID1, TargetUserID2]()
+		{
+			TestFalse("GetUsersRestrictions should succeed", GetResult->Result.Error);
+			TestTrue("Should have at least 2 restrictions", GetResult->Restrictions.Num() >= 2);
+			TestTrue("Should find ban and mute for both users", *bFoundBoth);
+
+			UPubnubClient* PubnubClient = GetPubnubClientFromChat(Chat);
+			if(PubnubClient)
+			{
+				FString ModerationChannelID = UPubnubChatInternalUtilities::GetRestrictionsChannelForChannelID(TestChannelID);
+				TArray<FString> UserIDsToRemove = {TargetUserID1, TargetUserID2};
+				FPubnubChannelMembersResult RemoveResult = PubnubClient->RemoveChannelMembers(ModerationChannelID, UserIDsToRemove, FPubnubMemberInclude::FromValue(false), 1);
+				if(RemoveResult.Result.Error)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Failed to remove restrictions during cleanup: %s"), *RemoveResult.Result.ErrorMessage);
+				}
+			}
+			Chat->DeleteChannel(TestChannelID);
+			Chat->DeleteUser(TargetUserID1);
+			Chat->DeleteUser(TargetUserID2);
+			CleanUpCurrentChatUser(Chat);
+			CleanUp();
+		}, 0.0f));
+		return true;
+	}
 }
 
 // ============================================================================

@@ -1,8 +1,17 @@
 name: unreal-engine-chat
-version: 1.0.3
+version: 2.0.0
 schema: 1
 scm: github.com/pubnub/unreal-engine-chat
 changelog:
+  - date: 2026-11-05
+    version: 2.0.0
+    changes:
+      - type: bug
+        text: "MarkAllMessagesAsRead succeeds and returns the page and total from GetMemberships when the user has no memberships."
+      - type: improvement
+        text: "PubnubChat requires PubnubLibrary 3.0.0 or newer. InitChat sets the Chat SDK version on the client it creates, and InitChatWithPubnubClient leaves a supplied client's SDK identity unchanged."
+      - type: improvement
+        text: "SetPubnubOrigin returns FPubnubChatOperationResult, and the previous int status codes are removed. Error is false on success, and an empty origin resets the client to the default origin."
   - date: 2026-06-23
     version: 1.0.3
     changes:
@@ -150,7 +159,7 @@ sdks:
                     minimum-ue-version:
                       - 5.0
                     maximum-ue-version:
-                      - 5.7
+                      - 5.8
 
 
 supported-platforms:

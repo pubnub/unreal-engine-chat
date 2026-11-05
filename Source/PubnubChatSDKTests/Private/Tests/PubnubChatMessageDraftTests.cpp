@@ -3095,6 +3095,7 @@ bool FPubnubChatMessageDraftInsertSuggestedMentionComplexScenarioTest::RunTest(c
 #include "FunctionLibraries/PubnubJsonUtilities.h"
 #include "Tests/PubnubChatTestsUtils.h"
 #include "Tests/PubnubChatTestHelpers.h"
+#include "UObject/StrongObjectPtr.h"
 #include "Kismet/GameplayStatics.h"
 #include "HAL/PlatformTime.h"
 
@@ -3481,7 +3482,12 @@ bool FPubnubChatMessageDraftSendHappyPathTest::RunTest(const FString& Parameters
 		
 		if(CreateResult.Channel)
 		{
-			// Connect channel
+			// Connect returns when subscribe is registered locally. The handshake
+			// finishes later, so the publish waits until that status lists this channel.
+			FChatHandshakeTracker Handshake;
+			TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+			TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 			TestFalse("Connect should succeed", ConnectResult.Error);
 			
@@ -3508,12 +3514,23 @@ bool FPubnubChatMessageDraftSendHappyPathTest::RunTest(const FString& Parameters
 					}
 				};
 				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
-				
-				// Send message with default params
-				FPubnubChatSendTextParams SendParams; // Default params
-				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
-				
-				TestFalse("Send should succeed", SendResult.Error);
+
+				TStrongObjectPtr<UPubnubChatMessageDraft> DraftPtr(Draft);
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, DraftPtr]()
+				{
+					TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+					const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+					TestTrue("Send handshake should include the channel", bChannelReady);
+					if (*Handshake.bFailed || !bChannelReady || !DraftPtr.IsValid())
+					{
+						return;
+					}
+
+					FPubnubChatSendTextParams SendParams;
+					FPubnubChatOperationResult SendResult = DraftPtr->Send(SendParams);
+					TestFalse("Send should succeed", SendResult.Error);
+				}, 0.0f));
 				
 				// Wait for message to be received
 				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
@@ -3592,7 +3609,12 @@ bool FPubnubChatMessageDraftSendFullParametersTest::RunTest(const FString& Param
 		
 		if(CreateResult.Channel)
 		{
-			// Connect channel
+			// Connect returns when subscribe is registered locally. The handshake
+			// finishes later, so the publish waits until that status lists this channel.
+			FChatHandshakeTracker Handshake;
+			TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+			TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 			TestFalse("Connect should succeed", ConnectResult.Error);
 			
@@ -3619,16 +3641,26 @@ bool FPubnubChatMessageDraftSendFullParametersTest::RunTest(const FString& Param
 					}
 				};
 				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
-				
-				// Send message with all parameters
-				FPubnubChatSendTextParams SendParams;
-				SendParams.StoreInHistory = true;
-				SendParams.SendByPost = false;
-				SendParams.Meta = TestMeta;
-				
-				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
-				
-				TestFalse("Send should succeed with all parameters", SendResult.Error);
+
+				TStrongObjectPtr<UPubnubChatMessageDraft> DraftPtr(Draft);
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, DraftPtr, TestMeta]()
+				{
+					TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+					const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+					TestTrue("Send handshake should include the channel", bChannelReady);
+					if (*Handshake.bFailed || !bChannelReady || !DraftPtr.IsValid())
+					{
+						return;
+					}
+
+					FPubnubChatSendTextParams SendParams;
+					SendParams.StoreInHistory = true;
+					SendParams.SendByPost = false;
+					SendParams.Meta = TestMeta;
+					FPubnubChatOperationResult SendResult = DraftPtr->Send(SendParams);
+					TestFalse("Send should succeed with all parameters", SendResult.Error);
+				}, 0.0f));
 				
 				// Wait for message to be received
 				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
@@ -3713,6 +3745,12 @@ bool FPubnubChatMessageDraftSendWithQuotedMessageTest::RunTest(const FString& Pa
 		return false;
 	}
 
+	// Connect returns when subscribe is registered locally. The handshake finishes
+	// later, so the first publish waits until that status lists this channel.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 	TestFalse("Connect should succeed", ConnectResult.Error);
 
@@ -3729,9 +3767,21 @@ bool FPubnubChatMessageDraftSendWithQuotedMessageTest::RunTest(const FString& Pa
 	};
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(OnFirstMessage);
 
-	// Send first message (will be quoted later)
-	FPubnubChatOperationResult SendFirstResult = CreateResult.Channel->SendText(FirstMessageText);
-	TestFalse("SendText first message should succeed", SendFirstResult.Error);
+	UPubnubChatChannel* Channel = CreateResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, Channel, FirstMessageText]()
+	{
+		TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Send handshake should include the channel", bChannelReady);
+		if (*Handshake.bFailed || !bChannelReady || !IsValid(Channel))
+		{
+			return;
+		}
+
+		FPubnubChatOperationResult SendFirstResult = Channel->SendText(FirstMessageText);
+		TestFalse("SendText first message should succeed", SendFirstResult.Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bFirstMessageReceived]() -> bool { return *bFirstMessageReceived; }, MAX_WAIT_TIME));
 
@@ -3873,6 +3923,12 @@ bool FPubnubChatMessageDraftSendWithQuotedMessageGetQuotedMessageTest::RunTest(c
 		return false;
 	}
 
+	// Connect returns when subscribe is registered locally. The handshake finishes
+	// later, so the first publish waits until that status lists this channel.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 	TestFalse("Connect should succeed", ConnectResult.Error);
 
@@ -3888,8 +3944,21 @@ bool FPubnubChatMessageDraftSendWithQuotedMessageGetQuotedMessageTest::RunTest(c
 	};
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(OnFirstMessage);
 
-	FPubnubChatOperationResult SendFirstResult = CreateResult.Channel->SendText(FirstMessageText);
-	TestFalse("SendText first message should succeed", SendFirstResult.Error);
+	UPubnubChatChannel* Channel = CreateResult.Channel;
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, Channel, FirstMessageText]()
+	{
+		TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Send handshake should include the channel", bChannelReady);
+		if (*Handshake.bFailed || !bChannelReady || !IsValid(Channel))
+		{
+			return;
+		}
+
+		FPubnubChatOperationResult SendFirstResult = Channel->SendText(FirstMessageText);
+		TestFalse("SendText first message should succeed", SendFirstResult.Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bFirstMessageReceived]() -> bool { return *bFirstMessageReceived; }, MAX_WAIT_TIME));
 
@@ -4169,7 +4238,12 @@ bool FPubnubChatMessageDraftSendWithMentionsTest::RunTest(const FString& Paramet
 		
 		if(CreateResult.Channel)
 		{
-			// Connect channel
+			// Connect returns when subscribe is registered locally. The handshake
+			// finishes later, so the publish waits until that status lists this channel.
+			FChatHandshakeTracker Handshake;
+			TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+			TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 			TestFalse("Connect should succeed", ConnectResult.Error);
 			
@@ -4218,12 +4292,23 @@ bool FPubnubChatMessageDraftSendWithMentionsTest::RunTest(const FString& Paramet
 					}
 				};
 				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
-				
-				// Send message
-				FPubnubChatSendTextParams SendParams;
-				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
-				
-				TestFalse("Send should succeed", SendResult.Error);
+
+				TStrongObjectPtr<UPubnubChatMessageDraft> DraftPtr(Draft);
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, DraftPtr]()
+				{
+					TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+					const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+					TestTrue("Send handshake should include the channel", bChannelReady);
+					if (*Handshake.bFailed || !bChannelReady || !DraftPtr.IsValid())
+					{
+						return;
+					}
+
+					FPubnubChatSendTextParams SendParams;
+					FPubnubChatOperationResult SendResult = DraftPtr->Send(SendParams);
+					TestFalse("Send should succeed", SendResult.Error);
+				}, 0.0f));
 				
 				// Wait for message to be received
 				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {
@@ -4307,8 +4392,10 @@ bool FPubnubChatMessageDraftSendAndGetMessageElementsRoundTripTest::RunTest(cons
 		return false;
 	}
 
+	// A previous run can leave this user when message-miss cleanup destroys the chat before DeleteUser.
+	Chat->DeleteUser(TestUserID);
 	FPubnubChatUserResult CreateUserResult = Chat->CreateUser(TestUserID, FPubnubChatUserData());
-	TestFalse("CreateUser should succeed", CreateUserResult.Result.Error);
+	TestFalse(FString::Printf(TEXT("CreateUser should succeed: %s"), *CreateUserResult.Result.ErrorMessage), CreateUserResult.Result.Error);
 
 	FPubnubChatChannelResult CreateMentionChannelResult = Chat->CreatePublicConversation(TestMentionChannelID, FPubnubChatChannelData());
 	TestFalse("CreateMentionChannel should succeed", CreateMentionChannelResult.Result.Error);
@@ -4323,6 +4410,12 @@ bool FPubnubChatMessageDraftSendAndGetMessageElementsRoundTripTest::RunTest(cons
 		CleanUp();
 		return false;
 	}
+
+	// Connect returns when subscribe is registered locally. The handshake finishes
+	// later, so the publish waits until that status lists this channel.
+	FChatHandshakeTracker Handshake;
+	TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+	TrackHandshake(Chat->GetPubnubClient(), Handshake);
 
 	FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 	TestFalse("Connect should succeed", ConnectResult.Error);
@@ -4388,9 +4481,22 @@ bool FPubnubChatMessageDraftSendAndGetMessageElementsRoundTripTest::RunTest(cons
 	};
 	CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
 
-	FPubnubChatSendTextParams SendParams;
-	FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
-	TestFalse("Send should succeed", SendResult.Error);
+	TStrongObjectPtr<UPubnubChatMessageDraft> DraftPtr(Draft);
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+	ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, DraftPtr]()
+	{
+		TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+		const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+		TestTrue("Send handshake should include the channel", bChannelReady);
+		if (*Handshake.bFailed || !bChannelReady || !DraftPtr.IsValid())
+		{
+			return;
+		}
+
+		FPubnubChatSendTextParams SendParams;
+		FPubnubChatOperationResult SendResult = DraftPtr->Send(SendParams);
+		TestFalse("Send should succeed", SendResult.Error);
+	}, 0.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() { return *bMessageReceived; }, MAX_WAIT_TIME));
 
@@ -4479,7 +4585,12 @@ bool FPubnubChatMessageDraftSendComplexMessageTest::RunTest(const FString& Param
 		
 		if(CreateResult.Channel)
 		{
-			// Connect channel
+			// Connect returns when subscribe is registered locally. The handshake
+			// finishes later, so the publish waits until that status lists this channel.
+			FChatHandshakeTracker Handshake;
+			TSharedPtr<int32> HandshakeBaseline = SnapshotHandshakeEpoch(Handshake);
+			TrackHandshake(Chat->GetPubnubClient(), Handshake);
+
 			FPubnubChatOperationResult ConnectResult = CreateResult.Channel->Connect();
 			TestFalse("Connect should succeed", ConnectResult.Error);
 			
@@ -4542,12 +4653,23 @@ bool FPubnubChatMessageDraftSendComplexMessageTest::RunTest(const FString& Param
 					}
 				};
 				CreateResult.Channel->OnMessageReceivedNative.AddLambda(MessageLambda);
-				
-				// Send message
-				FPubnubChatSendTextParams SendParams;
-				FPubnubChatOperationResult SendResult = Draft->Send(SendParams);
-				
-				TestFalse("Send should succeed", SendResult.Error);
+
+				TStrongObjectPtr<UPubnubChatMessageDraft> DraftPtr(Draft);
+				ADD_LATENT_AUTOMATION_COMMAND(FWaitForChatHandshakeCommand(Handshake, HandshakeBaseline, { TestChannelID }, {}, MAX_WAIT_TIME));
+				ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([this, Handshake, TestChannelID, DraftPtr]()
+				{
+					TestFalse(FString::Printf(TEXT("Send handshake failed: %s"), **Handshake.FailureReason), *Handshake.bFailed);
+					const bool bChannelReady = Handshake.Channels->Contains(TestChannelID);
+					TestTrue("Send handshake should include the channel", bChannelReady);
+					if (*Handshake.bFailed || !bChannelReady || !DraftPtr.IsValid())
+					{
+						return;
+					}
+
+					FPubnubChatSendTextParams SendParams;
+					FPubnubChatOperationResult SendResult = DraftPtr->Send(SendParams);
+					TestFalse("Send should succeed", SendResult.Error);
+				}, 0.0f));
 				
 				// Wait for message to be received
 				ADD_LATENT_AUTOMATION_COMMAND(FWaitUntilLatentCommand([bMessageReceived]() -> bool {

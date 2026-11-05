@@ -10,6 +10,7 @@
 #include "PubnubChatInternalConverters.h"
 #include "PubnubChatMessage.h"
 #include "PubnubChatUser.h"
+#include "FunctionLibraries/PubnubInternalUtilities.h"
 #include "PubnubLibraryVersion.h"
 #include "StructLibraries/PubnubChatChannelStructLibrary.h"
 #include "StructLibraries/PubnubChatUserStructLibrary.h"
@@ -52,7 +53,8 @@ FString UPubnubChatInternalUtilities::GetFilterForChannelsRestrictions()
 FString UPubnubChatInternalUtilities::GetChatSdkVersionSuffix()
 {
 	return FString::Printf(
-		TEXT("-PubNub-Unreal/%d.%d.%d/CA-Unreal/%d.%d.%d"),
+		TEXT("%s-PubNub-Unreal/%d.%d.%d/CA-Unreal/%d.%d.%d"),
+		*UPubnubInternalUtilities::GetOperatingSystemString(),
 		PUBNUB_LIBRARY_VERSION_MAJOR,
 		PUBNUB_LIBRARY_VERSION_MINOR,
 		PUBNUB_LIBRARY_VERSION_PATCH,
@@ -1001,7 +1003,11 @@ bool UPubnubChatInternalUtilities::CheckPatternPermission(const TSharedPtr<FJson
 
 	// Iterate through all patterns and check if any match the resource name
 	TArray<FString> PatternKeys;
-	ResourceTypeObject->Values.GetKeys(PatternKeys);
+	PatternKeys.Reserve(ResourceTypeObject->Values.Num());
+	for (const auto& Pair : ResourceTypeObject->Values)
+	{
+		PatternKeys.Add(PubnubCopyJsonKey(Pair.Key));
+	}
 
 	// Check all matching patterns - return true if ANY pattern grants the permission
 	for(const FString& PatternKey : PatternKeys)
