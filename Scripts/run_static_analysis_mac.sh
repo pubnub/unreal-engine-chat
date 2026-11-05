@@ -6,10 +6,11 @@
 # links this checkout in as Plugins/PubnubChat, and analyzes only PubnubChatSDK.
 # PubnubChatSDKTests sets bDisableStaticAnalysis and is not passed to -Module.
 #
-# Chat compiles against PubnubLibrary. That plugin is already present beside this
-# one, at ../Pubnub, because chat cannot build without it. The host receives a
-# copy with static analysis disabled, so this job does not analyze the core
-# plugin and does not modify the original checkout.
+# Chat compiles against PubnubLibrary. CI checks that plugin out from
+# pubnub/unreal-engine and passes it as PUBNUB_LIBRARY_ROOT. A local run uses
+# the sibling Plugins/Pubnub checkout when that variable is unset. The host
+# receives a copy with static analysis disabled, so this job does not analyze
+# the core plugin and does not modify the original checkout.
 #
 # The macos-gh runner has UE 5.5. That engine uses the Clang shipped with
 # Xcode 15.2 through 16.9 (see Engine/Config/Apple/Apple_SDK.json).
@@ -101,7 +102,7 @@ resolve_library_root() {
   elif [[ -d "${PLUGIN_ROOT}/../Pubnub" ]]; then
     LIBRARY_ROOT="$(cd "${PLUGIN_ROOT}/../Pubnub" && pwd)"
   else
-    die "PubnubLibrary was not found beside this plugin at '${PLUGIN_ROOT}/../Pubnub'."
+    die "PubnubLibrary was not found. Set PUBNUB_LIBRARY_ROOT to the unreal-engine checkout, or place that checkout beside this plugin at '${PLUGIN_ROOT}/../Pubnub'."
   fi
   [[ -f "${LIBRARY_ROOT}/PubnubLibrary.uplugin" ]] || die "PubnubLibrary.uplugin was not found at '${LIBRARY_ROOT}'."
   [[ -f "${LIBRARY_ROOT}/Source/PubnubLibrary/PubnubLibrary.Build.cs" ]] || die "PubnubLibrary.Build.cs was not found at '${LIBRARY_ROOT}/Source/PubnubLibrary'."

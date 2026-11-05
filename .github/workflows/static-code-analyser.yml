@@ -27,9 +27,17 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
+      - name: Checkout PubnubLibrary
+        uses: actions/checkout@v4
+        with:
+          repository: pubnub/unreal-engine
+          ref: master
+          path: pubnub-library
+          token: ${{ secrets.GH_TOKEN }}
       - name: Run static code analyser
         env:
           UE_ROOT: ${{ vars.UE_ROOT || '/Users/Shared/Epic Games/UE_5.5' }}
+          PUBNUB_LIBRARY_ROOT: ${{ github.workspace }}/pubnub-library
         run: bash Scripts/run_static_analysis_mac.sh
       - name: Upload analyzer reports
         if: failure()
